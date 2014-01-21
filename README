@@ -54,4 +54,6 @@ are five examples scipt applications provided.  Enter the examples
 directory and run the scripts. Each contains a detailed explanation of
 about the particular HSPF model used and how to build the model with PyHSPF.
 
-Acknowledgements: Developed with funding from the United States Department of Energy, Energy Efficiency & Renewable Energy, Bioenergies Technology Office. The sponsor in no way endorses this program.
+Acknowledgements: Developed with funding from the United States Department of Energy, 
+Energy Efficiency & Renewable Energy, Bioenergies Technology Office. The sponsor in 
+no way endorses this program.
