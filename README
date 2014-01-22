@@ -14,10 +14,10 @@ These data sources (with the exception of the hydrology parameters) can be
 supplied externally as needed (e.g., using Python extensions for 
 geographic information systems (GIS) software). Alternatively, a 
 series of preprocessing classes and routines were developed based on 
-flowline and catchment data from the National Hydrolography Dataset 
+flowline and catchment data from the National Hydrography Dataset 
 Version 2 (NHDPlus), climate data from the National Climate Data Center, 
-and landuse data from the National Agricultural Statitistics Service (NASS)
-Cropland Data Layer (CDL). The preprocessing routines require GDAL, PyShp,
+and landuse data from the National Agricultural Statistics Service (NASS)
+Cropland Data Layer (CDL). The preprocessing routines require GDAL, Pyshp,
 and Pillow in addition to NumPy, Scipy, and Matplotlib, and make a series
 of specific assumptions about the data. For more info contact me.
 
@@ -47,13 +47,18 @@ Python Shapefile Library (pyshp)
 Python Imaging Library (Pillow)
 7-zip (Windows only)
 
-Installation: Open a command prompt and navigate to this PyHSPF directory.
-Then run "python setup.py install". Requires GNU compiler collection (other
-compilers may work but are untested). I am providing a few pre-built 
-distributions in addition. Contact me if you have trouble installing.
+Installation: Extract the source zip files, then open a command prompt,
+navigate to the PyHSPF directory, and run "python setup.py install." 
+I am providing a few pre-built distributions in addition, but I have 
+had trouble porting these to different machines. The binaries can be 
+rebuilt using the open source GNU compiler collection (other compilers 
+may work but are untested). Assuming gfortran and gcc are available 
+as environment variables, the HSPF library can be rebuilt by navigating
+as before, running "python setup.py build," and then 
+"python setup.py install." Contact me if you have trouble installing.
 
-Testing: Open the python interpretor (from a command prompt simply type 
-"python"). Then try to import pyhspf; the base Fortran subroutines can be
+Testing: Open the python interpreter (from a command prompt simply type 
+"python"). Then try "import pyhspf"; the base Fortran subroutines can be
 accessed from pyhspf.hspf. If the import succeeds, then try to run 
 pyhspf.hspf.sydatepy(), which should print the date as a tuple. There 
 are five examples scipts provided in the "examples.zip" file. Each 
@@ -61,8 +66,8 @@ example contains a detailed explanation of about the particular HSPF model
 used and how to build the model with PyHSPF.
 
 Acknowledgements: Developed with funding from the United States Department of 
-Energy, Energy Efficiency & Renewable Energy, Bioenergies Technology Office. 
-The sponsor in no way endorses this program.
+Energy, Energy Efficiency & Renewable Energy, Bioenergies Technology Office
+(BETO). The sponsor in no way endorses this program.
 
 Other Related Pages:
 WATER (water analysis tool for energy resources) http://water.es.anl.gov/
