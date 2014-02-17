@@ -154,8 +154,7 @@ watershed = Watershed(watershed_name, subbasins)
 # it should be provided as  an "updown" dictionary--that is, you supply a 
 # subbasin number, and the dictionary returns the downstream number. So for 
 # this example we have subbasin 100 goes into 101 and we'll say that 101 goes 
-# into 0 to indicate it doesn't connect to anything. we'll also tell HSPF 
-# 101 is an outlet for the whole watershed.
+# into 0 to indicate it doesn't connect to anything (is a watershed outlet). 
 
 updown = {'100':'101', '101':0}
 
@@ -290,7 +289,7 @@ targets = ['reach_outvolume',  # the volume that exits each reach at each step
 # reach_volume    = RO
 # runoff          = SURO, IFWO, and AGWO for PERLNDs, SURO for IMPLNDs
 
-# now then, the "build_uci" command can be used to build the UCI input file.
+# now then, the "build_uci" function can be used to build the UCI input file.
 # it also builds the output WDM file since they work together with 
 # the UCI file. in this example we are just doing hydrology but you can add 
 # (provided you give the data) snow atemp, and sediment.  the other modules 
@@ -339,7 +338,7 @@ staids  = [wdm.get_attribute(wdmoutfile, n, 'STAID ') for n in dsns]
 
 # print(dsns, idconss, staids)
 
-# one HSPF parameter we saved is ROVOL (a postprocessor can be used to 
+# one HSPF parameter we saved is ROVOL (the postprocessor can be used to 
 # simplify this, but for now let's just use WDMUtil). The following
 # finds the right dsn. see if you can follow the syntax.
 

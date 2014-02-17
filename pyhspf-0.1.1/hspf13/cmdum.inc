@@ -1,0 +1,9 @@
+C    FROM CMDUM.COM
+C    AREA RESERVED FOR OSVS:
+C
+C     + + + PARAMETERS + + +
+      INCLUDE 'pmxosv.inc'
+C
+C     SPECIAL COMMON SCRTCH
+       COMMON/SCRTCH/ ASVEC
+       INTEGER        ASVEC(1)

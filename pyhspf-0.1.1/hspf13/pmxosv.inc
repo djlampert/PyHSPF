@@ -1,0 +1,5 @@
+C
+C     + + + PARAMETERS + + +
+C
+      INTEGER MAXOSV
+      PARAMETER (MAXOSV=500000)

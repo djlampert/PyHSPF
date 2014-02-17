@@ -1,0 +1,11 @@
+C     from CRIN2C.INC
+C     run interpreter common - character variables (see also CRIN3C.INC)
+C
+      COMMON/CRINC/OPTYP,TABNAM
+      CHARACTER*6  OPTYP
+      CHARACTER*12 TABNAM(MAXTTP)
+C
+C     + + + EQUIVALENCES + + +
+      EQUIVALENCE (TABNAM,TABNM1),(OPTYP,OPTYP1)
+      CHARACTER*1  TABNM1(12,MAXTTP),OPTYP1(6)
+C

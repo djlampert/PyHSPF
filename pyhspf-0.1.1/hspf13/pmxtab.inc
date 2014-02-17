@@ -1,0 +1,5 @@
+C
+C     + + + PARAMETERS + + +
+      INTEGER        MAXTTP,MAXTBL
+      PARAMETER     (MAXTTP=150)
+      PARAMETER     (MAXTBL=400)
