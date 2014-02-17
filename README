@@ -18,8 +18,9 @@ Hydrography Dataset Plus Version 2 (NHDPlus), climate data from the
 National Climate Data Center, and landuse data from the National 
 Agricultural Statistics Service (NASS) Cropland Data Layer (CDL). 
 The preprocessing and calibration routines require GDAL, Pyshp, and 
-Pillow in addition to NumPy, Scipy, and Matplotlib, and make a series 
-of specific assumptions about the data. For more info contact me.
+Pillow in addition to NumPy, Scipy, and Matplotlib, and require the user
+to download the source data files from NASS and NHDPlus. For more info 
+contact me.
 
 PyHSPF can be used to assimilate the data into an HSPF model, build the 
 HSPF input files, simulate the model over a period of time, and then 
@@ -28,15 +29,16 @@ requires numpy, scipy, and matplotlib and can be used for generating input
 files. A series of examples are provided to illustrate PyHSPF core module 
 usage.
 
-The preprocessing modules contain a powerful calculator to automate 
-extraction of climate data from various databases including the National 
-Solar Radiation Database (NSRDB), Global Historical Climate Network Daily 
-(GHCND), Global Summary of the Day (GSOD), and the NCDC Hourly Precipitation 
-Database (DSI-3240). The preprocessing modules can calculate daily or 
-hourly potential evapotranspiration time series using the ASCE 
-Penman-Monteith Equation. This is a major difference from the other 
-databases (namely EPA Basins which uses the Hammond method). The Penman
-calculator could be used completely outside PyHSPF.
+The preprocessing modules contain a calculator to automate extraction of 
+climate data from various databases including the National Solar 
+Radiation Database (NSRDB), Global Historical Climate Network Daily 
+(GHCND), Global Summary of the Day (GSOD), the NCDC Hourly Precipitation 
+Database (DSI-3240), and the National Water Information System. The 
+preprocessing modules can calculate daily or hourly reference 
+evapotranspiration time series using the ASCE Penman-Monteith Equation. 
+This is a major difference from the other databases available for HSPF.
+The climate data extractors/Penman calculator can be used completely 
+outside HSPF.
 
 Core Dependencies: 
 Python Programming Language Version 3
