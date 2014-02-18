@@ -200,6 +200,10 @@ def calculate_cropPET(directory, HUC8, start, end, hourly = True,
             with open('{}/{}/evaporations/evaporation'.format(*v), 'rb') as f: 
                 evaporations = pickle.load(f)
 
+            # Watts/m2 to kW hr/m2
+
+            solar = [s * 0.024 for s in solar]
+
             plot_dayofyearET(HUC8, start, end, evaporations, PETs, tmin, tmax, 
                              dewpoint, wind, solar, labels = crops, 
                              output = output)
@@ -235,6 +239,10 @@ def calculate_cropPET(directory, HUC8, start, end, hourly = True,
             v = directory, HUC8
             with open('{}/{}/evaporations/evaporation'.format(*v), 'rb') as f: 
                 evaporations = pickle.load(f)
+
+            # Watts/m2 to kW hr/m2
+
+            solar = [s * 0.024 for s in solar]
 
             plot_hourlyET(HUC8, start, end, evaporations, PETs, temp, dewpoint, 
                           wind, solar, labels = crops, output = output)

@@ -463,6 +463,10 @@ def make_timeseries(directory, HUC8, start, end, verbose = True):
         with open(dailyRET, 'rb') as f: 
             s, t, RET = pickle.load(f)
 
+        # Watts/m2 to kW hr/m2
+
+        dsolar = [s * 0.024 for s in dsolar]
+
         plot_dailyET(HUC8, start, end, RET, evaporations, tmin, tmax, 
                      dewpoint, wind, dsolar, output = dailyRET)
 
@@ -512,6 +516,10 @@ def make_timeseries(directory, HUC8, start, end, verbose = True):
             s, t, solar = pickle.load(f)
         with open(hourlyRET, 'rb') as f: 
             s, t, hRET = pickle.load(f)
+
+        # Watts/m2 to kW hr/m2
+
+        solar = [s * 0.024 for s in solar]
 
         with open(evapstations, 'rb') as f: evaporations = pickle.load(f)
 

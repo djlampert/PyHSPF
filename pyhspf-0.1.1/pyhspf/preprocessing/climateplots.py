@@ -329,7 +329,7 @@ def plot_nsrdb(station, start, end, show = False, output = None,
 
     sub.set_title('Average Daily Solar Radition, {}'.format(station.station))
     sub.set_xlabel('Time')
-    sub.set_ylabel('Solar Radiation (kW hr/m\u00B2)')
+    sub.set_ylabel('Solar Radiation (kW hr/m\u00B2/day)')
 
     for dataset, l, c in zip([station.observed, station.suny, 
                               station.metstat, station.legacy],
@@ -914,7 +914,8 @@ def plot_solar(solarfile, HUC8, year, output = None, verbose = False):
     #pyplot.close()
 
 def plot_dailyET(HUC8, start, end, ET, evaporations, tmin, tmax, dewpoint, 
-                  wind, solar, output = None, show = False, verbose = True):
+                 wind, solar, axsize = 11, output = None, show = False, 
+                 verbose = True):
 
     if verbose: print('plotting daily potential evapotranspiration for ' +
                       '{}\n'.format(HUC8))
@@ -951,7 +952,7 @@ def plot_dailyET(HUC8, start, end, ET, evaporations, tmin, tmax, dewpoint,
                           markerfacecolor = 'None', markersize = 3, label = k)
     subs[i].plot_date(times, ET, fmt = '-', color = 'green', lw = 1.,
                       label = 'potential evapotranspiration')
-    subs[i].set_ylabel('Evaporation (mm)')
+    subs[i].set_ylabel('Evaporation (mm)', size = axsize)
     subs[i].yaxis.set_major_locator(MaxNLocator(10))
     subs[i].legend(fontsize = 8, loc = 'lower left')
 
@@ -965,7 +966,7 @@ def plot_dailyET(HUC8, start, end, ET, evaporations, tmin, tmax, dewpoint,
                       label = 'min temperature')
     subs[i].plot_date(times, dewpoint, fmt = '-', color = 'green', lw = 0.5, 
                       label = 'dewpoint')
-    subs[i].set_ylabel('Temperature (\u00B0C)')
+    subs[i].set_ylabel('Temperature (\u00B0C)', size = axsize)
     subs[i].yaxis.set_major_locator(MaxNLocator(5))
     subs[i].legend(fontsize = 8, loc = 'lower left')
 
@@ -975,7 +976,7 @@ def plot_dailyET(HUC8, start, end, ET, evaporations, tmin, tmax, dewpoint,
 
     subs[i].plot_date(times, wind, fmt = '-', color = 'pink', lw = 0.5, 
                       label = 'wind')
-    subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'pink', 
+    subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'pink', size = axsize,
                        multialignment = 'center')
     subs[i].yaxis.set_major_locator(MaxNLocator(5))
 
@@ -985,8 +986,8 @@ def plot_dailyET(HUC8, start, end, ET, evaporations, tmin, tmax, dewpoint,
 
     subs[i].plot_date(times, solar, fmt = '-', color = 'orange', lw = 0.5,
                       label = 'solar')
-    subs[i].set_ylabel('Solar Radiation\n(kW hr/m\u00B2)', color = 'orange',
-                       multialignment = 'center')
+    subs[i].set_ylabel('Solar Radiation\n(kW hr/m\u00B2/day)', color = 'orange',
+                       multialignment = 'center', size = axsize)
     subs[i].yaxis.set_major_locator(MaxNLocator(5))
 
     pyplot.tight_layout()
@@ -995,7 +996,7 @@ def plot_dailyET(HUC8, start, end, ET, evaporations, tmin, tmax, dewpoint,
     if show: pyplot.show()
 
 def plot_dayofyearET(HUC8, start, end, evaporations, ETs, tmin, tmax, dewpoint,
-                      wind, solar, labels = None, fill = False,
+                     wind, solar, labels = None, fill = False, axsize = 11,
                      output = None, show = False):
     """Plots the day of the water year estimates of ET from the Penman 
     Model."""
@@ -1061,7 +1062,7 @@ def plot_dayofyearET(HUC8, start, end, evaporations, ETs, tmin, tmax, dewpoint,
         if fill:
             subs[i].fill_between(times, 0, ET, color = c, alpha = 0.3)
 
-    subs[i].set_ylabel('Evaporation (mm)')
+    subs[i].set_ylabel('Evaporation (mm)', size = axsize)
     subs[i].legend(fontsize = 8, loc = 'upper left')
     t = ''.join(tots)
     subs[i].text(0.98, 0.99, t, ha = 'right', va = 'top', 
@@ -1077,7 +1078,7 @@ def plot_dayofyearET(HUC8, start, end, evaporations, ETs, tmin, tmax, dewpoint,
                       label = 'min temperature')
     subs[i].plot_date(times, dewpoint, fmt = '-', color = 'green', lw = 0.5, 
                       label = 'dewpoint')
-    subs[i].set_ylabel('Temperature (\u00B0C)')
+    subs[i].set_ylabel('Temperature (\u00B0C)', size = axsize)
 
     subs[i].legend(fontsize = 8, loc = 'lower right')
 
@@ -1088,7 +1089,7 @@ def plot_dayofyearET(HUC8, start, end, evaporations, ETs, tmin, tmax, dewpoint,
     subs[i].plot_date(times, wind, fmt = '-', color = 'pink', lw = 0.5, 
                       label = 'wind')
     subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'pink', 
-                       multialignment = 'center')
+                       multialignment = 'center', size = axsize)
 
     # daily solar radiation
 
@@ -1096,8 +1097,8 @@ def plot_dayofyearET(HUC8, start, end, evaporations, ETs, tmin, tmax, dewpoint,
 
     subs[i].plot_date(times, solar, fmt = '-', color = 'orange', lw = 0.5,
                       label = 'solar')
-    subs[i].set_ylabel('Solar Radiation\n(kW hr/m\u00B2)', color = 'orange',
-                       multialignment = 'center')
+    subs[i].set_ylabel('Solar Radiation\n(kW hr/m\u00B2/day)', color = 'orange',
+                       multialignment = 'center', size = axsize)
 
     # ticks
 
@@ -1110,7 +1111,7 @@ def plot_dayofyearET(HUC8, start, end, evaporations, ETs, tmin, tmax, dewpoint,
     labels = [t.get_text() for t in subs[-1].get_xticklabels()]
     labels = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar',
               'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
-    subs[-1].set_xticklabels(labels)
+    subs[-1].set_xticklabels(labels, size = axsize)
 
     #pyplot.tight_layout()
     if output is not None: pyplot.savefig(output)
@@ -1119,7 +1120,8 @@ def plot_dayofyearET(HUC8, start, end, evaporations, ETs, tmin, tmax, dewpoint,
 
 def plot_hourlyET(HUC8, start, end, evaporations, hETs, temp, 
                   dewpoint, wind, solar, labels = None, colors = None, 
-                  fill = False, output = None, show = False, verbose = True):
+                  axsize = 11, fill = False, output = None, show = False, 
+                  verbose = True):
 
     if verbose: print('plotting hourly evapotranspiration\n')
 
@@ -1216,7 +1218,7 @@ def plot_hourlyET(HUC8, start, end, evaporations, hETs, temp,
             tot = sum([e for e in evaporation if e is not None])
             tots.append('\n{}: {:4.0f} mm'.format(k, tot))
 
-    subs[i].set_ylabel('Evaporation\n(mm)', color = 'green', size = 10, 
+    subs[i].set_ylabel('Evaporation\n(mm)', color = 'green', size = axsize, 
                        multialignment = 'center')
     subs[i].legend(fontsize = 8, loc = 'upper left')
     t = ''.join(tots)
@@ -1232,7 +1234,7 @@ def plot_hourlyET(HUC8, start, end, evaporations, hETs, temp,
                       label = 'temperature')
     subs[i].plot_date(times, dewpoint, fmt = '-', color = 'green', lw = 0.5, 
                       label = 'dewpoint')
-    subs[i].set_ylabel('Temperature\n(\u00B0C)', size = 10, color = 'red',
+    subs[i].set_ylabel('Temperature\n(\u00B0C)', size = axsize, color = 'red',
                        multialignment = 'center')
     subs[i].tick_params(axis = 'y', colors = 'red', size = 9)
 
@@ -1245,7 +1247,7 @@ def plot_hourlyET(HUC8, start, end, evaporations, hETs, temp,
     subs[i].plot_date(times, wind, fmt = '-', color = 'pink', lw = 0.5, 
                       label = 'wind')
     subs[i].tick_params(axis = 'y', colors = 'pink', size = 9)
-    subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'pink', size = 10, 
+    subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'pink', size = axsize, 
                        multialignment = 'center')
 
     # daily solar radiation
@@ -1255,8 +1257,8 @@ def plot_hourlyET(HUC8, start, end, evaporations, hETs, temp,
     subs[i].plot_date(times, solar, fmt = '-', color = 'orange', lw = 0.5,
                       label = 'solar')
     subs[i].tick_params(axis = 'y', colors = 'orange', size = 9)
-    subs[i].set_ylabel('Solar Radiation\n(kW hr/m\u00B2)', color = 'orange',
-                       multialignment = 'center', size = 10)
+    subs[i].set_ylabel('Solar Radiation\n(kW hr/m\u00B2/day)', color = 'orange',
+                       multialignment = 'center', size = axsize)
 
     # ticks
 
