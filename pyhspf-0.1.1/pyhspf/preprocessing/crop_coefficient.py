@@ -155,19 +155,20 @@ def cropK_timeseries(crop, start, end, tstep = 'hourly'):
 
     return K
 
-def calculate_cropPET(directory, HUC8, start, end, hourly = True, 
-                      daily = False, plot = True):
+def calculate_cropPET(directory, HUC8, start, end, tstep = 'hourly', 
+                      output = None, evaporations = True, plot = True):
 
     #crops = ['Corn', 'Soybeans', 'Pasture', 'Fallow', 'Forest', 
     #         'Other grain', 'Alfalfa', 'Wetlands', 'Developed', 'Other']
     crops = ['cereals', 'legumes', 'alfalfa', 'fallow', 'pasture',
              'wetlands', 'others']
 
-    v = directory, HUC8
-    p = '{}/{}/watershedtimeseries'.format(*v)
+    if output is None: p = '{}/{}/watershedtimeseries'.format(directory, HUC8)
+    else:              p = output
+
     st, en = start.year, end.year
 
-    if daily:
+    if tstep == 'daily':
 
         # open the reference ET
 
@@ -181,7 +182,7 @@ def calculate_cropPET(directory, HUC8, start, end, hourly = True,
         PETs = [RET * np.array(cropK_timeseries(crop, st, en, tstep = 'daily'))
                 for crop in crops]
 
-        output = '{}/dailycropPET'.format(p)
+        plotfile = '{}/dailycropPET'.format(p)
 
         # make plot of the time series and day of year averages
 
@@ -196,9 +197,12 @@ def calculate_cropPET(directory, HUC8, start, end, hourly = True,
                 s, t, wind = pickle.load(f)
             with open('{}/dailysolar'.format(p), 'rb') as f: 
                 s, t, solar = pickle.load(f)
-            v = directory, HUC8
-            with open('{}/{}/evaporations/evaporation'.format(*v), 'rb') as f: 
-                evaporations = pickle.load(f)
+            
+            if evaporations:
+                v = directory, HUC8
+                evapfile = '{}/{}/evaporations/evaporation'.format(*v)
+                with open(evapfile, 'rb') as f: evaporations = pickle.load(f)
+            else: evaporations = {}
 
             # Watts/m2 to kW hr/m2
 
@@ -206,9 +210,9 @@ def calculate_cropPET(directory, HUC8, start, end, hourly = True,
 
             plot_dayofyearET(HUC8, start, end, evaporations, PETs, tmin, tmax, 
                              dewpoint, wind, solar, labels = crops, 
-                             output = output)
+                             output = plotfile)
 
-    if hourly:
+    elif tstep == 'hourly':
 
         hourlyRET = '{}/hourlyRET'.format(p)
         with open(hourlyRET, 'rb') as f: s, t, RET = pickle.load(f)
@@ -226,7 +230,6 @@ def calculate_cropPET(directory, HUC8, start, end, hourly = True,
         if plot:
 
             PETs   = [PETs[crop][2] for crop in crops]
-            output = hourlyPETs
 
             with open('{}/hourlytemperature'.format(p), 'rb') as f: 
                 s, t, temp = pickle.load(f)
@@ -236,16 +239,23 @@ def calculate_cropPET(directory, HUC8, start, end, hourly = True,
                 s, t, dewpoint = pickle.load(f)
             with open('{}/wind'.format(p), 'rb') as f: 
                 s, t, wind = pickle.load(f)
-            v = directory, HUC8
-            with open('{}/{}/evaporations/evaporation'.format(*v), 'rb') as f: 
-                evaporations = pickle.load(f)
+
+            if evaporations:
+                v = directory, HUC8
+                evapfile = '{}/{}/evaporations/evaporation'.format(*v)
+                with open(evapfile, 'rb') as f: evaporations = pickle.load(f)
+            else: evaporations = {}
 
             # Watts/m2 to kW hr/m2
 
             solar = [s * 0.024 for s in solar]
 
             plot_hourlyET(HUC8, start, end, evaporations, PETs, temp, dewpoint, 
-                          wind, solar, labels = crops, output = output)
+                          wind, solar, labels = crops, output = hourlyPETs)
+
+    else: 
+        print('warning: unknown time step specified\n')
+        raise
 
 #directory = 'c:/hspf_data'
 #HUC8      = '07080106'

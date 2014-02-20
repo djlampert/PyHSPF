@@ -239,7 +239,7 @@ def calculate_landuse(directory, HUC8, years, codefile, overwrite = False,
 
             for y in years:
 
-                landfile = '{}/{}landuse'.format(d, year)
+                landfile = '{}/{}landuse'.format(d, y)
 
                 if os.path.isfile(landfile) and y > year:
                     with open(landfile, 'rb') as f: 
