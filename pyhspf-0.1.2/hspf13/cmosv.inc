@@ -1,0 +1,14 @@
+C    FROM CMOSV.COM
+C    AREA RESERVED FOR OSVS:
+C
+C     + + + PARAMETERS + + +
+      INCLUDE 'pmxosv.inc'
+C
+C     SPECIAL COMMON SCRTCH
+       COMMON/SCRTCH/ OSV
+       INTEGER        OSV(MAXOSV)
+C
+       INTEGER   ASVEC(2)
+       REAL      OSVR(MAXOSV)
+       EQUIVALENCE (OSV(1),OSVR(1)),(OSV(1),ASVEC(1))
+C    END: BYTE 72000
