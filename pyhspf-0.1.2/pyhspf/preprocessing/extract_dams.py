@@ -27,7 +27,14 @@ def extract_dams(directory, damfile, HUC8, output, verbose = True):
     if verbose: print('reading the dam file\n')
 
     sf         = Reader(damfile, shapeType = 1)
-    damrecords = sf.records()
+
+    # work around for issues with pyshp
+
+    damrecords   = []
+    for i in range(len(sf.shapes())):
+        try: damrecords.append(sf.record(i))
+        except: damrecords.append([-100 for i in range(len(sf.fields))])
+
 
     name_index  = sf.fields.index(['DAM_NAME',   'C', 65,   0]) - 1
     nid_index   = sf.fields.index(['NIDID',      'C', 7,    0]) - 1

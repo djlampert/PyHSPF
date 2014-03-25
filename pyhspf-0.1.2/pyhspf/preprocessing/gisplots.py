@@ -615,8 +615,9 @@ def plot_gage_subbasin(directory, HUC8, gage, hspfmodel, title = None,
 
 def plot_watershed(directory, HUC8, raster = None, catchments = True, 
                    flowlines = True, outlets = False, gages = 'all',
-                   dams = False, title = None, grid = False, patchcolor = None, 
-                   output = None, show = False, verbose = True):
+                   dams = False, title = None, legend = True, grid = False, 
+                   patchcolor = None, output = None, show = False, 
+                   verbose = True):
     """Makes a plot of all the flowlines and catchments of a basin on top of a
     raster image file."""
 
@@ -633,9 +634,6 @@ def plot_watershed(directory, HUC8, raster = None, catchments = True,
     outletfile = directory + '/%s/%ssubbasin_outlets'   % (HUC8, HUC8)
     inletfile  = directory + '/%s/%ssubbasin_inlets'    % (HUC8, HUC8)
     gagefile   = directory + '/%s/%sgagestations'       % (HUC8, HUC8)
-
-    #if output is None: 
-    #    output = directory + '/%s/%sdelineated' % (HUC8, HUC8)
 
     if raster == 'elevation':
         raster_file = dem
@@ -811,6 +809,12 @@ def plot_watershed(directory, HUC8, raster = None, catchments = True,
 
             subplot.plot(flowline[:, 0], flowline[:, 1], 'b', lw = w)
 
+        if legend:
+
+            avg_width = sum(widths) / len(widths)
+            subplot.plot([-200, -199], [-200, -199], 'b', lw = 5 * avg_width,
+                         label = 'flowlines')
+
     if outlets:
 
         f = Reader(outletfile, shapeType = 1)
@@ -821,7 +825,8 @@ def plot_watershed(directory, HUC8, raster = None, catchments = True,
         flows = [r[flow_index] for r in outlet_records]
         outlet_points = [o.points[0] for o in outlet_shapes]
         x1, y1 = zip(*outlet_points)
-        subplot.scatter(x1, y1, marker = 'o', c = 'r', s = 30)
+        subplot.scatter(x1, y1, marker = 'o', c = 'r', s = 30, 
+                        label = 'outlets')
 
         if os.path.isfile(inletfile + '.shp'): 
             f = Reader(inletfile, shapeType = 1)
@@ -839,7 +844,7 @@ def plot_watershed(directory, HUC8, raster = None, catchments = True,
         gage_points = [g.points[0] for g in gage_shapes]
 
         x1, y1 = zip(*gage_points)
-        subplot.scatter(x1, y1, marker = 'o', c = 'r', s = 30)
+        subplot.scatter(x1, y1, marker = 'o', c = 'r', s = 30, label = 'gauges')
 
     elif gages == 'calibration': # show gages used for calibration
 
@@ -868,7 +873,7 @@ def plot_watershed(directory, HUC8, raster = None, catchments = True,
                 gage_points.append(shape.points[0])
 
         x1, y1 = zip(*gage_points)
-        subplot.scatter(x1, y1, marker = 'o', c = 'r', s = 30)
+        subplot.scatter(x1, y1, marker = 'o', c = 'r', s = 30, label = 'gauges')
 
     if dams:  # show dams
 
@@ -890,7 +895,7 @@ def plot_watershed(directory, HUC8, raster = None, catchments = True,
                 dam_points.append(s.points[0])
 
         x1, y1 = zip(*dam_points)
-        subplot.scatter(x1, y1, marker = 's', c = 'y', s = 30)
+        subplot.scatter(x1, y1, marker = 's', c = 'y', s = 30, label = 'dams')
 
     subplot.set_xlabel('Longitude, Decimal Degrees', size = 13)
     subplot.set_ylabel('Latitude, Decimal Degrees',  size = 13)
@@ -927,6 +932,10 @@ def plot_watershed(directory, HUC8, raster = None, catchments = True,
 
         subplot.xaxis.grid(True, 'minor', linestyle = '-', linewidth = 0.5)
         subplot.yaxis.grid(True, 'minor', linestyle = '-', linewidth = 0.5)
+
+    if legend: 
+        leg = subplot.legend(loc = 'upper right')
+        leg.get_frame().set_alpha(0.)
 
     # show it
 

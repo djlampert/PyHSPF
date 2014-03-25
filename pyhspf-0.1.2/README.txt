@@ -1,4 +1,4 @@
-PyHSPF, Version 0.1.1
+PyHSPF, Version 0.1.2
 last updated: 03/23/2014
 Developed by David J. Lampert and May M. Wu, Argonne National Laboratory
 
