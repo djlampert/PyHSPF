@@ -55,6 +55,7 @@ class GHCNDStation:
             r = request.Request(f)
 
             try:
+            
                 with io.StringIO(request.urlopen(r).read().decode()) as s:
 
                     # parse it
@@ -66,6 +67,10 @@ class GHCNDStation:
                     self.add_monthly(year, month, element, values)
 
                 with open(destination, 'wb') as f: pickle.dump(self, f)
+
+            except PermissionError:
+                print('\nWarning: destination path appears invalid\n')
+                raise
 
             except:
                 print('warning: unable to download data from ' +
@@ -98,8 +103,11 @@ class GHCNDStation:
         dates = [datetime.datetime(int(year), int(month), i) 
                  for i in range(1, monthrange(int(year), int(month))[1] + 1)]
         values = [int(data[i:i+5]) for i in range(0, 248, 8)]
+        qflags = [data[i+6]        for i in range(0, 248, 8)]
 
-        for d, v in zip(dates, values): l.append((d, v / m))
+        for d, v, q in zip(dates, values, qflags): 
+            if   q != 'X': l.append((d, v / m))
+            else:          l.append((d, -9999))
 
 class GSODStation:
     """A class to store meteorology data from the Global Summary of the Day 
@@ -112,9 +120,6 @@ class GSODStation:
         self.airforce  = airforce   # Air Force Datsav3 Station Number
         self.wban      = wban       # Weather Bureau Air Force Navy Number
         self.name      = name       # Description
-        #self.country   = country
-        #self.state     = state
-        #self.call      = call
         self.latitude  = latitude
         self.longitude = longitude
         self.elevation = elevation

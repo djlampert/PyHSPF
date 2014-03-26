@@ -701,6 +701,11 @@ def plot_watershed(directory, HUC8, raster = None, catchments = True,
             points = np.array(catchment.points)
             subplot.add_patch(make_patch(points, facecolor, width = 0.06))
 
+        if legend:
+
+            subplot.plot([-200, -199], [-200, -199], 'black', lw = 0.2,
+                         label = 'catchments')
+
     else:
         s = Reader(sfile, shapeType = 5)
 
@@ -710,6 +715,11 @@ def plot_watershed(directory, HUC8, raster = None, catchments = True,
             shape = s.shape(i)
             points = np.array(shape.points)
             subplot.add_patch(make_patch(points, facecolor, width = 0.15))
+
+        if legend:
+
+            subplot.plot([-200, -199], [-200, -199], 'black', lw = 0.3,
+                         label = 'subbasins')
 
     # get the flowline attributes, make an "updown" dictionary to follow flow,
     # and change the keys to comids
@@ -764,6 +774,12 @@ def plot_watershed(directory, HUC8, raster = None, catchments = True,
 
             subplot.plot(flowline[:, 0], flowline[:, 1], 'b', lw = w)
 
+        if legend:
+
+            avg_width = sum(widths) / len(widths)
+            subplot.plot([-200, -199], [-200, -199], 'b', lw = 5 * avg_width,
+                         label = 'flowlines')
+
     else: # use the combined flowlines
 
         c = Reader(combined, shapeType = 3)
@@ -812,7 +828,7 @@ def plot_watershed(directory, HUC8, raster = None, catchments = True,
         if legend:
 
             avg_width = sum(widths) / len(widths)
-            subplot.plot([-200, -199], [-200, -199], 'b', lw = 5 * avg_width,
+            subplot.plot([-200, -199], [-200, -199], 'b', lw = 3 * avg_width,
                          label = 'flowlines')
 
     if outlets:
@@ -936,6 +952,8 @@ def plot_watershed(directory, HUC8, raster = None, catchments = True,
     if legend: 
         leg = subplot.legend(loc = 'upper right')
         leg.get_frame().set_alpha(0.)
+        legtext = leg.get_texts()
+        pyplot.setp(legtext, fontsize = 10)
 
     # show it
 
