@@ -8,7 +8,6 @@
 # model. Descriptions below.
 #
 
-from scipy             import stats
 from matplotlib        import pyplot
 from matplotlib.ticker import MaxNLocator
 from matplotlib.dates  import YearLocator, MonthLocator
@@ -1119,10 +1118,10 @@ def plot_dayofyearET(HUC8, start, end, evaporations, ETs, tmin, tmax, dewpoint,
 
     if show: pyplot.show()
 
-def plot_hourlyET(HUC8, start, end, evaporations, hETs, temp, dewpoint, wind, 
-                  solar, title = None, totals = True, labels = None, 
-                  colors = None, axsize = 11, fill = False, 
-                  output = None, show = False, verbose = True):
+def plot_hourlyET(HUC8, start, end, evaporations, hETs, temp, 
+                  dewpoint, wind, solar, labels = None, colors = None, 
+                  axsize = 11, fill = False, output = None, show = False, 
+                  verbose = True):
 
     if verbose: print('plotting hourly evapotranspiration\n')
 
@@ -1156,10 +1155,8 @@ def plot_hourlyET(HUC8, start, end, evaporations, hETs, temp, dewpoint, wind,
     subs += [pyplot.subplot2grid((6,1), (i,0), sharex = subs[0]) 
              for i in (3, 4, 5)]
 
-    if title is None:
-        v = HUC8, 'Evapotranspiration'
-        subs[0].set_title('{} {}'.format(*v), size = 14)
-    else: subs[0].set_title(title, size = 14)
+    v = HUC8, 'Evapotranspiration'
+    subs[0].set_title('{} {}'.format(*v), size = 14)
 
     # evaporation and potential evapotranspiration
 
@@ -1169,16 +1166,11 @@ def plot_hourlyET(HUC8, start, end, evaporations, hETs, temp, dewpoint, wind,
 
     if labels is None: labels = ['Penman Equation' for h in hETs]
 
-    if totals:
+    tots = ['\n{}: {:4.0f} mm'.format(l, sum(e)) for l, e in zip(labels, hETs)]
 
-        tots = ['\n{}: {:4.0f} mm'.format(l, sum(e)) 
-                for l, e in zip(labels, hETs)]
+    # snip the first break
 
-        # snip the first break
-
-        tots[0] = tots[0][1:]
-
-    else: tots = ['{} Annual Total: {:4.0f} mm'.format(labels[0], sum(hETs[0]))]
+    tots[0] = tots[0][1:]
 
     # colors
 
@@ -1216,48 +1208,22 @@ def plot_hourlyET(HUC8, start, end, evaporations, hETs, temp, dewpoint, wind,
 
     fmts = ['s', '+', '*', 'o']
 
-    for item, fmt, color in zip(evaporations.items(), fmts, colors):
+    for item, fmt in zip(evaporations.items(), fmts):
         k, v = item
         evaporation = dayofyear(dates, v.make_timeseries(start, end))
         if len([e for e in evaporation if e is not None]) > 0:
             subs[i].plot_date(times, evaporation, fmt = fmt,
-                              markerfacecolor = 'None', markersize = 4,
-                              markeredgecolor = color,
+                              markerfacecolor = 'None', markersize = 3, 
                               label = k + ' evaporation')
-
-            if totals:
-                tot = sum([e for e in evaporation if e is not None])
-                tots.append('\n{}: {:4.0f} mm'.format(k, tot))
-
-            else:
-
-                # calculate the linear regression between April 1 and October 31
-                # for the reference ET versus the pan evaporation to see the 
-                # goodness of fit and estimate the pan coefficient
-
-                xs = [x for t, x in zip(times, evaporation) 
-                      if 3 < t.month and t.month < 11] 
-                ys = [y for t, y in zip(times, hETs[0]) 
-                      if 3 < t.month and t.month < 11] 
-
-                # get the linear regression
-
-                m, b, r, p, std_err = stats.linregress(xs, ys)
-            
-                # add it to the text box
-
-                its = k, m, b, r**2
-                t = '\n{0}: y={1:.2f}x+{2:1.2f}; r\u00B2={3:.2f}'.format(*its)
-                tots.append(t)
+            tot = sum([e for e in evaporation if e is not None])
+            tots.append('\n{}: {:4.0f} mm'.format(k, tot))
 
     subs[i].set_ylabel('Evaporation\n(mm)', color = 'green', size = axsize, 
                        multialignment = 'center')
     subs[i].legend(fontsize = 8, loc = 'upper left')
-
     t = ''.join(tots)
     subs[i].text(0.98, 0.99, t, ha = 'right', va = 'top', 
                  transform = subs[i].transAxes, size = 8)
-
     subs[i].tick_params(axis = 'y', colors = 'green', size = 9)
 
     # temperature and dewpoint
@@ -1283,7 +1249,6 @@ def plot_hourlyET(HUC8, start, end, evaporations, hETs, temp, dewpoint, wind,
     subs[i].tick_params(axis = 'y', colors = 'pink', size = 9)
     subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'pink', size = axsize, 
                        multialignment = 'center')
-    subs[i].set_ylim([0, subs[i].get_ylim()[1]])
 
     # daily solar radiation
 
@@ -1294,7 +1259,6 @@ def plot_hourlyET(HUC8, start, end, evaporations, hETs, temp, dewpoint, wind,
     subs[i].tick_params(axis = 'y', colors = 'orange', size = 9)
     subs[i].set_ylabel('Solar Radiation\n(kW hr/m\u00B2/day)', color = 'orange',
                        multialignment = 'center', size = axsize)
-    subs[i].set_ylim([0, subs[i].get_ylim()[1]])
 
     # ticks
 
