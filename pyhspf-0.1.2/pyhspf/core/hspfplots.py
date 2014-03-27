@@ -1015,7 +1015,8 @@ def plot_calibration(HUC8, simulated_daily, observed_daily, simulated_monthly,
     pyplot.close()
 
 def plot_dayofyear(HUC8, precipitation, potentialET, simulated_flow, 
-                   simulated_evap, observed_flow = None, lw = 1,
+                   simulated_evap, observed_flow = None, prec_bars = True,
+                   flow_bars = True, evap_bars = True, lw = 1, title = None,
                    labelsize = 12, ticksize = 10, output = None, show = False):
     """Plots the day of the water year estimates of precipitation, 
     evapotranspiration, and runoff for the model."""
@@ -1063,9 +1064,11 @@ def plot_dayofyear(HUC8, precipitation, potentialET, simulated_flow,
              pyplot.subplot2grid((8,1), (5,0), rowspan = 2, sharex = subs[0])
              ]
 
-    v = HUC8, start.year, end.year
-    subs[0].set_title('{} Average Daily Hydrograph {}-{}'.format(*v), 
-                      size = 14)
+    if title is None:
+        v = HUC8, start.year, end.year
+        subs[0].set_title('{} Average Daily Hydrograph {}-{}'.format(*v), 
+                          size = 14)
+    else: subs[0].set_title(title)
 
     # precipitation
 
@@ -1078,13 +1081,14 @@ def plot_dayofyear(HUC8, precipitation, potentialET, simulated_flow,
 
     # add an error band
 
-    minprec = [s if e is None else s - e
-               for s, e in zip(precipitation, prec_range)]
-    maxprec = [s if e is None else s + e 
-               for s, e in zip(precipitation, prec_range)]
+    if prec_bars:
+        minprec = [s if e is None else s - e
+                   for s, e in zip(precipitation, prec_range)]
+        maxprec = [s if e is None else s + e 
+                   for s, e in zip(precipitation, prec_range)]
 
-    subs[0].fill_between(times, minprec, maxprec, color = prec_color, 
-                         alpha = 0.2)
+        subs[0].fill_between(times, minprec, maxprec, color = prec_color, 
+                             alpha = 0.2)
 
     # observed and simulated flow
 
@@ -1099,13 +1103,14 @@ def plot_dayofyear(HUC8, precipitation, potentialET, simulated_flow,
 
     # add an error band
 
-    minflow = [s if e is None else s - e
-               for s, e in zip(simulated_flow, flow_range)]
-    maxflow = [s if e is None else s + e 
-               for s, e in zip(simulated_flow, flow_range)]
+    if flow_bars:
+        minflow = [s if e is None else s - e
+                   for s, e in zip(simulated_flow, flow_range)]
+        maxflow = [s if e is None else s + e 
+                   for s, e in zip(simulated_flow, flow_range)]
 
-    subs[1].fill_between(times, minflow, maxflow, color = flow_color, 
-                         alpha = 0.2)
+        subs[1].fill_between(times, minflow, maxflow, color = flow_color, 
+                             alpha = 0.2)
 
     subs[1].set_ylabel('Runoff\n(mm)', color = 'red', multialignment = 'center',
                        size = labelsize,)
@@ -1131,13 +1136,14 @@ def plot_dayofyear(HUC8, precipitation, potentialET, simulated_flow,
 
     # add an error band
 
-    minevap = [s if e is None else s - e
-               for s, e in zip(simulated_evap, evap_range)]
-    maxevap = [s if e is None else s + e 
-               for s, e in zip(simulated_evap, evap_range)]
+    if evap_bars:
+        minevap = [s if e is None else s - e
+                   for s, e in zip(simulated_evap, evap_range)]
+        maxevap = [s if e is None else s + e 
+                   for s, e in zip(simulated_evap, evap_range)]
 
-    subs[2].fill_between(times, minevap, maxevap, color = evap_color, 
-                         alpha = 0.2)
+        subs[2].fill_between(times, minevap, maxevap, color = evap_color, 
+                             alpha = 0.2)
 
     # axis limits
 
@@ -1147,28 +1153,6 @@ def plot_dayofyear(HUC8, precipitation, potentialET, simulated_flow,
     subs[1].set_ylim([0, ma])
     mi, ma = subs[2].get_ylim()
     subs[2].set_ylim([0, ma])
-
-    # hack way to append the legend using a dummy box to make patches
-
-    dummybox = [[0.00001,   -0.00001], 
-                [0.00001,  -0.000011], 
-                [0.000011, -0.000011], 
-                [0.000011, -0.00001], 
-                [0.00001,  -0.00001],
-                ]
-
-    subs[0].add_patch(make_patch(dummybox, facecolor = flow_color, alpha = 0.2,
-                                 label = '95% CI band'))
-
-    hs, ls = zip(*chain(zip(*subs[0].get_legend_handles_labels()),
-                        zip(*subs[1].get_legend_handles_labels()),
-                        zip(*subs[2].get_legend_handles_labels())
-                        )
-                  )
-
-    leg = subs[2].legend(hs, ls, loc = 'upper center', fontsize = ticksize,
-                         ncol = math.ceil(len(hs)/2),
-                         bbox_to_anchor = (0.5, -0.36))
 
     # ticks
 
@@ -1188,6 +1172,38 @@ def plot_dayofyear(HUC8, precipitation, potentialET, simulated_flow,
     labels = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar',
               'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
     subs[-1].set_xticklabels(labels)
+
+    # hack way to append the legend using a dummy box to make patches
+
+    dummybox = [[0.00001,   -0.00001], 
+                [0.00001,  -0.000011], 
+                [0.000011, -0.000011], 
+                [0.000011, -0.00001], 
+                [0.00001,  -0.00001],
+                ]
+
+    if prec_bars:
+        subs[0].add_patch(make_patch(dummybox, facecolor = prec_color, 
+                                     alpha = 0.2, label = '95% CI band'))
+
+    if flow_bars:
+        subs[0].add_patch(make_patch(dummybox, facecolor = flow_color, 
+                                     alpha = 0.2, label = '95% CI band'))
+
+    if evap_bars:
+        subs[0].add_patch(make_patch(dummybox, facecolor = evap_color, 
+                                     alpha = 0.2, label = '95% CI band'))
+
+    hs, ls = zip(*chain(zip(*subs[0].get_legend_handles_labels()),
+                        zip(*subs[1].get_legend_handles_labels()),
+                        zip(*subs[2].get_legend_handles_labels())
+                        )
+                  )
+
+    leg = subs[2].legend(hs, ls, loc = 'upper center', fontsize = ticksize,
+                         ncol = math.ceil(len(hs)/2),
+                         bbox_to_anchor = (0.5, -0.36))
+
 
     # finish up
 

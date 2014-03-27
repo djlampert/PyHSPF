@@ -2783,7 +2783,8 @@ class Postprocessor:
                         observed_flow = oflow, tstep = tstep, output = output,
                         units = self.hspfmodel.units, show = show)
 
-    def plot_dayofyear(self, comid = None, upcomids = [], tstep = 'daily', 
+    def plot_dayofyear(self, comid = None, upcomids = [], prec_bars = True,
+                       flow_bars = True, evap_bars = True, title = None,
                        output = None, show = True):
         """Makes a day of year plot for the hydrology."""
 
@@ -2791,9 +2792,12 @@ class Postprocessor:
 
         if comid is None: comid = self.comid
 
-        prec  = self.get_precipitation(comid, upcomids = upcomids,tstep = tstep)
-        pet   = self.get_pet(comid = comid, upcomids = upcomids, tstep = tstep)
-        evap  = self.get_evaporation(comid, upcomids = upcomids, tstep = tstep)
+        prec  = self.get_precipitation(comid, upcomids = upcomids,
+                                       tstep = 'daily')
+        pet   = self.get_pet(comid = comid, upcomids = upcomids, 
+                             tstep = 'daily')
+        evap  = self.get_evaporation(comid, upcomids = upcomids, 
+                                     tstep = 'daily')
 
         # get runoff area (km2)
 
@@ -2807,20 +2811,23 @@ class Postprocessor:
 
         # get the observed flows
 
-        t, oflow = self.get_obs_flow(tstep = tstep)
+        t, oflow = self.get_obs_flow(tstep = 'daily')
 
         oflow = t, [f * 86400 / conv / area for f in oflow]
         
         # simulated runoff
 
-        times, vols = self.get_reach_timeseries('ROVOL', comid,tstep = 'hourly')
+        times, vols = self.get_reach_timeseries('ROVOL', comid,
+                                                tstep = 'hourly')
 
         vols = self.aggregate_hourly_daily(vols)
 
         sflow = t, [v * conv / area for v in vols]
 
         plot_dayofyear(self.hspfmodel.description, prec, pet, sflow, evap,
-                       observed_flow = oflow, output = output, show = show)
+                       observed_flow = oflow, prec_bars = prec_bars, 
+                       flow_bars = flow_bars, evap_bars = evap_bars,
+                       title = title, output = output, show = show)
 
     def plot_waterbudget(self, comid = None, upcomids = [], limits = None,
                          tstep = 'monthly', dates = None, output = None, 
