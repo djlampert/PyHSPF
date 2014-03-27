@@ -928,18 +928,22 @@ def plot_calibration(HUC8, simulated_daily, observed_daily, simulated_monthly,
     observed_daily.sort()
     L = len(observed_daily)
     obs_daily_cdf = [norm.ppf(i / L) for i in range(L)]
+    obs_daily_cdf.reverse()
 
     simulated_daily.sort()
     L = len(simulated_daily)
     sim_daily_cdf = [norm.ppf(i / L) for i in range(L)]
+    sim_daily_cdf.reverse()
 
     observed_monthly.sort()
     L = len(observed_monthly) 
     obs_monthly_cdf = [norm.ppf(i / L) for i in range(L)]
+    obs_monthly_cdf.reverse()
 
     simulated_monthly.sort()
     L = len(simulated_monthly)
     sim_monthly_cdf = [norm.ppf(i / L) for i in range(L)]
+    sim_monthly_cdf.reverse()
 
     # tick marks (had to do this hack style for matplotlib)
 
@@ -964,7 +968,7 @@ def plot_calibration(HUC8, simulated_daily, observed_daily, simulated_monthly,
     ax5.plot(sim_daily_cdf, simulated_daily, '-', color = 'red',
              label = 'simulated daily')
 
-    ax5.legend(loc = 2, fontsize = ticksize)
+    ax5.legend(loc = 'upper right', fontsize = ticksize)
 
     # tick marks (had to do this hack style for matplotlib)
 
@@ -988,7 +992,7 @@ def plot_calibration(HUC8, simulated_daily, observed_daily, simulated_monthly,
     ax6.plot(sim_monthly_cdf, simulated_monthly, '-', color = 'red',
              label = 'simulated monthly')
 
-    ax6.legend(loc = 2, fontsize = ticksize)
+    ax6.legend(loc = 'upper right', fontsize = ticksize)
 
     # tick settings
 
