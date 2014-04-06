@@ -10,9 +10,9 @@ from scipy.io        import netcdf
 from dateutil        import tz
 from multiprocessing import Pool, cpu_count
 
-from nrcm import NRCMGrid
+from pyhspf.forecasting.nrcm import NRCMGrid
 
-class Extractor:
+class NetCDFExtractor:
     """
     A class to open and re-organize data from Nested Regional Climate
     Model netcdf files.

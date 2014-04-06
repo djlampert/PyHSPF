@@ -5,7 +5,7 @@ This is the __init__ file
 
 version = '0.1'
 
-__all__ = ['hydrologycalibrator', 'sedimentcalibrator', 'calibrate']
+__all__ = ['hydrologycalibrator', 'sedimentcalibrator', 'calibrate', 'validate']
 
 from pyhspf.calibration.hydrologycalibrator import HydrologyCalibrator
 from pyhspf.calibration.hydrologycalibrator import HydrologyParameters

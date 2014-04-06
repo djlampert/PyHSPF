@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 # hindcaster.py
-# Hindcaster class for HSPF model hincasting
+# Hindcaster class for HSPF model hindcasting
 # David J. Lampert
 # djlampert@gmail.com
 #
@@ -9,13 +9,14 @@
 
 import os, sys, shutil, pickle, datetime, time, math
 
-from pyhspf import HSPFModel
-from pyhspf import hspf
+from pyhspf.core                      import HSPFModel
+from pyhspf.core                      import Postprocessor
+from pyhspf                           import hspf
+from pyhspf.forecasting.forecastplots import plot_calibration
+from pyhspf.forecasting.forecastplots import plot_dayofyear
+from pyhspf.forecasting.forecastplots import plot_waterbudget
 
-from pyhspf.forecasting import Postprocessor
-from forecastplots import plot_calibration, plot_dayofyear, plot_waterbudget
-
-class Hindcaster:
+class Forecaster:
     """A class to perform hindcasts for HSPF models."""
 
     def __init__(self, temp = True, snow = True, hydrology = True):
@@ -88,9 +89,9 @@ class Hindcaster:
 
         elif upcomids is not None: self.upcomids += upcomids
 
-    def build_hspfmodel(self, directory, HUC8, run_dates, basemodel, 
-                        filename, landyear = 2001, 
-                        overwrite = False, verbose = True, vverbose = False):
+    def build_NRCM_hindcast(self, directory, HUC8, run_dates, basemodel, 
+                            filename = 'hindcast', overwrite = False, 
+                            verbose = True, vverbose = False):
         """Builds an instance of the HSPFModel class and the resulting HSPF UCI
         file based on a particular directory structure for each of the needed
         files."""
@@ -613,14 +614,6 @@ class Hindcaster:
         with open(self.basemodel, 'rb') as f: basemodel = pickle.load(f)
         with open(self.hindcast, 'rb') as f:  hindmodel = pickle.load(f)
 
-        # make plots of the calibration subbasin
-
-        #self.plot_gage_subbasin(hspfmodel, folder)
-
-        # make plots of the landuse segments
-
-        #self.plot_gage_landuse(hspfmodel, folder)
-
         # figure out the external targets needed
 
         targets = ['reach_outvolume', 'groundwater', 'water_state', 
@@ -633,17 +626,7 @@ class Hindcaster:
 
         self.set_hydrology(basemodel, self.run_dates, targets)
 
-        # calculate the errors and make a calibration report
-
-        #hindprocessor.get_hspexp_parameters(verbose = False)
-
         # plot everything and save to file
-
-        #output  = folder + '/monthlyhydrograph'
-        #self.plot_hydrograph(hindprocessor, output = output, show = False)
-
-        #output  = folder + '/waterbudgets'
-        #self.plot_allwaterbudgets(hindprocessor, output = output,show = False)
 
         output  = folder + '/calibration'
         self.plot_calibration(basemodel, hindmodel, output = output, 
@@ -653,18 +636,7 @@ class Hindcaster:
         self.plot_dayofyear(basemodel, hindmodel, output = output, 
                             show = False)
 
-        #output  = folder + '/averagewaterbudget'
-        #self.plot_waterbudget(hindprocessor, baseprocessor, output = output, 
-        #                      show = False)
-
-        # get the outlet outflow volume time series
-
-        #outlet = self.get_outletflows(hspfmodel)
-
-        # save the hspfmodel, base values, errors, parameters, and effluent
-
         with open(folder + '/hspfmodel',  'wb') as f: pickle.dump(hindmodel, f)
-        #with open(folder + '/outletflows', 'wb') as f: pickle.dump(outlet, f)
 
     def plot_gage_subbasin(self, hspfmodel, folder):
         """Makes a plot of the subbasin area."""

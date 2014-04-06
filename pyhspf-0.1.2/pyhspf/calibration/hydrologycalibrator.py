@@ -202,12 +202,7 @@ class HydrologyCalibrator:
 
         v = directory, HUC8
 
-        watershed  = '{}/{}/watershed'.format(*v)
-        precipfile = '{}/{}/precipitations/precipitation'.format(*v)
-        evapfile   = '{}/{}/watershedtimeseries/hourlyPET'.format(*v)
-        tempfile   = '{}/{}/temperatures/temperature'.format(*v)
-        dewfile    = '{}/{}/dewpoint/dewpoint'.format(*v)
-
+        watershed     = '{}/{}/watershed'.format(*v)
         hspfdirectory = '{}/{}/hspf'.format(*v)
         if not os.path.isdir(hspfdirectory): os.mkdir(hspfdirectory)
 

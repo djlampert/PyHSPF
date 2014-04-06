@@ -182,9 +182,9 @@ def plot_ghcnd(station, start = None, end = None, show = False, output = None,
                  end - datetime.timedelta(days = 1), end]
         wind = [0, None, None, 1]
 
-    subs[i].plot_date(times, wind, fmt = '-', color = 'pink', lw = 0.5, 
+    subs[i].plot_date(times, wind, fmt = '-', color = 'purple', lw = 0.5, 
                       label = 'wind')
-    subs[i].set_ylabel('Wind Speed (m/s)', color = 'pink')
+    subs[i].set_ylabel('Wind Speed (m/s)', color = 'purple')
 
     i = 3
     
@@ -311,9 +311,9 @@ def plot_gsod(station, start = None, end = None, show = False, output = None,
                  end - datetime.timedelta(days = 1), end]
         wind = [0, None, None, 1]
 
-    subs[i].plot_date(times, wind, fmt = '-', color = 'pink', lw = 0.5, 
+    subs[i].plot_date(times, wind, fmt = '-', color = 'purple', lw = 0.5, 
                       label = 'wind')
-    subs[i].set_ylabel('Wind Speed (m/s)', color = 'pink')
+    subs[i].set_ylabel('Wind Speed (m/s)', color = 'purple')
 
     if output is not None: pyplot.savefig(output)
 
@@ -764,7 +764,7 @@ def plot_wind(windfile, HUC8, year, output = None, verbose = False):
         else: dates = [start_date + i * datetime.timedelta(days = 1)
                        for i in range(len(values))]
 
-        subs[i].plot_date(dates, values, color = 'pink', fmt = '-',
+        subs[i].plot_date(dates, values, color = 'purple', fmt = '-',
                           label = 'wind')
         subs[i].set_ylabel('Wind Speed (m/s)')
         subs[i].yaxis.set_major_locator(MaxNLocator(4))
@@ -975,9 +975,9 @@ def plot_dailyET(HUC8, start, end, ET, evaporations, tmin, tmax, dewpoint,
 
     i = 2
 
-    subs[i].plot_date(times, wind, fmt = '-', color = 'pink', lw = 0.5, 
+    subs[i].plot_date(times, wind, fmt = '-', color = 'purple', lw = 0.5, 
                       label = 'wind')
-    subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'pink', size = axsize,
+    subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'purple', size = axsize,
                        multialignment = 'center')
     subs[i].yaxis.set_major_locator(MaxNLocator(5))
 
@@ -1087,9 +1087,9 @@ def plot_dayofyearET(HUC8, start, end, evaporations, ETs, tmin, tmax, dewpoint,
 
     i = 2
 
-    subs[i].plot_date(times, wind, fmt = '-', color = 'pink', lw = 0.5, 
+    subs[i].plot_date(times, wind, fmt = '-', color = 'purple', lw = 0.5, 
                       label = 'wind')
-    subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'pink', 
+    subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'purple', 
                        multialignment = 'center', size = axsize)
 
     # daily solar radiation
@@ -1278,10 +1278,10 @@ def plot_hourlyET(HUC8, start, end, evaporations, hETs, temp, dewpoint, wind,
 
     i = 2
 
-    subs[i].plot_date(times, wind, fmt = '-', color = 'pink', lw = 0.5, 
+    subs[i].plot_date(times, wind, fmt = '-', color = 'purple', lw = 0.5, 
                       label = 'wind')
-    subs[i].tick_params(axis = 'y', colors = 'pink', size = 9)
-    subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'pink', size = axsize, 
+    subs[i].tick_params(axis = 'y', colors = 'purple', size = 9)
+    subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'purple', size = axsize, 
                        multialignment = 'center')
     subs[i].set_ylim([0, subs[i].get_ylim()[1]])
 

@@ -196,9 +196,9 @@ def plot_dailyET(HUC8, start, end, ET, evaporations, tmin, tmax, dewpoint,
 
     i = 2
 
-    subs[i].plot_date(times, wind, fmt = '-', color = 'pink', lw = 0.5, 
+    subs[i].plot_date(times, wind, fmt = '-', color = 'purple', lw = 0.5, 
                       label = 'wind')
-    subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'pink', size = axsize,
+    subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'purple', size = axsize,
                        multialignment = 'center')
     subs[i].yaxis.set_major_locator(ticker.MaxNLocator(5))
 
@@ -308,9 +308,9 @@ def plot_dayofyearET(HUC8, start, end, evaporations, ETs, tmin, tmax, dewpoint,
 
     i = 2
 
-    subs[i].plot_date(times, wind, fmt = '-', color = 'pink', lw = 0.5, 
+    subs[i].plot_date(times, wind, fmt = '-', color = 'purple', lw = 0.5, 
                       label = 'wind')
-    subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'pink', 
+    subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'purple', 
                        multialignment = 'center', size = axsize)
 
     # daily solar radiation
@@ -335,7 +335,6 @@ def plot_dayofyearET(HUC8, start, end, evaporations, ETs, tmin, tmax, dewpoint,
               'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
     subs[-1].set_xticklabels(labels, size = axsize)
 
-    #pyplot.tight_layout()
     if output is not None: pyplot.savefig(output)
 
     if show: pyplot.show()
@@ -466,10 +465,10 @@ def plot_hourlyET(HUC8, start, end, evaporations, hETs, temp,
 
     i = 2
 
-    subs[i].plot_date(times, wind, fmt = '-', color = 'pink', lw = 0.5, 
+    subs[i].plot_date(times, wind, fmt = '-', color = 'purple', lw = 0.5, 
                       label = 'wind')
-    subs[i].tick_params(axis = 'y', colors = 'pink', size = 9)
-    subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'pink', size = axsize, 
+    subs[i].tick_params(axis = 'y', colors = 'purple', size = 9)
+    subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'purple', size = axsize, 
                        multialignment = 'center')
 
     # daily solar radiation
@@ -530,26 +529,32 @@ def plot_calibration(HUC8, start, end,
     obs_daily.sort()
     L = len(obs_daily)
     obs_daily_cdf = [norm.ppf(i / L) for i in range(L)]
+    obs_daily_cdf.reverse()
 
     base_daily.sort()
     L = len(base_daily)
     base_daily_cdf = [norm.ppf(i / L) for i in range(L)]
+    base_daily_cdf.reverse()
 
     hind_daily.sort()
     L = len(hind_daily)
     hind_daily_cdf = [norm.ppf(i / L) for i in range(L)]
+    hind_daily_cdf.reverse()
 
     obs_monthly.sort()
     L = len(obs_monthly) 
     obs_monthly_cdf = [norm.ppf(i / L) for i in range(L)]
+    obs_monthly_cdf.reverse()
 
     base_monthly.sort()
     L = len(base_monthly)
     base_monthly_cdf = [norm.ppf(i / L) for i in range(L)]
+    base_monthly_cdf.reverse()
 
     hind_monthly.sort()
     L = len(hind_monthly)
     hind_monthly_cdf = [norm.ppf(i / L) for i in range(L)]
+    hind_monthly_cdf.reverse()
 
     # tick marks (had to do this hack style for matplotlib)
 
@@ -1050,3 +1055,180 @@ def plot_waterbudget(HUC8, precipitation, potential_evap, simulated_evap,
 
     pyplot.clf()
     pyplot.close()
+
+def plot_climates(htemp, stemp, hdewpoint, sdewpoint, hwind, swind, 
+                  hsolar, ssolar, hRET, sRET, start, end,
+                  colors = ['green', 'green'],
+                  labels = ['historical climate', 'simulated climate'],
+                  fmts = ['s', '-'],
+                  fill = False,
+                  output = 'simulated_climate',
+                  verbose = True,
+                  show = False,
+                  ):
+    
+    if verbose: print('plotting hourly evapotranspiration\n')
+
+    # figure out the average conditions for each day of the water year
+
+    dates = [start + datetime.timedelta(hours = 1) * i 
+             for i in range((end - start).days * 24)]
+
+    hsolar = dayofyear(dates, hsolar)
+    htemp  = dayofyear(dates, htemp)
+
+    hETs  = [[24 * p for p in dayofyear(dates, hRET)]]
+
+    ssolar = dayofyear(dates, ssolar)
+    stemp  = dayofyear(dates, stemp)
+
+    hETs.append([24 * p for p in dayofyear(dates, sRET)])
+
+    # these are daily values
+
+    dates = [start + datetime.timedelta(days = 1) * i 
+             for i in range((end - start).days)]
+
+    hdewpoint = dayofyear(dates, hdewpoint)
+    hwind     = dayofyear(dates, hwind)
+
+    sdewpoint = dayofyear(dates, sdewpoint)
+    swind     = dayofyear(dates, swind)
+
+    # day of year times (2004 is a leap year)
+
+    times = [datetime.datetime(2003, 10, 1) + datetime.timedelta(days = 1) * i 
+             for i in range(366)]
+
+    # make the plot
+
+    fig = pyplot.figure(figsize = (8,8))
+    
+    subs =  [pyplot.subplot2grid((5,1), (0,0), rowspan = 2)]
+    subs += [pyplot.subplot2grid((5,1), (i,0), sharex = subs[0]) 
+             for i in range(2,5)]
+
+    subs[0].set_title('Simulated Versus Observed Climate Variables', size = 14)
+
+    # evaporation and potential evapotranspiration
+
+    i = 0
+
+    # total annual evaporation
+
+    if labels is None: labels = ['Penman Equation' for h in hETs]
+
+    tots = ['\n{}: {:4.0f} mm'.format(l, sum(e)) for l, e in zip(labels, hETs)]
+
+    # snip the first break
+
+    tots[0] = tots[0][1:]
+
+    msize = 3
+    for hET, c, l, fmt in zip(hETs, colors, labels, fmts):
+        
+        if fmt == 's':
+            subs[i].plot_date(times, hET, markeredgecolor = c, 
+                              markerfacecolor = 'None', markersize = msize,
+                              fmt = fmt, label = l)
+        else:
+            subs[i].plot_date(times, hET, color = c, lw = 1., fmt = fmt, 
+                              label = l)
+        if fill:
+            subs[i].fill_between(times, 0, hET, color = c, alpha = 0.3)
+
+    evapfmts = ['s', '+', '*', 'o']
+
+    #for item, fmt in zip(evaporations.items(), evapfmts):
+    #    k, v = item
+    #    evaporation = dayofyear(dates, v.make_timeseries(start, end))
+    #    if len([e for e in evaporation if e is not None]) > 0:
+    #        subs[i].plot_date(times, evaporation, fmt = fmt,
+    #                          markerfacecolor = 'None', markersize = 3, 
+    #                          label = k + ' evaporation')
+    #        tot = sum([e for e in evaporation if e is not None])
+    #        tots.append('\n{}: {:4.0f} mm'.format(k, tot))
+
+    subs[i].set_ylabel('Evaporation\n(mm)', color = 'green', size = 10, 
+                       multialignment = 'center')
+    subs[i].legend(fontsize = 8, loc = 'upper left')
+    t = ''.join(tots)
+
+    add_tots = False
+    if add_tots:
+        subs[i].text(0.98, 0.99, t, ha = 'right', va = 'top', 
+                     transform = subs[i].transAxes, size = 8)
+
+    subs[i].tick_params(axis = 'y', colors = 'green', size = 9)
+
+    # temperature and dewpoint
+
+    i = 1
+
+    subs[i].plot_date(times, htemp, fmt = 's', markeredgecolor = 'red', 
+                      markerfacecolor = 'None', markersize = msize, 
+                      markeredgewidth = 0.2, label = 'historical temperature')
+    subs[i].plot_date(times, stemp, fmt = '-', color = 'red', lw = 1, 
+                      label = 'simulated temperature')
+    subs[i].plot_date(times, hdewpoint, fmt = 's', markeredgecolor = 'green', 
+                      markerfacecolor = 'None', markersize = msize, 
+                      markeredgewidth = 0.2, label = 'historical dewpoint')
+    subs[i].plot_date(times, sdewpoint, fmt = '-', color = 'green', lw = 1, 
+                      label = 'simulated dewpoint')
+    subs[i].set_ylabel('Temperature\n(\u00B0C)', size = 10, color = 'red',
+                       multialignment = 'center')
+    subs[i].tick_params(axis = 'y', colors = 'red', size = 9)
+    subs[i].yaxis.set_major_locator(ticker.MaxNLocator(5))
+
+    subs[i].legend(fontsize = 8, loc = 'lower right')
+
+    # average daily wind speed
+
+    i = 2
+
+    subs[i].plot_date(times, hwind, fmt = 's', markeredgecolor = 'purple', 
+                      markerfacecolor = 'None', markersize = msize,
+                      label = 'historical wind')
+    subs[i].plot_date(times, swind, fmt = '-', color = 'purple', lw = 1, 
+                      label = 'simulated wind')
+    subs[i].tick_params(axis = 'y', colors = 'purple', size = 9)
+    subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'purple', size = 10, 
+                       multialignment = 'center')
+    subs[i].set_ylim([0, subs[i].get_ylim()[1]])
+    subs[i].yaxis.set_major_locator(ticker.MaxNLocator(6))
+    subs[i].legend(fontsize = 8, loc = 'lower right')
+
+    # daily solar radiation
+
+    i = 3
+
+    subs[i].plot_date(times, hsolar, fmt = 's', markeredgecolor = 'orange', 
+                      markerfacecolor = 'None', markersize = msize,
+                      label = 'historical solar')
+    subs[i].plot_date(times, ssolar, fmt = '-', color = 'orange', lw = 1,
+                      label = 'simulated solar')
+    subs[i].tick_params(axis = 'y', colors = 'orange', size = 9)
+    subs[i].set_ylabel('Solar Radiation\n(kW hr/m\u00B2)', color = 'orange',
+                       multialignment = 'center', size = 10)
+    subs[i].set_ylim([0, subs[i].get_ylim()[1]])
+    subs[i].legend(fontsize = 8, loc = 'lower right')
+    subs[i].yaxis.set_major_locator(ticker.MaxNLocator(5))
+
+    # ticks
+
+    for sub in subs[:-1]: 
+        for t in sub.xaxis.get_ticklabels(): t.set_visible(False)
+
+    subs[-1].set_xlabel('Water Year')
+    subs[-1].xaxis.set_major_locator(MonthLocator())
+    for s in subs[1:]: 
+        for t in s.yaxis.get_ticklabels(): t.set_fontsize(9)
+    labels = [t.get_text() for  t in subs[-1].get_xticklabels()]
+    labels = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar',
+              'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
+    subs[-1].set_xticklabels(labels, size = 9)
+
+    pyplot.tight_layout()
+    if output is not None: pyplot.savefig(output)
+
+    if show: pyplot.show()
