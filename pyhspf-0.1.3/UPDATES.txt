@@ -1,0 +1,3 @@
+Added special actions
+Re-organized the core classes (Perlnd, Implnd, Rchres, SpecialActions) into different files
+Added example7 to illustrate the use of special actions

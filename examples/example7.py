@@ -1,70 +1,37 @@
 #!/usr/bin/env python3
 #
-# example1.py
+# example7.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# Purpose: Demonstrates how to build an instance of the HSPFModel class 
-# that can be used to generate UCI files for an HSPF simulation with PyHSPF.
-# Minimal assumptions are made of the user's background in Python. The idea
-# is to learn how the "think in HSPF."
+# Purpose: Demonstrates how to builds an instance of the HSPFModel class 
+# that can be used to generate UCI files for an HSPF simulation with PyHSPF
 #
-# Last updated: 04/27/2014
+# Last updated: 01/17/2014
 #
-# This is a very basic example of how to create an HSPF model in Python using 
-# PyHSPF. No external data files are needed. Python can be used to script the
-# data in as needed. Details throughout. Keep in mind this is a "walk before
-# you run" approach.
+# This is a repeat of example1.py, but illustrating how to add a special action.
 
 # start and end dates (year 2001). we will use the datetime module for this.
 
 import datetime
 
 start = datetime.datetime(2001, 1, 1)
-end   = datetime.datetime(2002, 1, 1)
+end   = datetime.datetime(2003, 1, 1)
 
-# do a 4-hour timestep; time step should be specified in minutes. HSPF can use
-# any time step from 1 minute to 1 day (1440 minutes) as long as it divides 
-# evenly into 1440.
+# do a 4-hour timestep; time step should be specified in minutes
 
 tstep = 240
 
-# PyHSPF has a "Watershed" class to store information about the watershed 
-# related to physical properties (i.e., it has nothing to do with HSPF per se).
-# instances of this class are used to generate the HSPFModel class.  
-# I'll illustrate how to use it here.
-
-from pyhspf import Watershed
-
-# first the watershed needs to be subdivided into subbasins, which are
-# stored in a dictionary of instances of the Subbasin class with keys
-# corresponding to the names you want to give. the keys must be strings of at 
-# most 15 characters. a subbasin consists of a flowplane to store information 
-# about the landscape, a reach that the land drains to, and landuse (or other 
-# category data) to sudivide the subbasin into homogeneous land segments.
-
-from pyhspf import Subbasin
+from pyhspf import Watershed, Subbasin, HSPFModel, WDMUtil
 
 subbasins = {}  # subbasin dictionary
 
 # we'll call the first subbasin 100
 
-number   = '100'             # subbasin number
+number   = '100'               # subbasin number
 subbasin = Subbasin(number)  # created subbasin "100"
 
-# subbasins are defined by many attributes, which are grouped into categories 
-# including:
-#
-# --the flowplane (slope length, area, centroid, average elevation)
-#
-# --the reach (name, upstream number, upstream elevation, downstream elevation, 
-# length, average slope, inflow rate, outflow rate, average velocity, and 
-# traveltime)
-#
-# --the landuse categories to be used by the model and the corresponding areas 
-# within each subbasin 
-#
-# --the inlets and outlets from the watershed
+# subbasin attributes
 
 # flow plane parameters for the subbasin
 
@@ -72,25 +39,23 @@ length     = 100       # m
 planeslope = 0.02      # -
 area       = 100       # km2
 elev       = 100       # m
-centroid   = [-90, 40] # lon, lat
+centroid   = [-90, 40] # long, lat
 
 # add the flow plane data for subbasin 100
 
 subbasin.add_flowplane(length, planeslope, area, centroid, elev)
 
-# now let's provide the info about the reach. not all of this is needed by
-# HSPF. the preprocessor takes all of this information from NHDPlus V2, though
-# it could come from other sources if needed.
+# now let's provide the info about the reach
 
 name       = 'dave stream' # something descriptive
 reach      = 'hello'       # used for HUC8 in the USA
-inlet      = None          # upstream subbasin id number (no inlet so None)
+inlet      = 99            # the upstream subbasin id number (for networks)
 maxelev    = 110           # elevation at the top of the reach (m)
 minelev    = 100           # elevation at the bottom of the reach (m)
 slopelen   = 10            # the reach length (km)
 slope      = 0.001         # the average slope (be consistent w data above)
 
-# estimates of the average conditions (these are used to develop FTABLES)
+# estimates of the average conditions (used to develop FTABLES)
 
 inflow     = 10            # the inflow (cfs) sorry about the engligh units
 outflow    = 12            # the outflow (cfs)
@@ -102,14 +67,7 @@ traveltime = 30480 / 3600  # consistent with velocity and length
 subbasin.add_reach(number, name, reach, inlet, maxelev, minelev, slopelen, 
                    slope, inflow, outflow, velocity, traveltime)
 
-# another piece of info we need is the landuse (or however we want to 
-# subdivide the subbasins into land segments, e.g. soils). so here let's
-# just assume 20% is developed with 50% impervious, 40% agriculture, and 40% 
-# forest. The areas are in square km so we get 20 km2 impervious, etc. 
-# more than one landuse can change stored (for every year), but it's 
-# not necessary to change it for HSPF. If you want to have impervious land, 
-# you must use "Developed" to identify it; the relative percentages of 
-# developed land can be changed from the default of 50% if desired.
+# land segments
 
 landuse_names = ['Developed', 'Agriculture', 'Forest']
 areas         = [20, 40, 40]
@@ -132,7 +90,7 @@ subbasin.add_flowplane(length, planeslope, area, centroid, elev)
 
 # slightly change the reach info
 
-inlet      = '100'  # this one is downstream of #100
+inlet      = 100  # this one is downstream of #100, so tell HSPF what's above
 maxelev    = 100 
 minelev    = 90
 inflow     = 12
@@ -156,11 +114,7 @@ watershed_name = 'Dave'
 
 watershed = Watershed(watershed_name, subbasins)
 
-# another key piece of information for the watershed is the flow network. 
-# it should be provided as  an "updown" dictionary--that is, you supply a 
-# subbasin number, and the dictionary returns the downstream number. So for 
-# this example we have subbasin 100 goes into 101 and we'll say that 101 goes 
-# into 0 to indicate it doesn't connect to anything (is a watershed outlet). 
+# flow network dictionary
 
 updown = {'100':'101', '101':0}
 
@@ -169,27 +123,12 @@ updown = {'100':'101', '101':0}
 watershed.add_outlet('101')
 watershed.add_mass_linkage(updown)
 
-# so that's all the physically-based data needed by HSPF. we can now make an 
-# instance of another class, the HSPFmodel, which can be used to build the 
-# input files (the input and output WDM files and the UCI file).
-
-from pyhspf import HSPFModel
-
 # names of the files used in the simulation (the HSPF input and output files
 # are generated automatically); can also specify a directory to use elsewhere
 
-filename = 'example1'
-
-# the UCI file name will be 'example1.uci'
-# the input and output WDM filenames are generated automatically, and are the
-# model filename + '_in.wdm' for the input WDM file and '_out.wdm' for the 
-# output file (we'll need this later to retrieve results from the files)
-
+filename   = 'example7'
 wdmoutfile = filename + '_out.wdm'
-
-# let's also generate an optional output file created by HSPF directly
-
-outfile = 'example1.out' 
+outfile    = 'example7.out' 
 
 # create an instance of the HSPFModel class
 
@@ -200,13 +139,25 @@ hspfmodel = HSPFModel()
 hspfmodel.build_from_watershed(watershed, filename, print_file = outfile, 
                                tstep = tstep)
 
-# the last thing we need for the simulation is to assign precipitation, 
-# potential evapotranspiration, and any other time series to the subbasins.
-# there are many different ways to estimate the potential evapotranspiration 
-# including correlation to observed pan evaporation, Penman-Monteith, etc. 
-# let's assume the potential evapotranspiration starts at zero then increases 
+# let's now add a special action, thawed ground on the agricultural land
+# in the first subbasin on April 1 at 12 noon.
+
+thawdate = datetime.datetime(2001, 4, 1, 12)
+
+hspfmodel.add_special_action('thaw', '100', 'Agriculture', thawdate)
+
+# let's add another special action, frozen ground on the agricultural land
+# in the first subbasin on December 1 at midnight.
+
+freezedate = datetime.datetime(2001, 12, 1)
+
+hspfmodel.add_special_action('frozen', '100', 'Agriculture', freezedate)
+
+# climate forcing time series
+
+# let's assume the pan evapotranspiration starts at zero then increases 
 # to 12 mm in a day 7/01, then decreases to zero 1/01; thus max 4-hr 
-# potential evapotranspiration is 2 mm. see if you can work out the logic :0)
+# evaporation is 2 mm.
 
 evaporation = [2 * (d - datetime.datetime(d.year, 1, 1)).days / 
                (datetime.datetime(d.year, 7, 1) - 
@@ -232,28 +183,21 @@ identifier = 'example_evap'
 
 hspfmodel.add_timeseries(tstype, identifier, start, evaporation, tstep = tstep)
 
-# now we need to tell HSPF how to use the time series for this model. the unique
-# identifier for the time series and the unique subbasin numbers are used 
-# to make this connection. we will assign this time series to the whole
-# watershed, although you can have a unique time series for each subbasin, 
-# landuse category, or each operation if you want.
+# assign the time series for this model
 
 hspfmodel.assign_watershed_timeseries(tstype, identifier)
 
 # now let's add some random rainfall. let's assume there is a 5% chance of rain
 # every 4-hour period and that the rainfall is an integer between 0 and 20.
-# we'll use the random module to do this.
 
 import random
 
-# make 365 * 6 random numbers (one year, 4-hr timeseries)
-
-numbers = [random.random() for i in range(365 * 6)]
-
+# make 365 * 6 * 2 random numbers (two years, 4-hr timeseries)
 # if the number is greater than 0.95 (5% chance), let's say it's raining and
 # assign a value (this should give about a meter of rain per year)
 
-rainfall = [random.randint(0,20) if n > 0.95 else 0. for n in numbers]
+rainfall = [random.randint(0,20) if random.random() > 0.95 else 0. 
+            for i in range(365 * 6 * 2)]
 
 # assign the precipitation time series to the file
 
@@ -285,14 +229,6 @@ targets = ['reach_outvolume',  # the volume that exits each reach at each step
            'reach_volume',     # the volume in the reach
            'runoff']           # the surface runoff
 
-# the targets above each correspond to a particular Fortran variable; the idea
-# is to make them more descriptive. the targets above correspond to:
-#
-# reach_outvolume = ROVOL
-# evaporation     = TAET for PERLNDs, and IMPEV for IMPLNDs
-# reach_volume    = RO
-# runoff          = SURO, IFWO, and AGWO for PERLNDs, SURO for IMPLNDs
-
 # now then, the "build_uci" function can be used to build the UCI input file.
 # it also builds the output WDM file since they work together with 
 # the UCI file. in this example we are just doing hydrology but you can add 
@@ -305,23 +241,8 @@ hspfmodel.build_uci(targets, start, end, hydrology = True, verbose = False)
 
 hspfmodel.run(verbose = True)
 
-# let's "pickle" the hspfmodel for later. "pickling" means writing a python
-# object to a file so that you can access it later. the idea (from my point of
-# view) is to save the python HSPFModel, and forget about the UCI. it's always
-# there is you want to see it, but changing the parameters is much easier in
-# python, and can even be scripted. pickling is pretty easy. the "with"
-# statement just closes the file automatically.
-
-import pickle
-
-with open('hspfmodel', 'wb') as f: pickle.dump(hspfmodel, f)
-
 # assuming that went ok (look at the echo and out files), we can retrieve the
 # results using WDMUtil
-
-from pyhspf import WDMUtil
-
-# create an instance of WDMUtil
 
 wdm = WDMUtil()
 
@@ -337,10 +258,6 @@ wdm.open(wdmoutfile, 'r')
 dsns    =  wdm.get_datasets(wdmoutfile)
 idconss = [wdm.get_attribute(wdmoutfile, n, 'IDCONS') for n in dsns]
 staids  = [wdm.get_attribute(wdmoutfile, n, 'STAID ') for n in dsns]
-
-# uncomment if you want to see what's here in the output file
-
-# print(dsns, idconss, staids)
 
 # one HSPF parameter we saved is ROVOL (the postprocessor can be used to 
 # simplify this, but for now let's just use WDMUtil). The following
@@ -395,53 +312,3 @@ fig.autofmt_xdate(rotation = 25)
 
 pyplot.show()
 
-# ok, remember when we pickled the hspfmodel? let's pull it back up and change
-# some parameters. you may have noticed we left out a critical part of the 
-# HSPF model--the hydrology parameters. the classes i have built have default
-# values in the hspfmodel.py file. separate classes are made for PERLND, IMPLND,
-# RCHRES that store these parameters. i'll briefly show how to pull open the
-# hspf file and change some parameters. you can always change the defaults
-# as needed or just modify the UCI file once it's been created. whatever works.
-
-# open the pickled version
-
-with open('hspfmodel', 'rb') as f: hspfmodel = pickle.load(f)
-
-# let's change the lower zone storage number from 150 to 50 and the upper zone
-# storage number from 10 to 5 for each of the perlnds and see the effects on
-# the model output. HSPF parameter names are attached to the perlnd instances
-# they all have 4-6 character variables in Fortran
-
-for p in hspfmodel.perlnds: 
-    p.LZSN = 50
-    p.UZSN = 5
-
-# now just repeat the run and postprocessing (i omit comments). this could
-# easily be scripted into a function.
-
-hspfmodel.build_uci(targets, start, end, hydrology = True, verbose = False)
-hspfmodel.run()
-
-wdm.open(wdmoutfile, 'r')
-
-flows = [r * 10**6 / 3600 / 4 for r in wdm.get_data(wdmoutfile, n)]
-
-fig = pyplot.figure(figsize = (8, 10))
-
-axes = [fig.add_subplot(3, 1, i + 1) for i in range(3)]
-
-axes[0].plot_date(times, rainfall, fmt = 'b-', lw = 0.3)
-axes[1].plot_date(times, evaporation, fmt = 'g-', lw = 0.3)
-axes[2].plot_date(times, flows, fmt = 'r-', lw = 0.3)
-
-axes[2].set_xlabel('Date', fontsize = 9)
-axes[0].set_ylabel('Precipitation, (mm)', fontsize = 10, color = 'blue')
-axes[1].set_ylabel('Evapotranspiration (mm)', fontsize = 10, color = 'green')
-axes[2].set_ylabel('Flow (m\u00B3/s)', fontsize = 10, color = 'red')
-
-for ax in axes: ax.tick_params(axis = 'both', size = 9)
-fig.autofmt_xdate(rotation = 25)
-
-pyplot.show()
-
-# play around with the assumptions and get familiar with the idea

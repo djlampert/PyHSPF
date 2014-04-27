@@ -1,10 +1,10 @@
-PyHSPF, Version 0.1.2
-last updated: 03/23/2014
+PyHSPF, Version 0.1.3
+last updated: 04/20/2014
 Developed by David J. Lampert and May M. Wu, Argonne National Laboratory
 
 Summary: PyHSPF contains a library of subroutines to run the Hydrological 
 Simulation Program in Fortran (HSPF), Version 12.2, Python extensions to 
-the HSPF library, and a series of classes for building input files, 
+the HSPF library, and classes for for building the required input files, 
 performing simulations, and postprocessing simulation results.  
 
 HSPF requires flowline and catchment data for a stream network, land use 
@@ -22,14 +22,14 @@ Pillow in addition to NumPy, SciPy, and Matplotlib, and require the user
 to download the source data files from NASS and NHDPlus. For more info 
 contact me.
 
-PyHSPF can be used to assimilate the data into an HSPF model, build the 
+PyHSPF can be used to assimilate data into an HSPF model, build the 
 HSPF input files, simulate the model over a period of time, and then 
 provide statistics and plots of the simulation output. The "core" module 
 requires NumPy, SciPy, and Matplotlib and can be used for generating input 
 files. A series of examples is provided to illustrate PyHSPF core module 
 usage.
 
-The preprocessing modules contain a calculator to automate extraction of 
+The preprocessing modules contain classes to automate extraction of 
 climate data from various databases including the National Solar 
 Radiation Database (NSRDB), Global Historical Climate Network Daily 
 (GHCND), Global Summary of the Day (GSOD), the NCDC Hourly Precipitation 
@@ -60,8 +60,8 @@ may work but are untested). The HSPF13 folder contains the source code
 including some minor modifications needed to simplify the compilation.
 Assuming gfortran and gcc are available as environment variables, the 
 HSPF library can be rebuilt by navigating as before, running "python 
-setup.py build," and then "python setup.py install." Contact me if you 
-have trouble with the installation.
+setup.py build," and then (as adminstrator) "python setup.py install." 
+Contact me if you have trouble with the installation.
 
 Testing: Open the python interpreter (from a command prompt simply type 
 "python"). Then try "import pyhspf"; the base Fortran subroutines can be

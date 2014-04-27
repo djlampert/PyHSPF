@@ -1,0 +1,15 @@
+C    FROM CTSEX.COM
+C    EXTRA SECTION OF TSS OSV:
+C     FROM CTSEXT
+      COMMON/SCRTCH/ DUMFIL,SEQFL,XOLD,    XNEW,    XVAR,
+     1 XZERO,    XLAST,    TXOLD,TXNEW,TXVAR,RRATIO,RATIO,SUITFG,
+     2 TESTFG,UFLAG,ZFLAG,UNDEF,DUMEXT
+      INTEGER        DUMFIL,SEQFL,
+     1                     TXOLD,TXNEW,TXVAR,       RATIO,SUITFG,
+     2 TESTFG,UFLAG,ZFLAG,      DUMEXT(13)
+      REAL                        XOLD(20),XNEW(20),XVAR(20),
+     1 XZERO(20),XLAST(20),                  RRATIO,
+     2                          UNDEF
+C
+C    END BYTE 1300
+
