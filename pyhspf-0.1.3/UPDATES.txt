@@ -1,3 +1,4 @@
-Added special actions
-Re-organized the core classes (Perlnd, Implnd, Rchres, SpecialActions) into different files
+Added special actions file and class to easy implementation
+Re-organized the core classes for HSPF modules (Perlnd, Implnd, Rchres, SpecialActions) into different files
+Re-organized the core classes to increase tranparency of process parameters
 Added example7 to illustrate the use of special actions

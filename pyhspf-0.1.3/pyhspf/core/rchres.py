@@ -5,22 +5,42 @@
 # Purpose: Builds an instance of the HSPFModel class that can be used to
 # generate UCI files for an HSPF simulation.
 #
-# last updated: 08/27/2013
+# last updated: 04/30/2014
 
 class Rchres:
-    """A class for a reach of a water body for an HSPF model."""
+    """A class to store and retrieve information for a reach/reservoir 
+    for an HSPF model.
+    """
 
-    def __init__(self, operation, comid, gnis, length, delth, flow, velocity, 
-                 nexits = 1, lake = False, ftable = None, dam = None,
-                 HYFG = False, ADFG = False, CNFG = False, HTFG = False, 
-                 SDFG = False, GQFG = False, OXFG = False, NUFG = False, 
-                 PKFG = False, PHFG = False):
+    def __init__(self, 
+                 operation, 
+                 subbasin,
+                 name, 
+                 length, 
+                 delth, 
+                 nexits   = 1, 
+                 lake     = False,
+                 dam      = None, 
+                 flow     = None, 
+                 velocity = None, 
+                 ftable   = None, 
+                 HYFG     = False, 
+                 ADFG     = False, 
+                 CNFG     = False, 
+                 HTFG     = False, 
+                 SDFG     = False, 
+                 GQFG     = False, 
+                 OXFG     = False, 
+                 NUFG     = False, 
+                 PKFG     = False, 
+                 PHFG     = False
+                 ):
         """Sets the basic reach properties and the activity flags for RCHRES."""
 
         self.operation = operation
-        self.comid     = comid
-        self.landtype  = 'Reach'  # land type (always the same)
-        self.gnis      = gnis
+        self.subbasin  = subbasin
+        self.landtype  = 'Reach'  # for generic HSPF operations; always "Reach"
+        self.name      = name
         self.length    = length
         self.delth     = delth
         self.flow      = flow
@@ -43,10 +63,12 @@ class Rchres:
         self.PKFG = PKFG
         self.PHFG = PHFG
 
-    def set_hydr_parms(self, units):
+    def set_hydr_parms(self, 
+                       units # English or Metric
+                       ):
         """Shortcut function to set each PWAT block."""
 
-        self.units = units # English or Metric
+        self.units = units 
 
         self.set_hydr_parm1()
         self.set_hydr_parm2()
@@ -54,8 +76,15 @@ class Rchres:
 
         if self.ftable is None: self.set_ftable()
 
-    def set_hydr_parm1(self, VCFG = 0, ODFVFG = 4, ODGTFG = 0, A1FG = 1,
-                       A2FG = 1, A3FG = 1, FUNCT = 1):
+    def set_hydr_parm1(self, 
+                       VCFG   = 0, 
+                       ODFVFG = 4, 
+                       ODGTFG = 0, 
+                       A1FG   = 1,
+                       A2FG   = 1, 
+                       A3FG   = 1, 
+                       FUNCT  = 1
+                       ):
         """Sets the hydraulic flags."""
 
         self.VCFG   = VCFG
@@ -72,17 +101,20 @@ class Rchres:
 
     def get_hydr_parm1(self):
         """Returns the HYDR-PARM1."""
-
-        ODFGs  = (tuple(self.ODFVFG for i in range(self.nexits)) + 
-                  tuple(0 for i in range(5 - self.nexits)))
-        ODGTs  = (tuple(self.ODGTFG for i in range(self.nexits)) +
-                  tuple(0 for i in range(5 - self.nexits)))
-        FUNCTs = tuple(self.FUNCT for i in range(5))
         
-        return ((self.operation, self.VCFG, self.A1FG, self.A2FG, self.A3FG,)
-                + ODFGs + ODGTs + FUNCTs)
+        return ((self.operation, self.VCFG, self.A1FG, self.A2FG, self.A3FG,) +
+                tuple(self.ODFVFG for i in range(self.nexits)) + 
+                tuple(0 for i in range(5 - self.nexits)) +
+                tuple(self.ODGTFG for i in range(self.nexits)) +
+                tuple(0 for i in range(5 - self.nexits)) +
+                tuple(self.FUNCT for i in range(5)))
 
-    def set_hydr_parm2(self, FDSN = 0, STCOR = 0, KS = 0.5, DB50 = 0.25):
+    def set_hydr_parm2(self, 
+                       FDSN  = 0, 
+                       STCOR = 0, 
+                       KS    = 0.5, 
+                       DB50  = 0.25
+                       ):
         """Sets some of the hydraulic parameters."""
 
         self.FDSN  = FDSN
@@ -96,7 +128,12 @@ class Rchres:
         return (self.operation, self.FDSN, self.operation, self.length, 
                 self.delth, self.STCOR, self. KS, self.DB50)
 
-    def set_hydr_init(self, VOL = None, CAT = 0, CATI = 4, OUTDGT = 0):
+    def set_hydr_init(self, 
+                      VOL    = None, 
+                      CAT    = 0, 
+                      CATI   = 4, 
+                      OUTDGT = 0
+                      ):
         """Sets the intial values for the HYDR state variables."""
 
         if VOL is None:
@@ -124,8 +161,15 @@ class Rchres:
 
             else:
 
-                area   = self.flow / self.velocity / conv1  # m2 or ft2
-                volume = self.length * area / conv2         # Mm3 or acre-ft
+                if self.flow is None or self.velocity is None:
+
+                    area = 10
+                    volume = 1
+
+                else:
+
+                    area   = self.flow / self.velocity / conv1  # m2 or ft2
+                    volume = self.length * area / conv2         # Mm3 or acre-ft
             
                 # winter flows are well below average so set to 1/5
 
@@ -140,8 +184,9 @@ class Rchres:
     def get_hydr_init(self):
         """Gets the values for HYDR-INIT."""
 
-        return ((self.operation, self.VOL) + tuple(self.CATI for i in range(5))
-                + tuple(self.OUTDGT for i in range(5)))
+        return ((self.operation, self.VOL,) + 
+                tuple(self.CATI for i in range(5)) +
+                tuple(self.OUTDGT for i in range(5)))
  
     def set_ftable(self):
         """Sets the FTABLE for the reach."""
@@ -153,6 +198,10 @@ class Rchres:
         # work around for very flat areas
 
         if s < 0.00001: s = 0.00001
+
+        if self.flow is None or self.velocity is None:
+            print('warning, insufficient information to build ftable')
+            raise
 
         if not self.lake:
             self.ftable = make_ftable(self.flow, self.velocity, self.length, s)
@@ -166,7 +215,9 @@ class Rchres:
 
         return self.ftable
 
-    def set_sandfg(self, SANDFG = 3):
+    def set_sandfg(self, 
+                   SANDFG = 3
+                   ):
         """Sets the SANDFG for the reach."""
 
         self.SANDFG = SANDFG # sand algorithm (1:Toffaleti, 2:Colby, 3:Power) 
@@ -174,9 +225,13 @@ class Rchres:
     def get_sandfg(self):
         """Returns the SANDFG for the reach."""
 
-        return (self.operation, self.SANDFG)
+        return self.operation, self.SANDFG
 
-    def set_genparm(self, BEDWID = None, BEDWRN = None, POR = 0.5):
+    def set_genparm(self, 
+                    BEDWID = None, 
+                    BEDWRN = None, 
+                    POR = 0.5
+                    ):
         """Sets the physical characterstics of the bed. Uses the average flow
         and velocity and assumes a 3:1 width:depth ratio. Since sediment 
         transport is driven by higher flow, assumes 3 times average."""
@@ -205,9 +260,14 @@ class Rchres:
     def get_genparm(self):
         """Returns the SED-GENPARM values."""
 
-        return (self.operation, self.BEDWID, self.BEDWRN, self.POR)
+        return self.operation, self.BEDWID, self.BEDWRN, self.POR
 
-    def set_sand_pm(self, W = 0.5, RHO = 2.5, KSAND = 0.1, EXPSND = 2.):
+    def set_sand_pm(self, 
+                    W      = 0.5, 
+                    RHO    = 2.5, 
+                    KSAND  = 0.1, 
+                    EXPSND = 2.
+                    ):
         """Sets the values for physical properties of the sand particles."""
 
         # These parameters are not unique in HSPF so had to add "sand"
@@ -227,8 +287,14 @@ class Rchres:
         return (self.operation, self.Dsand, self.Wsand, self.RHOsand, 
                 self.KSAND, self.EXPSND)
 
-    def set_silt_pm(self, D = 0.05, W = 0.007, RHO = 2.65, TAUCD = 0.005,
-                    TAUCS = 0.01, M = 0.001):
+    def set_silt_pm(self, 
+                    D     = 0.05, 
+                    W     = 0.007, 
+                    RHO   = 2.65, 
+                    TAUCD = 0.005,
+                    TAUCS = 0.01, 
+                    M     = 0.001
+                    ):
         """Sets the values for the physical properties of silt."""
 
         # These parameters are not unique in HSPF so had to add "silt"
@@ -246,8 +312,14 @@ class Rchres:
         return (self.operation, self.Dsilt, self.Wsilt, self.RHOsilt,
                 self.TAUCDsilt, self.TAUCSsilt, self.Msilt)
 
-    def set_clay_pm(self, D = 0.01, W = 0.0002, RHO = 2.65, TAUCD = 0.005,
-                    TAUCS = 0.01, M = 0.001):
+    def set_clay_pm(self, 
+                    D     = 0.01, 
+                    W     = 0.0002, 
+                    RHO   = 2.65, 
+                    TAUCD = 0.005,
+                    TAUCS = 0.01, 
+                    M     = 0.001
+                    ):
         """Sets the values for the physical properties of silt."""
 
         # These parameters are not unique in HSPF so had to add "clay"
@@ -265,7 +337,11 @@ class Rchres:
         return (self.operation, self.Dclay, self.Wclay, self.RHOclay,
                 self.TAUCDclay, self.TAUCSclay, self.Mclay)
     
-    def set_ssed_init(self, Sand = 5., Silt = 25., Clay = 25.):
+    def set_ssed_init(self, 
+                      Sand = 5., 
+                      Silt = 25., 
+                      Clay = 25.
+                      ):
         """Sets the initial values for the suspended solids concentrations."""
 
         self.Sand = Sand  # sand concentration (mg/L)
@@ -275,9 +351,14 @@ class Rchres:
     def get_ssed_init(self):
         """Returns the initial values for suspended solids concentrations."""
 
-        return (self.operation, self.Sand, self.Silt, self.Clay)
+        return self.operation, self.Sand, self.Silt, self.Clay
 
-    def set_bed_init(self, BEDDEP = 1., Sand = 0.8, Silt = 0.1, Clay = 0.1):
+    def set_bed_init(self, 
+                     BEDDEP = 1., 
+                     Sand = 0.8, 
+                     Silt = 0.1, 
+                     Clay = 0.1
+                     ):
         """Sets the initial values for the bed depth and particle fractions."""
 
         # note that again these are not unique names in HSPF so modified
@@ -290,5 +371,4 @@ class Rchres:
     def get_bed_init(self):
         """Returns the BED-INIT values."""
 
-        return(self.operation, self.BEDDEP, self.FSand, self.FSilt, self.FClay) 
-
+        return self.operation, self.BEDDEP, self.FSand, self.FSilt, self.FClay

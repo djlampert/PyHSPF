@@ -5,11 +5,11 @@
 # David J. Lampert (djlampert@gmail.com)
 #
 # Purpose: Demonstrates how to build an instance of the HSPFModel class 
-# that can be used to generate UCI files for an HSPF simulation with PyHSPF.
-# Minimal assumptions are made of the user's background in Python. The idea
-# is to learn how the "think in HSPF."
+# that can be used to run HSPF simulations. Minimal assumptions are made 
+# of the user's background in Python. The idea is to learn how the 
+# "think in HSPF."
 #
-# Last updated: 04/27/2014
+# Last updated: 05/01/2014
 #
 # This is a very basic example of how to create an HSPF model in Python using 
 # PyHSPF. No external data files are needed. Python can be used to script the
@@ -30,18 +30,19 @@ end   = datetime.datetime(2002, 1, 1)
 tstep = 240
 
 # PyHSPF has a "Watershed" class to store information about the watershed 
-# related to physical properties (i.e., it has nothing to do with HSPF per se).
+# related to physical properties (it has nothing to do with HSPF per se).
 # instances of this class are used to generate the HSPFModel class.  
 # I'll illustrate how to use it here.
 
 from pyhspf import Watershed
 
 # first the watershed needs to be subdivided into subbasins, which are
-# stored in a dictionary of instances of the Subbasin class with keys
-# corresponding to the names you want to give. the keys must be strings of at 
-# most 15 characters. a subbasin consists of a flowplane to store information 
-# about the landscape, a reach that the land drains to, and landuse (or other 
-# category data) to sudivide the subbasin into homogeneous land segments.
+# stored in a dictionary where the keys correspond to the names you want 
+# to give them. the keys must be strings of at most 15 characters for 
+# consistency with the WDM format. a subbasin consists of a flowplane to 
+# store information about the landscape, the reach/reservoir that the land 
+# drains to, and landuse (or other category data) to sudivide the subbasin 
+# into homogeneous land segments.
 
 from pyhspf import Subbasin
 
@@ -78,29 +79,23 @@ centroid   = [-90, 40] # lon, lat
 
 subbasin.add_flowplane(length, planeslope, area, centroid, elev)
 
-# now let's provide the info about the reach. not all of this is needed by
-# HSPF. the preprocessor takes all of this information from NHDPlus V2, though
-# it could come from other sources if needed.
+# now let's provide the info about the reach
 
 name       = 'dave stream' # something descriptive
-reach      = 'hello'       # used for HUC8 in the USA
-inlet      = None          # upstream subbasin id number (no inlet so None)
 maxelev    = 110           # elevation at the top of the reach (m)
 minelev    = 100           # elevation at the bottom of the reach (m)
 slopelen   = 10            # the reach length (km)
-slope      = 0.001         # the average slope (be consistent w data above)
 
-# estimates of the average conditions (these are used to develop FTABLES)
+# estimates of the average conditions can be used to develop FTABLES (used by
+# HSPF to specify stage-discharge relationship) or specified directly
 
-inflow     = 10            # the inflow (cfs) sorry about the engligh units
-outflow    = 12            # the outflow (cfs)
+flow       = 10            # the inflow (cfs) sorry about the engligh units
 velocity   = 1             # velocity (fps) again sorry about the english units
-traveltime = 30480 / 3600  # consistent with velocity and length
 
 # now let's add the reach to the subbasin
 
-subbasin.add_reach(number, name, reach, inlet, maxelev, minelev, slopelen, 
-                   slope, inflow, outflow, velocity, traveltime)
+subbasin.add_reach(name, maxelev, minelev, slopelen, flow = flow, 
+                   velocity = velocity)
 
 # another piece of info we need is the landuse (or however we want to 
 # subdivide the subbasins into land segments, e.g. soils). so here let's
@@ -132,14 +127,12 @@ subbasin.add_flowplane(length, planeslope, area, centroid, elev)
 
 # slightly change the reach info
 
-inlet      = '100'  # this one is downstream of #100
 maxelev    = 100 
 minelev    = 90
-inflow     = 12
-outflow    = 14
+flow       = 12
 
-subbasin.add_reach(number, name, reach, inlet, maxelev, minelev, slopelen, 
-                   slope, inflow, outflow, velocity, traveltime)
+subbasin.add_reach(name, maxelev, minelev, slopelen, flow = flow, 
+                   velocity = velocity)
 
 # for simplicity just assume the same landuse types and areas
 
@@ -164,7 +157,7 @@ watershed = Watershed(watershed_name, subbasins)
 
 updown = {'100':'101', '101':0}
 
-# add the info to the watershed
+# add the info to the watershed and tell HSPF where the outlet is
 
 watershed.add_outlet('101')
 watershed.add_mass_linkage(updown)
@@ -208,16 +201,18 @@ hspfmodel.build_from_watershed(watershed, filename, print_file = outfile,
 # to 12 mm in a day 7/01, then decreases to zero 1/01; thus max 4-hr 
 # potential evapotranspiration is 2 mm. see if you can work out the logic :0)
 
-evaporation = [2 * (d - datetime.datetime(d.year, 1, 1)).days / 
+maxET = 2
+nsteps = (end-start).days * 1440 // tstep
+evaporation = [maxET * (d - datetime.datetime(d.year, 1, 1)).days / 
                (datetime.datetime(d.year, 7, 1) - 
                 datetime.datetime(d.year, 1, 1)).days
                if d.month < 7
                else
-               2 - 2 * (d - datetime.datetime(d.year, 7, 1)).days / 
+               maxET - maxET * (d - datetime.datetime(d.year, 7, 1)).days / 
                (datetime.datetime(d.year + 1, 1, 1) - 
                 datetime.datetime(d.year, 7, 1)).days
-               for d in [start + datetime.timedelta(hours = 4) * i
-                         for i in range(6 * (end - start).days)]
+               for d in [start + datetime.timedelta(minutes = tstep) * i
+                         for i in range(nsteps)]
                ]
 
 # specify the time series type
@@ -242,18 +237,15 @@ hspfmodel.assign_watershed_timeseries(tstype, identifier)
 
 # now let's add some random rainfall. let's assume there is a 5% chance of rain
 # every 4-hour period and that the rainfall is an integer between 0 and 20.
-# we'll use the random module to do this.
 
 import random
 
-# make 365 * 6 random numbers (one year, 4-hr timeseries)
-
-numbers = [random.random() for i in range(365 * 6)]
-
+# make random numbers for each 4 hour timestep
 # if the number is greater than 0.95 (5% chance), let's say it's raining and
 # assign a value (this should give about a meter of rain per year)
 
-rainfall = [random.randint(0,20) if n > 0.95 else 0. for n in numbers]
+rainfall = [random.randint(0,20) if random.random() > 0.95 else 0. 
+            for i in range(nsteps)]
 
 # assign the precipitation time series to the file
 
@@ -351,7 +343,7 @@ n = [dsn for dsn, idcons, staid in zip(dsns, idconss, staids)
 
 rovol = wdm.get_data(wdmoutfile, n)
 
-# it's always a good idea to close up the fortran files.
+# it's always a good idea to close up the files opened by Fortran
 
 wdm.close(wdmoutfile)
 

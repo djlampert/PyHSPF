@@ -16,7 +16,7 @@
 
 # description of simulation
 
-desc = 'Hunting Creek, Patuxent River Basin'
+description = 'Hunting Creek, Patuxent River Basin'
 
 # need to use dates and times, so use datetime module
 
@@ -66,27 +66,12 @@ subbasin.add_flowplane(length, planeslope, area, centroid, elev)
 # needed to build the watershed
 
 name     = 'HUNTING CR'
-reach    = 'HUC'
-inlet    = 0          # inlet subbasin reach number (0 = no inflow)
-maxelev  = 125        # inflow elevation, ft (only the difference needed)
+maxelev  = 125        # inflow elevation, ft
 minelev  = 100        # outflow elevlation, to give delth of 25 feet
 slopelen = 2.6        # reach length, miles
 
-# calculate the slope
-
-slope = (maxelev - minelev) / 5280 / slopelen
-
-# estimates for the average reach conditions (this can be used to automatically
-# create the ftables); here we are going to provide the ftable directly to be
-# consistent with the example UCI file for HSPExp
-
-inflow     = 0    # inflow to the reach (cfs)
-outflow    = 10   # outflow from the reach (cfs)
-velocity   = 1    # velocity (fps)
-traveltime = 1
-
-# the ftable is supplied in the example; so we will add it here. if not supplied
-# it is estimated from the average conditions 
+# here we are going to provide the ftable directly to be consistent with 
+# the example UCI file for HSPExp instead of using the PyHSPF function
 
 ftable = [[  0.0,    0.0,   0.0,      0.0],
           [ 0.22,  0.765,   0.09,    0.09],
@@ -110,9 +95,7 @@ ftable = [[  0.0,    0.0,   0.0,      0.0],
 
 # add the reach info to the subbasin
 
-subbasin.add_reach(sname, name, reach, inlet, maxelev, minelev, slopelen, 
-                   slope, inflow, outflow, velocity, traveltime, 
-                   ftable = ftable)
+subbasin.add_reach(name, maxelev, minelev, slopelen, ftable = ftable)
 
 # subbasin land use info (to create perlnds and implnds)
 
@@ -137,7 +120,7 @@ updown = {sname:0}
 
 # create an instance of the watershed class to store the data to build the model
 
-watershed = Watershed(desc, subbasins)
+watershed = Watershed(description, subbasins)
 
 # add the network and the outlet subbasin
 

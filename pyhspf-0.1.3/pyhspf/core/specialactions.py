@@ -48,6 +48,9 @@ class SpecialAction:
             tc  = 'YR'
             ts  = 1
             num = 999
+            y   = ' EVERY YEAR'
+            
+        else: y = ' ONCE'
 
         # increase infiltration due to thawed ground
 
@@ -62,16 +65,15 @@ class SpecialAction:
 
             # get the value (and annoyingly need to convert to internal units)
 
-            print(self.units)
             if self.units == 'Metric': mfact = self.tstep / 60 / 25.4
             else:                      mfact = self.tstep / 60
 
             if self.value is None: val = 0.2 * mfact
             else:                  val = self.value * mfact
 
-            l = ('  *** INCREASE INFILT DUE TO THAWED GROUND\n' +
-                 '  Operations   dcdts  yr mo dy hr mn d t   vnam  ' +
-                 's1 s2 s3 ac  Quantity tc  ts rp ***\n' +
+            l = ('  *** INCREASE INFILT DUE TO THAWED GROUND{}\n'.format(y) +
+                 '  *** op nos.  dcdts  yr mo dy hr mn d t   vnam  ' +
+                 's1 s2 s3 ac  Quantity tc  ts rp\n' +
                  '  <****><-><--><><-><--> <> <> <> <><><>  <----><->' +
                  '<-><-><-><--------> <> <-><->\n')
 
@@ -94,9 +96,9 @@ class SpecialAction:
             if self.value is None: val = 1. * mfact
             else:                  val = self.value * mfact
 
-            l = ('  *** DECREASE INFILT DUE TO FROZEN GROUND\n' +
-                 '  Operations   dcdts  yr mo dy hr mn d t   vnam  ' +
-                 's1 s2 s3 ac  Quantity tc  ts rp ***\n' +
+            l = ('  *** DECREASE INFILT DUE TO FROZEN GROUND{}\n'.format(y) +
+                 '  *** op nos.  dcdts  yr mo dy hr mn d t   vnam  ' +
+                 's1 s2 s3 ac  Quantity tc  ts rp\n' +
                  '  <****><-><--><><-><--> <> <> <> <><><>  <----><->' +
                  '<-><-><-><--------> <> <-><->\n')
 

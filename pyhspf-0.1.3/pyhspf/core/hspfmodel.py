@@ -248,13 +248,13 @@ class HSPFModel:
 
         # make the operations
 
-        r = 1    # the number assigned to the current rchres and ftable
-        p = 100  # the number assigned to the current perlnd
-        i = 100  # the number assigned to the current implnd
+        r = 1  # the number assigned to the current rchres and ftable
+        p = 1  # the number assigned to the current perlnd
+        i = 1  # the number assigned to the current implnd
 
-        rchreses = []
-        perlnds  = []
-        implnds  = []
+        self.rchreses = []
+        self.perlnds  = []
+        self.implnds  = []
 
         for comid in subbasin_network:
 
@@ -264,22 +264,24 @@ class HSPFModel:
 
             # assign the reach
 
-            delth  = (subbasin.reach.maxelev - subbasin.reach.minelev) / 100
-            flow   = (subbasin.reach.inflow + subbasin.reach.outflow) / 2
-
-            # minor work around for empty gnis names
-
-            if isinstance(subbasin.reach.gnis, bytes): gnis = ''
-            else: gnis = subbasin.reach.gnis
+            delth = subbasin.reach.maxelev - subbasin.reach.minelev
             
-            reach = Rchres(r, subbasin.comid, gnis, subbasin.reach.slopelen, 
-                           delth, flow, subbasin.reach.velocity, 
-                           ftable = subbasin.reach.ftable, 
-                           dam = subbasin.reach.dam)
-            rchreses.append(reach)
-            self.landtypes[comid]['Reach'] = reach
+            self.rchreses.append(Rchres(r, 
+                                        subbasin.name,
+                                        subbasin.reach.name, 
+                                        subbasin.reach.slopelen, 
+                                        delth, 
+                                        flow     = subbasin.reach.flow, 
+                                        velocity = subbasin.reach.velocity, 
+                                        ftable   = subbasin.reach.ftable, 
+                                        dam      = subbasin.reach.dam)
+                                 )
+
+            self.landtypes[comid]['Reach'] = self.rchreses[-1]
             r += 1
         
+            # use the first year if the user doesn't specify
+
             if self.landuseyear is None: 
                 landuse = subbasin.landuse[min(subbasin.landuse.keys())]
             else: 
@@ -294,39 +296,40 @@ class HSPFModel:
                     impervious_area = self.ifraction * area
                     pervious_area = (1 - self.ifraction) * area
 
-                    implnd = Implnd(i, subbasin.comid, impervious_area,
-                                    subbasin.flowplane.length,
-                                    subbasin.flowplane.slope,
-                                    subbasin.flowplane.avgelev,
-                                    subbasin.flowplane.centroid[1])
-                    implnds.append(implnd)
-                    self.landtypes[comid]['Impervious'] = implnd
+                    self.implnds.append(Implnd(i, 
+                                               subbasin.name, 
+                                               impervious_area,
+                                               subbasin.flowplane.length,
+                                               subbasin.flowplane.slope,
+                                               subbasin.flowplane.avgelev,
+                                               subbasin.flowplane.centroid[1])
+                                        )
+
+                    self.landtypes[comid]['Impervious'] = self.implnds[-1]
                     i += 1
                     
                 else: pervious_area = area
 
                 # add the perlnd
 
-                perlnd = Perlnd(p, subbasin.comid, landtype, pervious_area,
-                                subbasin.flowplane.length,
-                                subbasin.flowplane.slope,
-                                subbasin.flowplane.avgelev, 
-                                round(subbasin.reach.minelev / 100),
-                                subbasin.flowplane.centroid[1])
-                perlnds.append(perlnd)
-                self.landtypes[comid][landtype] = perlnd
+                self.perlnds.append(Perlnd(p, 
+                                           subbasin.name, 
+                                           landtype, 
+                                           pervious_area,
+                                           subbasin.flowplane.length,
+                                           subbasin.flowplane.slope,
+                                           subbasin.flowplane.avgelev, 
+                                           round(subbasin.reach.minelev),
+                                           subbasin.flowplane.centroid[1])
+                                    )
+
+                self.landtypes[comid][landtype] = self.perlnds[-1]
                 p += 1           
 
         # make a list of all the landuse types specified
 
         self.landuse = list(set([l for c in self.landtypes 
                                  for l in self.landtypes[c] if l != 'Reach']))
-
-        # attach the operations to the model
-
-        self.perlnds  = perlnds
-        self.implnds  = implnds
-        self.rchreses = rchreses
 
         # set up the time series for the whole watershed
 
@@ -519,7 +522,6 @@ class HSPFModel:
         for e in self.evaporations:
 
             start_date, tstep, data = self.evaporations[e]
-            #print('evap', e, start_date, tcode, tsstep, len(data))
 
             # calculate tsstep and tcode
 
@@ -768,25 +770,25 @@ class HSPFModel:
 
             for p in self.perlnds:
 
-                p.set_pwat_state(CEPS  = states[p.comid][p.landtype]['CEPS'],
-                                 SURS  = states[p.comid][p.landtype]['SURS'],
-                                 UZS   = states[p.comid][p.landtype]['UZS'], 
-                                 IFWS  = states[p.comid][p.landtype]['IFWS'], 
-                                 LZS   = states[p.comid][p.landtype]['LZS'], 
-                                 AGWS  = states[p.comid][p.landtype]['AGWS'])
+                p.set_pwat_state(CEPS  = states[p.subbasin][p.landtype]['CEPS'],
+                                 SURS  = states[p.subbasin][p.landtype]['SURS'],
+                                 UZS   = states[p.subbasin][p.landtype]['UZS'], 
+                                 IFWS  = states[p.subbasin][p.landtype]['IFWS'],
+                                 LZS   = states[p.subbasin][p.landtype]['LZS'], 
+                                 AGWS  = states[p.subbasin][p.landtype]['AGWS'])
 
             # set the implnd iwater states
 
             for i in self.implnds:
 
-                i.set_iwat_state1(RETS = states[i.comid][i.landtype]['RETS'])
-                i.set_iwat_state1(SURS = states[i.comid][i.landtype]['SURS'])
+                i.set_iwat_state1(RETS = states[i.subbasin][i.landtype]['RETS'])
+                i.set_iwat_state1(SURS = states[i.subbasin][i.landtype]['SURS'])
 
             # set the rchres states
 
             for r in self.rchreses:
 
-                r.VOL = states[r.comid][r.landtype]['VOL']
+                r.VOL = states[r.subbasin][r.landtype]['VOL']
 
         # set the snow states
 
@@ -794,9 +796,13 @@ class HSPFModel:
 
             for o in (self.perlnds + self.implnds):
 
-                o.set_snow_init1(packsnow =states[o.comid][o.landtype]['PACKF'],
-                                 packice  =states[o.comid][o.landtype]['PACKI'],
-                                 packwatr =states[o.comid][o.landtype]['PACKW'])
+                o.set_snow_init1(packsnow =
+                                 states[o.subbasin][o.landtype]['PACKF'],
+                                 packice  =
+                                 states[o.subbasin][o.landtype]['PACKI'],
+                                 packwatr =
+                                 states[o.subbasin][o.landtype]['PACKW']
+                                 )
 
     def add_temp(self):
 
@@ -1081,7 +1087,7 @@ class HSPFModel:
             if   otype == 'PERLND': attributes['DESCRP'] = o.landtype
             elif otype == 'IMPLND': attributes['DESCRP'] = 'Impervious'
             elif otype == 'RCHRES': attributes['DESCRP'] = 'Reach'
-            attributes['STAID '] = str(o.comid)
+            attributes['STAID '] = str(o.subbasin)
 
             t = otype, o.operation, group, var, sub1, sub2, func, n
             l = '{:<6s}{:4d} {:<6s} {:6s}{:2d}{:2d}{:>14s} WDM2{:6d}'.format(*t)
@@ -2183,15 +2189,15 @@ class HSPFModel:
         else:                            b  = 0
 
         if   self.units == 'English': 
-            ot = (pf, 0, b, 0)
+            ot = pf, 0, b, 0
             u  = 1
         elif self.units == 'Metric':  
-            ot = (0, pf, 0, b)
+            ot = 0, pf, 0, b
             u  = 2
 
         for p in self.perlnds:        
 
-            description = '{} {}'.format(p.comid, p.landtype)
+            description = '{} {}'.format(p.subbasin, p.landtype)
 
             line = ('{0:>5}     {1:<21}'.format(p.operation, description[:20]) +
                     '             %d    %d' % (u, u) +
@@ -2634,7 +2640,7 @@ class HSPFModel:
 
         for i in self.implnds:
 
-            description = '{} impervious'.format(i.comid)
+            description = '{} impervious'.format(i.subbasin)
 
             line = ('{0:>5}     {1:<21}'.format(i.operation, description) +
                     '        %d    %d' % (u, u) +
@@ -2904,7 +2910,7 @@ class HSPFModel:
 
         for r in self.rchreses:
 
-            description = '{0} {1}'.format(r.comid, r.gnis)[:20]
+            description = '{0} {1}'.format(r.subbasin, r.name)[:20]
 
             if self.print_file is None:  pf = 0
             else:                        pf = self.print_no
@@ -3229,7 +3235,7 @@ class HSPFModel:
                     for o in self.perlnds + self.implnds:
 
                         if (o.landtype in self.landtypes[subbasin] and 
-                            o.comid == subbasin):
+                            o.subbasin == subbasin):
 
                             if   o.landtype == 'Reach':      otype = 'RCHRES'
                             elif o.landtype == 'Impervious': otype = 'IMPLND'
@@ -3376,7 +3382,7 @@ class HSPFModel:
 
         # add the linkages between the reaches
 
-        comids = [r.comid for r in self.rchreses]
+        comids = [r.subbasin for r in self.rchreses]
 
         for comid in self.updown:
 
@@ -3403,7 +3409,7 @@ class HSPFModel:
 
             for p in self.perlnds:
 
-                if p.comid == r.comid:
+                if p.subbasin == r.subbasin:
 
                     # add the line (note perlnd-reach connections are now 
                     # assumed to be MASS-LINK 2)
@@ -3415,7 +3421,7 @@ class HSPFModel:
 
             for i in self.implnds:
 
-                if i.comid == r.comid:
+                if i.subbasin == r.subbasin:
 
                     # add the line (note implnd-reach connections are now 
                     # assumed to be MASS-LINK 3)

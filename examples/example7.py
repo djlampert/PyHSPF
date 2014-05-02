@@ -4,12 +4,12 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# Purpose: Demonstrates how to builds an instance of the HSPFModel class 
+# Purpose: Demonstrates how to build an instance of the HSPFModel class 
 # that can be used to generate UCI files for an HSPF simulation with PyHSPF
 #
-# Last updated: 01/17/2014
+# Last updated: 04/30/2014
 #
-# This is a repeat of example1.py, but illustrating how to add a special action.
+# This is a repeat of example1.py, but illustrating how to add special actions.
 
 # start and end dates (year 2001). we will use the datetime module for this.
 
@@ -28,8 +28,8 @@ subbasins = {}  # subbasin dictionary
 
 # we'll call the first subbasin 100
 
-number   = '100'               # subbasin number
-subbasin = Subbasin(number)  # created subbasin "100"
+number   = '100'            # subbasin number
+subbasin = Subbasin(number) # created subbasin "100"
 
 # subbasin attributes
 
@@ -45,27 +45,23 @@ centroid   = [-90, 40] # long, lat
 
 subbasin.add_flowplane(length, planeslope, area, centroid, elev)
 
-# now let's provide the info about the reach
+# reach info
 
-name       = 'dave stream' # something descriptive
-reach      = 'hello'       # used for HUC8 in the USA
-inlet      = 99            # the upstream subbasin id number (for networks)
-maxelev    = 110           # elevation at the top of the reach (m)
-minelev    = 100           # elevation at the bottom of the reach (m)
-slopelen   = 10            # the reach length (km)
-slope      = 0.001         # the average slope (be consistent w data above)
+name       = 'stream'   # something descriptive
+maxelev    = 110        # elevation at the top of the reach (m)
+minelev    = 100        # elevation at the bottom of the reach (m)
+slopelen   = 10         # the reach length (km)
 
-# estimates of the average conditions (used to develop FTABLES)
+# estimates of the average conditions can be used to develop FTABLES (used by
+# HSPF to specify stage-discharge relationship) or specified directly
 
-inflow     = 10            # the inflow (cfs) sorry about the engligh units
-outflow    = 12            # the outflow (cfs)
-velocity   = 1             # velocity (fps) again sorry about the english units
-traveltime = 30480 / 3600  # consistent with velocity and length
+flow       = 12            # the average flow must be in cfs
+velocity   = 1             # velocity must be in fps
 
-# now let's add the reach to the subbasin
+# add the reach to the subbasin
 
-subbasin.add_reach(number, name, reach, inlet, maxelev, minelev, slopelen, 
-                   slope, inflow, outflow, velocity, traveltime)
+subbasin.add_reach(name, maxelev, minelev, slopelen, flow = flow, 
+                   velocity = velocity)
 
 # land segments
 
@@ -74,30 +70,27 @@ areas         = [20, 40, 40]
 
 subbasin.add_landuse(2001, landuse_names, areas)
 
-# now it's done; let's add the subbasin to the dictionary of subbasins
+# add the subbasin to the dictionary of subbasins
 
 subbasins[number] = subbasin
 
-# let's make one more subbasin for this example (note all the parameters the
-# same except these few)
+# make another subbasin for this example
 
 number   = '101'
 subbasin = Subbasin(number)
 
-# let's just use the same flowplane parameters
+# same flowplane parameters
 
 subbasin.add_flowplane(length, planeslope, area, centroid, elev)
 
 # slightly change the reach info
 
-inlet      = 100  # this one is downstream of #100, so tell HSPF what's above
-maxelev    = 100 
-minelev    = 90
-inflow     = 12
-outflow    = 14
+maxelev  = 100 
+minelev  = 90
+flow     = 12
 
-subbasin.add_reach(number, name, reach, inlet, maxelev, minelev, slopelen, 
-                   slope, inflow, outflow, velocity, traveltime)
+subbasin.add_reach(name, maxelev, minelev, slopelen, flow = flow, 
+                   velocity = velocity)
 
 # for simplicity just assume the same landuse types and areas
 
@@ -118,10 +111,10 @@ watershed = Watershed(watershed_name, subbasins)
 
 updown = {'100':'101', '101':0}
 
-# add the info to the watershed
+# add the info to the watershed and outlet
 
-watershed.add_outlet('101')
 watershed.add_mass_linkage(updown)
+watershed.add_outlet('101')
 
 # names of the files used in the simulation (the HSPF input and output files
 # are generated automatically); can also specify a directory to use elsewhere
@@ -159,16 +152,18 @@ hspfmodel.add_special_action('frozen', '100', 'Agriculture', freezedate)
 # to 12 mm in a day 7/01, then decreases to zero 1/01; thus max 4-hr 
 # evaporation is 2 mm.
 
-evaporation = [2 * (d - datetime.datetime(d.year, 1, 1)).days / 
+maxET = 2
+nsteps = (end-start).days * 1440 // tstep
+evaporation = [maxET * (d - datetime.datetime(d.year, 1, 1)).days / 
                (datetime.datetime(d.year, 7, 1) - 
                 datetime.datetime(d.year, 1, 1)).days
                if d.month < 7
                else
-               2 - 2 * (d - datetime.datetime(d.year, 7, 1)).days / 
+               maxET - maxET * (d - datetime.datetime(d.year, 7, 1)).days / 
                (datetime.datetime(d.year + 1, 1, 1) - 
                 datetime.datetime(d.year, 7, 1)).days
-               for d in [start + datetime.timedelta(hours = 4) * i
-                         for i in range(6 * (end - start).days)]
+               for d in [start + datetime.timedelta(minutes = tstep) * i
+                         for i in range(nsteps)]
                ]
 
 # specify the time series type
@@ -192,12 +187,12 @@ hspfmodel.assign_watershed_timeseries(tstype, identifier)
 
 import random
 
-# make 365 * 6 * 2 random numbers (two years, 4-hr timeseries)
+# make random numbers for each 4 hour timestep
 # if the number is greater than 0.95 (5% chance), let's say it's raining and
 # assign a value (this should give about a meter of rain per year)
 
 rainfall = [random.randint(0,20) if random.random() > 0.95 else 0. 
-            for i in range(365 * 6 * 2)]
+            for i in range(nsteps)]
 
 # assign the precipitation time series to the file
 

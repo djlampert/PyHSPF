@@ -68,24 +68,25 @@ class Dam:
         self.surface_area = surface_area # surface area (acres)
 
 class Reach:
-    """A class that contains information about a reach."""
+    """A class that contains physical information about a reach."""
 
-    def __init__(self, outcomid, gnis, reach, incomid, maxelev, minelev, 
-                 slopelen, slope, inflow, outflow, velocity, traveltime, 
-                 dam = None, ftable = None):
+    def __init__(self, 
+                 name, 
+                 maxelev, 
+                 minelev, 
+                 slopelen, 
+                 flow       = None, # optional average flow
+                 velocity   = None, # optional average velocity
+                 traveltime = None, # optional average traveltime
+                 dam        = None, # optional dam instance
+                 ftable     = None  # optional stage-discharge table
+                 ):
 
-        # the following are available from the National Hydrography Dataset Plus
-
-        self.outcomid   = outcomid
-        self.gnis       = gnis
-        self.reach      = reach
-        self.incomid    = incomid
+        self.name       = name
         self.maxelev    = maxelev
         self.minelev    = minelev
         self.slopelen   = slopelen
-        self.slope      = slope
-        self.inflow     = inflow
-        self.outflow    = outflow
+        self.flow       = flow
         self.velocity   = velocity
         self.traveltime = traveltime
         self.dam        = dam
@@ -100,28 +101,28 @@ class Reach:
 class Subbasin:
     """A class that contains information about an HSPF watershed subbasin."""
 
-    def __init__(self, comid):
+    def __init__(self, name):
         """Sets up some basic properties of a subbasin."""
 
-        self.comid     = comid
-        self.reach     = None
-        self.inlets    = []
-        self.outlets   = []
-        self.landuse   = {}
+        self.name    = name
+        self.reach   = None
+        self.inlets  = []
+        self.outlets = []
+        self.landuse = {}
 
     def add_flowplane(self, length, slope, area, centroid, elev):
         """Adds the flowplane info to the subbasin."""
 
         self.flowplane = FlowPlane(length, slope, area, centroid, elev)
 
-    def add_reach(self, outcomid, gnis, reach, incomid, maxelev, minelev, 
-                  slopelen, slope, inflow, outflow, velocity, traveltime,
-                  dam = None, ftable = None):
+    def add_reach(self, name, maxelev, minelev, slopelen, flow = None, 
+                  velocity = None, traveltime = None, dam = None, 
+                  ftable = None):
         """Adds the Reach info to the subbasin."""
 
-        self.reach = Reach(outcomid, gnis, reach, incomid, maxelev, minelev, 
-                           slopelen, slope, inflow, outflow, velocity, 
-                           traveltime, dam = dam, ftable = ftable)
+        self.reach = Reach(name, maxelev, minelev, slopelen, flow = flow, 
+                           velocity = velocity, traveltime = traveltime, 
+                           dam = dam, ftable = ftable)
 
     def add_dam(self, nid, name, long, lat, river, owner, damtype, purposes, 
                 year, height, max_storage, norm_storage, surface_area):

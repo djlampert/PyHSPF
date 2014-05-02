@@ -17,6 +17,10 @@ def build_watershed(subbasinfile, flowfile, outletfile, damfile, gagefile,
 
     subbasins = {}
 
+    # create a dictionary to keep track of subbasin inlets
+
+    inlets = {}
+
     # read in the flow plane data into an instance of the FlowPlane class
 
     sf = Reader(subbasinfile, shapeType = 5)
@@ -65,8 +69,8 @@ def build_watershed(subbasinfile, flowfile, outletfile, damfile, gagefile,
         gnis       = record[gnis_index]
         reach      = record[reach_index]
         incomid    = '{}'.format(record[incomid_index])
-        maxelev    = record[maxelev_index]
-        minelev    = record[minelev_index]
+        maxelev    = record[maxelev_index] / 100
+        minelev    = record[minelev_index] / 100
         slopelen   = record[slopelen_index]
         slope      = record[slope_index]
         inflow     = record[inflow_index]
@@ -74,11 +78,14 @@ def build_watershed(subbasinfile, flowfile, outletfile, damfile, gagefile,
         velocity   = record[velocity_index]
         traveltime = record[traveltime_index]
 
+        if isinstance(gnis, bytes): gnis = ''
+
         subbasin = subbasins[outcomid]
 
-        subbasin.add_reach(outcomid, gnis, reach, incomid, maxelev, minelev, 
-                           slopelen, slope, inflow, outflow, velocity, 
-                           traveltime)
+        flow = (inflow + outflow) / 2
+        subbasin.add_reach(gnis, maxelev, minelev, slopelen, flow = flow, 
+                           velocity = velocity, traveltime = traveltime)
+        inlets[outcomid] = incomid
 
     # open up the outlet file and see if the subbasin has a gage or dam
 
@@ -190,7 +197,7 @@ def build_watershed(subbasinfile, flowfile, outletfile, damfile, gagefile,
 
         # check if the subbasin is a watershed inlet or a headwater source
 
-        inlet = hydroseqs[subbasin.reach.incomid]
+        inlet = hydroseqs[inlets[comid]]
 
         if flowlines[inlet].up in flowlines:
             i = '{}'.format(flowlines[flowlines[inlet].up].comid)

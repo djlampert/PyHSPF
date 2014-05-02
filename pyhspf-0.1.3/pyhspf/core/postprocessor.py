@@ -248,7 +248,8 @@ class Postprocessor:
         operations = self.hspfmodel.perlnds + self.hspfmodel.implnds
 
         for comid in comids:
-            areas.append(sum([o.area for o in operations if o.comid == comid]))
+            areas.append(sum([o.area 
+                              for o in operations if o.subbasin == comid]))
 
         return areas
 
@@ -280,7 +281,7 @@ class Postprocessor:
 
         segment_areas = {}
         for o in self.hspfmodel.perlnds + self.hspfmodel.implnds:
-            if o.comid == comid:
+            if o.subbasin == comid:
                 segment_areas[o.landtype] = o.area
 
         # find the dsn of the surface storage with the right station id (comid)
@@ -588,7 +589,7 @@ class Postprocessor:
             for l in self.hspfmodel.landuse:
                 
                 area = sum([o.area for o in operations 
-                            if o.landtype == l and o.comid in comids])
+                            if o.landtype == l and o.subbasin in comids])
                 evap = self.wdm.get_data(self.wdminfile, evap_dsns[d[l]],
                                          start = start, end = end)
                 areas.append(area)
@@ -637,7 +638,7 @@ class Postprocessor:
             for l in self.hspfmodel.landuse:
                 
                 area = sum([o.area for o in operations 
-                            if o.landtype == l and o.comid in comids])
+                            if o.landtype == l and o.subbasin in comids])
                 evap = self.wdm.get_data(self.wdminfile, evap_dsns[d[l]],
                                          start = start, end = end)
                 areas.append(area)
@@ -649,7 +650,7 @@ class Postprocessor:
         areas = []
         for comid in comids:
 
-            area = sum([o.area for o in operations if o.comid == comid])
+            area = sum([o.area for o in operations if o.subbasin == comid])
             areas.append(area)
 
         if   self.hspfmodel.units == 'Metric':  conv = 1000
@@ -972,13 +973,13 @@ class Postprocessor:
         snowcfs = {}
         rdcsns = {}
         for o in self.hspfmodel.perlnds + self.hspfmodel.implnds:
-            if o.comid not in snowcfs: 
-                snowcfs[o.comid] = {}
-                areas[o.comid]   = {}
-                rdcsns[o.comid]  = {}
-            snowcfs[o.comid][o.landtype] = o.SNOWCF
-            areas[o.comid][o.landtype]   = o.area
-            rdcsns[o.comid][o.landtype]  = o.RDCSN
+            if o.subbasin not in snowcfs: 
+                snowcfs[o.subbasin] = {}
+                areas[o.subbasin]   = {}
+                rdcsns[o.subbasin]  = {}
+            snowcfs[o.subbasin][o.landtype] = o.SNOWCF
+            areas[o.subbasin][o.landtype]   = o.area
+            rdcsns[o.subbasin][o.landtype]  = o.RDCSN
 
         dsns  = {}
         for id, staid, desc, dsn in zip(self.idconss, self.staids, 
@@ -1678,7 +1679,7 @@ class Postprocessor:
             operations = [o for o in (self.hspfmodel.perlnds + 
                                       self.hspfmodel.implnds +
                                       self.hspfmodel.rchreses)
-                          if o.comid == comid]
+                          if o.subbasin == comid]
             
             for o in operations:
 
@@ -2956,7 +2957,7 @@ class Postprocessor:
 
         # get the min and max shear stress for the reach
 
-        reach_comids = [r.comid for r in self.hspfmodel.rchreses]
+        reach_comids = [r.subbasin for r in self.hspfmodel.rchreses]
 
         reach = self.hspfmodel.rchreses[reach_comids.index(comid)]
 
@@ -3085,6 +3086,9 @@ class Postprocessor:
         elif self.hspfmodel.units == 'English': 
             conv = self.hspfmodel.tstep * 60 * 12 / 43560
 
+        if output is not None:
+            if not os.path.isdir(output): os.mkdir(output)
+
         for storm in storms:
         
             t, prec, sim, inflow, runoff, interflow, baseflow, obs = storm
@@ -3095,7 +3099,7 @@ class Postprocessor:
             i = [f * area / conv for f in interflow]
             b = [f * area / conv for f in baseflow]
 
-            if output is not None: out = output + '{}'.format(t[0])[:10]
+            if output is not None: out = output + '/{}'.format(t[0])[:10]
             else:                  out = None
             
             if tstep == 'hourly': msize = 4

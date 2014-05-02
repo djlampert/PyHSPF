@@ -140,6 +140,7 @@ def extract_raw(source, destination, HUC8, plot = True, show = False,
             lons.append(lon)
 
             if not os.path.isfile('{}/{}'.format(raw, f)):
+                print('copying {}'.format(f))
                 shutil.copy('{}/{}'.format(source, f), '{}/{}'.format(raw, f))
             
     if plot: 
@@ -167,22 +168,27 @@ def extract_timeseries(directory, start, end,
 
     for f in gridfiles:
 
-        with open(f, 'rb') as p: g = pickle.load(p)
+        print('re-organizing {}'.format(f))
 
-        # dump each time series and get rid of time zone info
+        if any([not os.path.isfile('{}/{}/{}'.format(directory, ts, f)) 
+                for f in os.listdir(source)]):
 
-        for ts in series:
+            with open(f, 'rb') as p: g = pickle.load(p)
 
-            data = [(datetime.datetime(t.year, t.month, t.day, t.hour), v) 
-                     for t, v in g.data[ts]]
-            data = [(t, v) for t, v in data if start <= t and t < end]
+            # dump each time series and get rid of time zone info
+
+            for ts in series:
+
+                data = [(datetime.datetime(t.year, t.month, t.day, t.hour), v) 
+                        for t, v in g.data[ts]]
+                data = [(t, v) for t, v in data if start <= t and t < end]
             
-            it = directory, ts, g.lon, g.lat
+                it = directory, ts, g.lon, g.lat
 
-            destination = '{}/{}/{:8.4f}_{:7.4f}'.format(*it)
+                destination = '{}/{}/{:8.4f}_{:7.4f}'.format(*it)
 
-            if not os.path.isfile(destination):
-                with open(destination, 'wb') as f: pickle.dump(data, f)
+                if not os.path.isfile(destination):
+                    with open(destination, 'wb') as f: pickle.dump(data, f)
 
 if __name__ == '__main__':
 

@@ -19,16 +19,19 @@ from pyhspf import Watershed, Subbasin, HSPFModel, WDMUtil
 
 # inputs
 
-desc  = 'Hunting Creek, Patuxent Basin'
-start = datetime.datetime(1988, 10, 1)
-end   = datetime.datetime(1990, 10, 1)
-tstep = 60
-units = 'English'
+description = 'Hunting Creek, Patuxent Basin'
+start       = datetime.datetime(1988, 10, 1)
+end         = datetime.datetime(1990, 10, 1)
+tstep       = 60
+units       = 'English'
 
 # 3 subbasins/reaches; the right and left branch feed the main channel; let's
 # call the left and right branches 31 and 32, and main branch 30
 
-updown = {'32':'30', '31':'30', '30':0}
+updown = {'32':'30', 
+          '31':'30', 
+          '30':0
+          }
 
 # keep track of the subbasins
 
@@ -50,12 +53,6 @@ planeslope = 0.05  # flow plane slope
 area       = 0
 elev       = 0
 centroid   = [0,0]
-reach      = ''
-inlet      = 0          # no external inlet
-inflow     = 0
-outflow    = 0
-velocity   = 1
-traveltime = 0
 
 # add the flow plane info for the subbasin
 
@@ -67,8 +64,6 @@ name     = 'Hunting Cr'
 maxelev  = 125        # inflow elevation, ft (only the difference needed)
 minelev  = 100        # outflow elevlation, to give delth of 25 feet
 slopelen = 0.5        # reach length, miles
-
-slope    = (maxelev - minelev) / 5280 / slopelen
 
 # the ftable is supplied in the example; so we will add it here. if not supplied
 # it is estimated from the average conditions 
@@ -94,16 +89,16 @@ ftable = [[0.0, 0.0, 0.0, 0.0],
 
 # add the reach info to the subbasin
 
-subbasin.add_reach('30', name, reach, inlet, maxelev, minelev, slopelen, 
-                   slope, inflow, outflow, velocity, traveltime, 
-                   ftable = ftable)
+subbasin.add_reach(name, maxelev, minelev, slopelen, ftable = ftable)
 
 # subbasin land use info (to create perlnds and implnds)
 
 landuse_names = ['Forest', 'Pasture/grass']
 areas         = [32, 6]
 
-ifraction = 1. # fraction of developed land that is impervious
+# fraction of developed land that is impervious
+
+ifraction = 1. 
 
 # add the landuse
 
@@ -127,12 +122,6 @@ planeslope = 0.05  # flow plane slope
 area       = 0
 elev       = 0
 centroid   = [0,0]
-reach      = ''
-inlet      = 0          # no external inlet
-inflow     = 0
-outflow    = 0
-velocity   = 1
-traveltime = 0
 
 # add the flow plane info for the subbasin
 
@@ -144,8 +133,6 @@ name     = 'Hunting Cr, rt br'
 maxelev  = 125        # inflow elevation, ft (only the difference needed)
 minelev  = 100        # outflow elevlation, to give delth of 25 feet
 slopelen = 2.6        # reach length, miles
-
-slope    = (maxelev - minelev) / 5280 / slopelen
 
 # the ftable is supplied in the example; so we will add it here. if not supplied
 # it is estimated from the average conditions 
@@ -171,9 +158,7 @@ ftable = [[  0.0,    0.0,   0.0,      0.0],
 
 # add the reach info to the subbasin
 
-subbasin.add_reach('31', name, reach, inlet, maxelev, minelev, slopelen, 
-                   slope, inflow, outflow, velocity, traveltime, 
-                   ftable = ftable)
+subbasin.add_reach(name, maxelev, minelev, slopelen, ftable = ftable)
 
 # subbasin land use info (to create perlnds and implnds) -- names provide 
 # hydrology default values
@@ -203,12 +188,6 @@ planeslope = 0.05  # flow plane slope
 area       = 0
 elev       = 0
 centroid   = [0,0]
-reach      = ''
-inlet      = 0          # no external inlet
-inflow     = 0
-outflow    = 0
-velocity   = 1
-traveltime = 0
 
 # add the flow plane info for the subbasin
 
@@ -220,8 +199,6 @@ name     = 'Hunting Cr, lft br'
 maxelev  = 125        # inflow elevation, ft (only the difference needed)
 minelev  = 100        # outflow elevlation, to give delth of 25 feet
 slopelen = 3.8        # reach length, miles
-
-slope    = (maxelev - minelev) / 5280 / slopelen
 
 # the ftable is supplied in the example; so we will add it here. if not supplied
 # it is estimated from the average conditions 
@@ -247,9 +224,7 @@ ftable = [[0.0, 0.0, 0.0, 0.0],
 
 # add the reach info to the subbasin
 
-subbasin.add_reach('32', name, reach, inlet, maxelev, minelev, slopelen, 
-                   slope, inflow, outflow, velocity, traveltime, 
-                   ftable = ftable)
+subbasin.add_reach(name, maxelev, minelev, slopelen, ftable = ftable)
 
 # subbasin land use info (to create perlnds and implnds) -- names provide 
 # hydrology default values
@@ -267,7 +242,7 @@ subbasins['32'] = subbasin
 
 # create an instance of the watershed class from the subbasin information
 
-watershed = Watershed(desc, subbasins)
+watershed = Watershed(description, subbasins)
 
 # add the network and the outlet subbasin
 

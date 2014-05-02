@@ -10,17 +10,35 @@
 class Perlnd:
     """A class for a pervious land segment for an HSPF model."""
 
-    def __init__(self, operation, comid, landtype, area, length, slope, melev,
-                 belv, lat, 
-                 ATMP = False, SNOW = False, PWAT = False,  SED  = False, 
-                 PST  = False, PWG  = False, PQAL = False, MSTL = False, 
-                 PEST = False, NITR = False, PHOS = False, TRAC = False):
+    def __init__(self, 
+                 operation, 
+                 subbasin, 
+                 landtype, 
+                 area, 
+                 length, 
+                 slope, 
+                 melev,
+                 belv, 
+                 lat, 
+                 ATMP = False, 
+                 SNOW = False, 
+                 PWAT = False,  
+                 SED  = False, 
+                 PST  = False, 
+                 PWG  = False, 
+                 PQAL = False, 
+                 MSTL = False, 
+                 PEST = False, 
+                 NITR = False, 
+                 PHOS = False, 
+                 TRAC = False
+                 ):
         """Sets up the modules and basic info for the PERLND."""
 
         # identification information
 
         self.operation  = operation  # the HSPF operation number (1-999)
-        self.comid      = comid      # the NHDPlus comid of the outlet
+        self.subbasin   = subbasin   # the subbasin number of the outlet
         self.landtype   = landtype   # the landuse category
 
         # physically-based parameters (units consistent with HSPF formulation)
@@ -50,8 +68,13 @@ class Perlnd:
     def set_land_parms(self, monLZETP = False):
         """Set parameters related to land use categories."""
 
-        crops = ['Corn', 'Soybeans', 'Other grain', 'Hay/alfalfa', 'Other',
-                 'Agriculture']
+        crops = ['Corn', 
+                 'Soybeans', 
+                 'Other grain', 
+                 'Hay/alfalfa', 
+                 'Other',
+                 'Agriculture'
+                 ]
 
         # forest cover percent
 
@@ -134,7 +157,7 @@ class Perlnd:
 
         self.HWT = 0
         if self.landtype == 'Water/wetland': 
-            #self.HWT = 1 # wetland flag (had issues trying this so needs work)
+            #self.HWT = 1 # wetland flag (had issues trying this--needs work)
             self.AGWETP = 0.7 # PET fraction satisfied by groundwater (0 to 1)
             self.RTOP   = 2
         else:                           
@@ -142,11 +165,18 @@ class Perlnd:
             self.AGWETP = 0
             self.RTOP = 1
 
-    def set_pwat_parms(self, units, VCS = 1, VUZ = 0, VNN = 1, VIFW = 0, 
-                       VIRC = 0, VLE = 0):
+    def set_pwat_parms(self, 
+                       units,     # English or Metric
+                       VCS  = 1,  # variable monthly canopy storage flag
+                       VUZ  = 0,  # variable monthly upper zone storage flag
+                       VNN  = 1,  # variable monthly Manning n flag
+                       VIFW = 0,  # variable monthly interflow inflow flag
+                       VIRC = 0,  # variable monthly interflow recession flag
+                       VLE  = 0   # variable monthly lower zone ET parm flag
+                       ):
         """Shortcut function to set each PWAT block."""
 
-        self.units = units # English or Metric
+        self.units = units
 
         self.set_pwat_parm1(VCS = VCS, VUZ = VUZ, VNN = VNN, VIFW = VIFW,
                             VIRC = VIRC, VLE = VLE)
@@ -183,9 +213,20 @@ class Perlnd:
 
         self.set_pwat_state()
 
-    def set_pwat_parm1(self, CSNO = 0, RTOP = 1, UZFG = 1, VCS = 0, VUZ = 0, 
-                             VNN  = 0, VIFW = 0, VIRC = 0, VLE = 0, IFFC = 1, 
-                             HWT  = 0, IRRG = 0):
+    def set_pwat_parm1(self, 
+                       CSNO = 0, 
+                       RTOP = 1, 
+                       UZFG = 1, 
+                       VCS  = 0, 
+                       VUZ  = 0, 
+                       VNN  = 0, 
+                       VIFW = 0, 
+                       VIRC = 0, 
+                       VLE  = 0, 
+                       IFFC = 1, 
+                       HWT  = 0, 
+                       IRRG = 0
+                       ):
         """sets up flags (PARM1) for the PWATER module."""
 
         # algorithm flags
@@ -237,7 +278,11 @@ class Perlnd:
                 self.VUZ, self.VNN, self.VIFW, self.VIRC, self.VLE, self.IFFC, 
                 self.HWT, self.IRRG)
         
-    def set_pwat_parm2(self, INFILT = 1., KVARY = 0., AGWRC = 0.95):
+    def set_pwat_parm2(self, 
+                       INFILT = 1., 
+                       KVARY = 0., 
+                       AGWRC = 0.95
+                       ):
         """Sets the values for some parameters (PWAT2) in the PWATER module.
         Note that LSUR and SLSUR come from physical data so they are not
         set here."""
@@ -257,8 +302,13 @@ class Perlnd:
         return (self.operation, self.FOREST, self.LZSN, self.INFILT, self.LSUR,
                 self.SLSUR, self.KVARY, self.AGWRC)
 
-    def set_pwat_parm3(self, PETMAX = 1., PETMIN = 0., INFEXP = 2., 
-                       INFILD = 2., DEEPFR = 0., BASETP = 0.):
+    def set_pwat_parm3(self, 
+                       PETMAX = 1., 
+                       PETMIN = 0., 
+                       INFEXP = 2., 
+                       INFILD = 2., 
+                       DEEPFR = 0., 
+                       BASETP = 0.):
         """Sets the values for some parameters (PWAT3) in the PWATER module."""
 
         self.PETMAX = PETMAX # air temp where input ET is reduced
@@ -275,8 +325,13 @@ class Perlnd:
         return (self.operation, self.PETMAX, self.PETMIN, self.INFEXP, 
                 self.INFILD, self.DEEPFR, self.BASETP, self.AGWETP)
 
-    def set_pwat_parm4(self, CEPSC = 0., UZSN = 20., NSUR = 0.1, INTFW = 10., 
-                       IRC = 0.6):
+    def set_pwat_parm4(self, 
+                       CEPSC = 0., 
+                       UZSN = 20., 
+                       NSUR = 0.1, 
+                       INTFW = 10., 
+                       IRC = 0.6
+                       ):
         """Sets the values for parameters that can vary by month but don't."""
 
         self.CEPSC = CEPSC # interception storage capacity
@@ -292,7 +347,10 @@ class Perlnd:
         return (self.operation, self.CEPSC, self.UZSN, self.NSUR, self.INTFW,
                 self.IRC, self.LZETP)
 
-    def set_pwat_parm5(self, FZG = 0.0394, FZGL = 0.1):
+    def set_pwat_parm5(self, 
+                       FZG = 0.0394, 
+                       FZGL = 0.1
+                       ):
         """Set the values for the parameters relating the effects of ice to
         infiltration rate."""
 
@@ -304,7 +362,12 @@ class Perlnd:
 
         return (self.operation, self.FZG, self.FZGL)
 
-    def set_pwat_parm6(self, GWDATM = None, PCW = 0.4, PGW = 0.4, UPGW = 0.4):
+    def set_pwat_parm6(self, 
+                       GWDATM = None, 
+                       PCW = 0.4, 
+                       PGW = 0.4, 
+                       UPGW = 0.4
+                       ):
         """Sets the values of the high water table parameters."""
 
         if GWDATM is None: self.GWDATM = self.BELV - 5
@@ -320,8 +383,15 @@ class Perlnd:
         return (self.operation, self.MELEV, self.BELV, self.GWDATM, self.PCW,
                 self.PGW, self.UPGW)
 
-    def set_pwat_parm7(self, STABNO = 999, SRRC = 0.1, SREXP = 2., 
-                       IFWSC = 20., DELTA = 0.025, UELFAC = 4., LELFAC = 2.5):
+    def set_pwat_parm7(self, 
+                       STABNO = 999, 
+                       SRRC = 0.1, 
+                       SREXP = 2., 
+                       IFWSC = 20., 
+                       DELTA = 0.025, 
+                       UELFAC = 4., 
+                       LELFAC = 2.5
+                       ):
         """Sets the values for the high water table parameters."""
 
         self.STABNO = STABNO  # ftable number
@@ -338,8 +408,15 @@ class Perlnd:
         return (self.operation, self.STABNO, self.SRRC, self.SREXP, self.IFWSC,
                 self.DELTA, self.UELFAC, self.LELFAC)
                        
-    def set_pwat_state(self, CEPS = 0., SURS = 0., UZS = None, IFWS = 0., 
-                       LZS = None, AGWS = 0., GWVS = 0.):
+    def set_pwat_state(self, 
+                       CEPS = 0., 
+                       SURS = 0., 
+                       UZS = None, 
+                       IFWS = 0., 
+                       LZS = None, 
+                       AGWS = 0., 
+                       GWVS = 0.
+                       ):
         """Sets the initial values for the state variables for PWATER."""
 
         self.CEPS = CEPS
@@ -427,8 +504,13 @@ class Perlnd:
 
         return (self.operation, self.SNOPFG, self.VKMFG)
 
-    def set_snow_parm1(self, SHADE = 0.15, SNOWCF = 1., COVIND = 10., 
-                       KMELT = 0., TBASE = 0.):
+    def set_snow_parm1(self, 
+                       SHADE = 0.15, 
+                       SNOWCF = 1., 
+                       COVIND = 10., 
+                       KMELT = 0., 
+                       TBASE = 0.
+                       ):
         """Sets the snow melt parameter values. Note first two pre-defined."""
 
         #self.LAT    = LAT   # latitude
@@ -445,8 +527,14 @@ class Perlnd:
         return (self.operation, self.lat, self.MELEV, self.SHADE, self.SNOWCF,
                 self.COVIND, self.KMELT, self.TBASE)
 
-    def set_snow_parm2(self, RDCSN = 0.12, TSNOW = 2., SNOEVP = 0.1, 
-                       CCFACT = 1., MWATER = 0.03, MGMELT = 0.25):
+    def set_snow_parm2(self, 
+                       RDCSN = 0.12, 
+                       TSNOW = 2., 
+                       SNOEVP = 0.1, 
+                       CCFACT = 1., 
+                       MWATER = 0.03, 
+                       MGMELT = 0.25
+                       ):
         """Sets snowpack parameter values."""
 
         self.RDCSN  = RDCSN  # snow density relative to water
@@ -462,8 +550,14 @@ class Perlnd:
         return (self.operation, self.RDCSN, self.TSNOW, self.SNOEVP, 
                 self.CCFACT, self.MWATER, self.MGMELT)
 
-    def set_snow_init1(self, packsnow = 0., packice = 0., packwatr = 0., 
-                       RDENPF = 0.2, DULL = 400., PAKTMP = 0.):
+    def set_snow_init1(self, 
+                       packsnow = 0., 
+                       packice = 0., 
+                       packwatr = 0., 
+                       RDENPF = 0.2, 
+                       DULL = 400., 
+                       PAKTMP = 0.
+                       ):
         """Sets the initial snow pack conditions. Note all are in water-
         equivalent units."""
 
@@ -480,7 +574,11 @@ class Perlnd:
         return (self.operation, self.packsnow, self.packice, self.packwatr,
                 self.RDENPF, self.DULL, self.PAKTMP)
 
-    def set_snow_init2(self, COVINX = 10., XLNMLT = 2.5, SKYCLR = 0.):
+    def set_snow_init2(self, 
+                       COVINX = 10., 
+                       XLNMLT = 2.5, 
+                       SKYCLR = 0.
+                       ):
         """Sets the initial values of other snow parameters."""
 
         self.COVINX = COVINX # snow pack depth needed to cover segment (mm)
@@ -492,7 +590,11 @@ class Perlnd:
 
         return (self.operation, self.COVINX, self.XLNMLT, self.SKYCLR)
 
-    def set_sed_parm1(self, CRV = 0, VSIV = 0, SDOP = 0):
+    def set_sed_parm1(self, 
+                      CRV = 0, 
+                      VSIV = 0, 
+                      SDOP = 0
+                      ):
         """Sets the sediment transport flags for monthly variables."""
 
         self.CRV  = CRV  # erosion-related cover flag
@@ -504,8 +606,14 @@ class Perlnd:
 
         return (self.operation, self.CRV, self.VSIV, self.SDOP)
 
-    def set_sed_parm2(self, SMPF = 1., KRER = 0.35, JRER = 2.0, AFFIX = None,
-                      COVER = 0., NVSI = 1.):
+    def set_sed_parm2(self, 
+                      SMPF = 1., 
+                      KRER = 0.35, 
+                      JRER = 2.0, 
+                      AFFIX = None,
+                      COVER = 0., 
+                      NVSI = 1.
+                      ):
         """Sets some of the sediment transport parameters."""
 
         self.SMPF  = SMPF  # supporting management practice factor (-)
@@ -537,7 +645,12 @@ class Perlnd:
         return (self.operation, self.SMPF, self.KRER, self.JRER, self.AFFIX,
                 self.COVER, self.NVSI)
 
-    def set_sed_parm3(self, KSER = None, JSER = 2.0, KGER = 0., JGER = 1.):
+    def set_sed_parm3(self, 
+                      KSER = None, 
+                      JSER = 2.0, 
+                      KGER = 0., 
+                      JGER = 1.
+                      ):
         """Sets some of the sediment transport parameters."""
 
         self.KSER = KSER  # detached sediment washoff coeff (tonne/ha hr^JSER-1)
@@ -566,7 +679,9 @@ class Perlnd:
 
         return (self.operation, self.KSER, self.JSER, self.KGER, self.JGER)
 
-    def set_sed_stor(self, DETS = 0.2):
+    def set_sed_stor(self, 
+                     DETS = 0.2
+                     ):
         """Sets the initial value of the detached sediment."""
 
         self.DETS = DETS
