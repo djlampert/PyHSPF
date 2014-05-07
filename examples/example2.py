@@ -4,9 +4,9 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# Last updated: 08/18/2013
+# Last updated: 05/07/2014
 #
-# Purpose: Demonstrates how to builds an instance of the HSPFModel class 
+# Purpose: Demonstrates how to build an instance of the HSPFModel class 
 # that can be used to generate UCI files for an HSPF simulation. Example
 # comes from the HSPF "expert" system (hspexp) for the Hunting Creek Watershed.
 # This is a "real" example of how to create an HSPF model in Python using 

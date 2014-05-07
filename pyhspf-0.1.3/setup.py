@@ -323,16 +323,32 @@ if not os.path.isdir(destination):
 
             shutil.copy(s, d)
 
+# DLLs from mingw
+
+if os.name == 'nt':
+    data_files = ['libgcc_s_sjlj-1.dll',
+                  'libgfortran-3.dll',
+                  'libquadmath-0.dll',
+                  ]
+
+    for f in data_files:
+        if not os.path.isfile('pyhspf/core/{}'.format(f)):
+            print('warning: missing DLL {}'.format(f))
+            raise
+
+else: data_files = []
+
 # if the source files exists, install
 
-datafiles = ['hspfmsg.wdm', 'attributes']
+package_data = ['hspfmsg.wdm', 'attributes']
 
 # files
 
 files = ['hspf13/{}'.format(f) 
          for f in os.listdir('hspf13') if f[-1] == 'c' or f[-1] == 'f']
 
-gflags = ['-O3', '-fno-automatic', '-fno-align-commons']
+fflags = ['-O3', '-fno-automatic', '-fno-align-commons']
+
 setup(
     name = 'pyhspf',
     version = '0.1.3',
@@ -359,16 +375,17 @@ setup(
                 'pyhspf.calibration',
                 'pyhspf.forecasting',
                 ],
-    package_dir = {'pyhspf': 'pyhspf',
-                   'core': 'pyhspf/core', 
+    package_dir = {'pyhspf':        'pyhspf',
+                   'core':          'pyhspf/core', 
                    'preprocessing': 'pyhspf/preprocessing', 
-                   'calibration': 'pyhspf/calibration',
-                   'forecasting': 'pyhspf/forecasting',
+                   'calibration':   'pyhspf/calibration',
+                   'forecasting':   'pyhspf/forecasting',
                    },
     package_data = {'pyhspf': ['HSPF13.zip'],
-                    'pyhspf.core': datafiles
+                    'pyhspf.core': package_data
                     },
+    data_files = [(sysconfig.get_python_lib(), data_files)],
     ext_modules=[Extension(name = 'hspf', sources = files, 
-                           extra_f77_compile_args = gflags)]
+                           extra_f77_compile_args = fflags)]
     )
 
