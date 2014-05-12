@@ -5,9 +5,10 @@ This is the setup file.
 
 import os, sys, io, zipfile, shutil, pickle
 
-from numpy.distutils.core import Extension, setup
-from distutils            import sysconfig
-from urllib               import request
+from numpy.distutils.core         import Extension, setup
+from numpy.distutils.exec_command import find_executable
+from distutils                    import sysconfig
+from urllib                       import request
 
 _directory = '{}/pyhspf'.format(sysconfig.get_python_lib())
 
@@ -326,15 +327,41 @@ if not os.path.isdir(destination):
 # DLLs from mingw
 
 if os.name == 'nt':
-    data_files = ['libgcc_s_sjlj-1.dll',
-                  'libgfortran-3.dll',
-                  'libquadmath-0.dll',
-                  ]
 
-    for f in data_files:
-        if not os.path.isfile('pyhspf/core/{}'.format(f)):
-            print('warning: missing DLL {}'.format(f))
-            raise
+    # find the path to mingw (this might work for other compilers too)
+
+    executable = 'gfortran'
+
+    needs = ['gfortran', 'gcc', 'quadmath']
+    
+    compiler_path      = find_executable(executable)
+
+    if compiler_path is not None:
+
+        directory = compiler_path[:compiler_path.index(executable)]
+    
+        # find the DLLs in the mingw bin directory
+
+        dlls = [f for f in os.listdir(directory) if f[-3:].lower() == 'dll']
+
+        matching = [dll for dll in dlls if any([need in dll for need in needs])]
+
+        data_files = ['{}{}'.format(directory, dll) for dll in matching]
+
+        for f in data_files:
+            if not os.path.isfile(f):
+                print('warning: missing DLL {}'.format(f))
+                raise
+
+    else: data_files = []
+
+    # numpy/f2py need this configuration file setup to work right
+
+    distfile = '{}/Lib/distutils/distutils.cfg'.format(python)
+    if not os.path.isfile(distfile):
+        print('adding a configuration file to the Python library...\n')
+        with open(distfile, 'w') as f:
+            f.write('[build]\ncompiler=mingw32')
 
 else: data_files = []
 
@@ -352,6 +379,8 @@ fflags = ['-O3', '-fno-automatic', '-fno-align-commons']
 setup(
     name = 'pyhspf',
     version = '0.1.3',
+    #install_requires = ['numpy>=1.8', 'scipy>=0.11', 'matplotlib>=1.2'],
+    #extra_requires = ['gdal>=1.9', 'pyshp>=1.1'],
     description = _s,
     author = 'David Lampert',
     author_email = 'djlampert@gmail.com',
@@ -382,9 +411,9 @@ setup(
                    'forecasting':   'pyhspf/forecasting',
                    },
     package_data = {'pyhspf': ['HSPF13.zip'],
-                    'pyhspf.core': package_data
+                    'pyhspf.core': package_data,
                     },
-    data_files = [(sysconfig.get_python_lib(), data_files)],
+    data_files = [('.', data_files)],
     ext_modules=[Extension(name = 'hspf', sources = files, 
                            extra_f77_compile_args = fflags)]
     )

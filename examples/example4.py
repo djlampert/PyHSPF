@@ -26,6 +26,15 @@ hspfmodel.filename = 'example4'
 
 hspfmodel.print_file = 'example4.out'
 
+# HSPF traditional utilized pan evaporation data, which are usually multiplied
+# by a pan coefficient on the order of 0.7 to adjust the pan evaporation to
+# potential evapotranspriation. PyHSPF has a built-in method to do a site-wide
+# adjustment to evapotranspiration timeseries if it is needed.  I would suggest
+# developing "final" input timeseries, but to be consistent with the Hunting
+# example we will adjust it to 0.76 here.
+
+hspfmodel.evap_multiplier = 0.76
+
 # build the input wdm file
 
 hspfmodel.build_wdminfile()
