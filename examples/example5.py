@@ -31,7 +31,7 @@ end       = datetime.datetime(1990, 10, 1)
 gagecomid = '30'          
 
 # since we will be running this file repeatedly, we need to keep track of the
-# parameters in an efficiency manner. since some of them are specific to the
+# parameters in an efficient manner. since some of them are specific to the
 # land use or soil, we will define system-wide multipliers to the calibration 
 # parameters relative to the default values in most cases. for example, the 
 # default INFILT is 0.04 in/hr, and the INFILT_multiplier keeps track of the 
@@ -40,8 +40,8 @@ gagecomid = '30'
 # in/hr.  this allows any variability in space or land use to be retained 
 # while still allowing for adjustment for the calibration. note large changes 
 # cannot be made for many parameters since they would move values outside of 
-# defaults. it is also possible to establish site-wide values such as AGWRC in 
-# the example below. finally, this is just one way to do this but it 
+# allowable ranges. it is also possible to establish site-wide values such as 
+# AGWRC in the example below. finally, this is just one way to do this but it 
 # illustrates the power of scripting vs a graphical user interface.  
 # brief description of variables provided here too.
 
@@ -160,7 +160,7 @@ p.calculate_errors()
 
 # lather, rinse, repeat by changing the multipliers until the calibration is 
 # satisfactory. this first run should have gone from a NS for flow * NS for 
-# log flow of 0.265 to 0.285, meaning for the next run we would want to start
+# log flow of 0.268 to 0.288, meaning for the next run we would want to start
 # with INTFW = 0.9 rather than 1; the optimized values are commented out below.
 # i got a daily NS of 0.77 and daily NS for log flow of 0.68 after about an 
 # hour of adjusting just these parameters. use the commented out values in 
