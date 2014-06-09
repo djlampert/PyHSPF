@@ -1,3 +1,0 @@
-added forecasting module
-fixed some issues with dayofyear for short simulations
-other minor changes mostly regarding comments

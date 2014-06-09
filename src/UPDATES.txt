@@ -1,0 +1,31 @@
+Version 0.1.0
+
+Initial commit
+
+Version 0.1.1
+
+Added a "day of the water year" plot option
+Fixed some issues with the "flow network plot"
+Got rid of point shapefiles related to climate data in preprocessor
+Fixed solar radiation units for climate plots
+Other minor changes mostly regarding comments
+
+Version 0.1.2
+
+Added forecasting module
+Fixed some issues with dayofyear for short simulations
+Other minor changes mostly regarding comments
+
+Version 0.1.3
+
+Added special actions file and class to easy implementation
+Re-organized the core classes for HSPF modules (Perlnd, Implnd, Rchres, SpecialActions) into different files
+Re-organized the core classes to increase tranparency of process parameters
+Added example7.py to illustrate the use of special actions
+
+Version 0.1.4
+
+Changed directories to one source "src" (trying to use the GitHub version contorl--future release will be "forks").
+Modified the setup.py file to remove the download from source, and make directory "misc" that has a file that can compile HSPF (separate from Python) and generate the message file.
+Re-organized and updated climate data extraction tools
+New example climate data download tools

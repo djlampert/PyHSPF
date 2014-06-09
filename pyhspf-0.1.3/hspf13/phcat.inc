@@ -1,5 +1,0 @@
-C
-C     + + + PARAMETERS + + +
-      INTEGER    MXCAT,MXCUSR
-      PARAMETER (MXCAT=100)
-      PARAMETER (MXCUSR=20)

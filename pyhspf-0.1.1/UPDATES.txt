@@ -1,5 +1,0 @@
-added a "day of the water year" plot option
-fixed some issues with the "flow network plot"
-got rid of point shapefiles related to climate data in preprocessor
-fixed solar radiation units for climate plots
-other minor changes mostly regarding comments

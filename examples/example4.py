@@ -4,7 +4,7 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# Last updated: 05/07/2014
+# Last updated: 08/18/2013
 #
 # Purpose: Demonstrates how to use the Postprocessor class to analyze the 
 # results of an HSPF simulation. The example comes from the HSPF "expert" 

@@ -1,106 +1,237 @@
-# example6.py
-# David Lampert
-# illustrates how to use the preprocessing tools to download climate data.
+# example7.py
+#
+# David J. Lampert (djlampert@gmail.com)
+#
+# Last updated: 06/09/2014
+#
+# This is a repeat of example1.py, but illustrating how to add special actions.
 
-from pyhspf.preprocessing.climateplots     import plot_hourlyET
-from pyhspf.preprocessing.download_climate import find_ghcnd
+# start and end dates (year 2001)
 
-import os, pickle, datetime
+import datetime, random
 
-# bounding box of interest
+start = datetime.datetime(2001, 1, 1)
+end   = datetime.datetime(2003, 1, 1)
 
-bbox = -94, 41.3, -91.3, 42.5 
+# 4-hour timestep
 
-# start and end dates
+tstep = 240
 
-start = datetime.datetime(1980, 1, 1)
-end   = datetime.datetime(2011, 1, 1)
+# imports from pyhspf
 
-# GHCND variable to look for data ('EVAP' is pan evaporation--look this up)
+from pyhspf import Watershed, Subbasin, HSPFModel, WDMUtil
 
-var = 'EVAP'
+subbasins = {}  # subbasin dictionary
 
-# url to the NCDC database for the GHCND
+# provide subbasin attributes
 
-GHCND = 'http://www1.ncdc.noaa.gov/pub/data/ghcn/daily'
+number        = '100'            # subbasin number
+subbasin      = Subbasin(number) # created subbasin "100"
+length        = 100       # m
+planeslope    = 0.02      # -
+area          = 100       # km2
+elev          = 100       # m
+centroid      = [-90, 40] # long, lat
+name          = 'stream'   # something descriptive
+maxelev       = 110        # elevation at the top of the reach (m)
+minelev       = 100        # elevation at the bottom of the reach (m)
+slopelen      = 10         # the reach length (km)
+flow          = 12            # the average flow must be in cfs
+velocity      = 1             # velocity must be in fps
+landuse_names = ['Developed', 'Agriculture', 'Forest']
+areas         = [20, 40, 40]
 
-# find the stations with evaporation data and make a list of GHCNDStation 
-# instances to use to download the data for the stations
+# add the data for subbasin 100
 
-stations = find_ghcnd(bbox, GHCND, var = var, dates = (start, end),
-                      verbose = True)
+subbasin.add_flowplane(length, planeslope, area, centroid, elev)
+subbasin.add_reach(name, maxelev, minelev, slopelen, flow = flow, 
+                   velocity = velocity)
+subbasin.add_landuse(2001, landuse_names, areas)
 
-# download the data to "output" location (here it's the current directory, ".")
-# each station will be saved as a binary file with its unique GHCND ID
+# add the subbasin to the dictionary of subbasins
 
-output = '.'
+subbasins[number] = subbasin
 
-for station in stations: station.download_data(output, start = start, end = end,
-                                               plot = True)
+# make another subbasin
 
-# there are 4 files in the bounding box (you wouldn't know this in advance); 
-# let's just look at Ames (Iowa State) and Iowa City (Iowa) since the other 
-# data sets are really limited.  
+number   = '101'
+subbasin = Subbasin(number)
+maxelev  = 100 
+minelev  = 90
+flow     = 12
 
-names = ['USC00130200', 'USC00134101']
+subbasin.add_flowplane(length, planeslope, area, centroid, elev)
+subbasin.add_reach(name, maxelev, minelev, slopelen, flow = flow, 
+                   velocity = velocity)
+subbasin.add_landuse(2001, landuse_names, areas)
+subbasins[number] = subbasin
 
-# the GHCND class is used to download data, but an additional class exists to
-# store it and do things like make timeseries for removing missing values, etc.
+# build the watershed
 
-from pyhspf.preprocessing.ncdcstations import EvapStation
+watershed = Watershed('Dave', subbasins)
 
-evapstations = []
-for n in names:
-    with open('{}/{}'.format(output, n), 'rb') as f: ghcnd = pickle.load(f)
+# flow network dictionary
 
-    # make the EvapStation
+updown = {'100':'101', '101':0}
 
-    evapstation = EvapStation()
+# add the info to the watershed and outlet
 
-    # add the GHCND station metadata to the EvapStation
+watershed.add_mass_linkage(updown)
+watershed.add_outlet('101')
 
-    evapstation.add_location(ghcnd)
+# names of the files used in the simulation (the HSPF input and output files
+# are generated automatically); can also specify a directory to use elsewhere
 
-    # add the GHCND station data to the EvapStation
+filename   = 'example7'
+wdmoutfile = filename + '_out.wdm'
+outfile    = 'example7.out' 
 
-    evapstation.add_data(ghcnd.evap)
+# create an instance of the HSPFModel class
 
-    # add the EvapStation to the dictionary
+hspfmodel = HSPFModel()
 
-    evapstations.append(evapstation)
+# and build the model from the watershed
 
-# now we can plot the time series (or whatever you need the data for)
-# note that there appears to be a few errors in the data set for Ames
+hspfmodel.build_from_watershed(watershed, filename, print_file = outfile, 
+                               tstep = tstep)
+
+# let's now add a special action, thawed ground on the agricultural land
+# in the first subbasin on April 1 at 12 noon.
+
+thawdate = datetime.datetime(2001, 4, 1, 12)
+
+hspfmodel.add_special_action('thaw', '100', 'Agriculture', thawdate)
+
+# let's add another special action, frozen ground on the agricultural land
+# in the first subbasin on December 1 at midnight.
+
+freezedate = datetime.datetime(2001, 12, 1)
+
+hspfmodel.add_special_action('frozen', '100', 'Agriculture', freezedate)
+
+# climate time series
+
+maxET = 2
+nsteps = (end-start).days * 1440 // tstep
+evaporation = [maxET * (d - datetime.datetime(d.year, 1, 1)).days / 
+               (datetime.datetime(d.year, 7, 1) - 
+                datetime.datetime(d.year, 1, 1)).days
+               if d.month < 7
+               else
+               maxET - maxET * (d - datetime.datetime(d.year, 7, 1)).days / 
+               (datetime.datetime(d.year + 1, 1, 1) - 
+                datetime.datetime(d.year, 7, 1)).days
+               for d in [start + datetime.timedelta(minutes = tstep) * i
+                         for i in range(nsteps)]
+               ]
+
+# specify the time series type
+
+tstype = 'evaporation'
+
+# give the dataset a unique identifier
+
+identifier = 'example_evap'
+
+# finally need the start date, a list of the data, and the time step (min)
+
+hspfmodel.add_timeseries(tstype, identifier, start, evaporation, tstep = tstep)
+
+# assign the time series for this model
+
+hspfmodel.assign_watershed_timeseries(tstype, identifier)
+
+# now let's add some random rainfall
+
+rainfall = [random.randint(0,20) if random.random() > 0.95 else 0. 
+            for i in range(nsteps)]
+
+# assign the precipitation time series to the file
+
+tstype     = 'precipitation'
+identifier = 'example_prec'
+
+hspfmodel.add_timeseries(tstype, identifier, start, rainfall, tstep = tstep)
+
+# again we need to connect the time series to the whole watershed
+
+hspfmodel.assign_watershed_timeseries(tstype, identifier)
+
+# now we need to tell HSPF to run hydrology and assign default parameters
+
+hspfmodel.add_hydrology()
+
+# and now we can build the wdm input file using the timeseries
+
+hspfmodel.build_wdminfile()
+
+# external targets
+
+targets = ['reach_outvolume', 'evaporation', 'reach_volume', 'runoff']
+
+# build the input files and run
+
+hspfmodel.build_uci(targets, start, end, hydrology = True, verbose = False)
+hspfmodel.run(verbose = True)
+
+# retrieve results using WDMUtil
+
+wdm = WDMUtil()
+
+# open the file for read access
+
+wdm.open(wdmoutfile, 'r')
+
+# let's pull up the flow at the outlet and plot it along with the precipitation
+# and evapotranspiration. the attributes that identify the data are "IDCONS"
+# (constituent ID) and "STAID " (station ID). these were assigned by the
+# build_wdminfile and build_UCI routines automatically; modify as needed.
+
+dsns    =  wdm.get_datasets(wdmoutfile)
+idconss = [wdm.get_attribute(wdmoutfile, n, 'IDCONS') for n in dsns]
+staids  = [wdm.get_attribute(wdmoutfile, n, 'STAID ') for n in dsns]
+
+# one HSPF parameter we saved is ROVOL (the postprocessor can be used to 
+# simplify this, but for now let's just use WDMUtil). The following
+# finds the right dsn. see if you can follow the syntax.
+
+n = [dsn for dsn, idcons, staid in zip(dsns, idconss, staids)
+     if idcons == 'ROVOL' and staid == '101'][0]
+
+rovol = wdm.get_data(wdmoutfile, n)
+
+# it's always a good idea to close up the fortran files.
+
+wdm.close(wdmoutfile)
+
+flows = [r * 10**6 / 3600 / 4 for r in rovol]
+
+# plot it
 
 from matplotlib import pyplot
 
-fig = pyplot.figure()
-sub = fig.add_subplot(111)
+# we need a list of the dates/times for the plot
 
-t = ('GHCND {} data for bounding box '.format(var) + 
-     '({}, {}) to ({}, {})'.format(*bbox))
-sub.set_title(t)
-sub.set_xlabel('Time')
-sub.set_ylabel('Daily Evaporation')
-sub.set_ylim([0, 30])
+times = [start + i * datetime.timedelta(hours = 4)
+         for i in range(int((end - start).total_seconds() / 3600 / 4))]
 
-# times for a time series plot
+fig = pyplot.figure(figsize = (8, 10))
 
-times = [start + i * datetime.timedelta(days = 1) 
-         for i in range((end-start).days)]
+axes = [fig.add_subplot(3, 1, i + 1) for i in range(3)]
 
-text = ''
-for s in evapstations:
-    total_evaporation = s.get_evaporation(start, end)
-    avg_evap = total_evaporation / (end-start).days * 365.25
-    values = s.make_timeseries(start, end)
-    sub.plot(times, values, label = s.name)
-    i = s.station, s.name, avg_evap
-    text+='\nStation {}, {}\nAnnual average evaporation = {:.0f} mm'.format(*i)
+axes[0].plot_date(times, rainfall, fmt = 'b-', lw = 0.3)
+axes[1].plot_date(times, evaporation, fmt = 'g-', lw = 0.3)
+axes[2].plot_date(times, flows, fmt = 'r-', lw = 0.3)
 
-sub.text(0.99, 1., text, ha = 'right', va = 'top', 
-         transform = sub.transAxes, size = 8)
+axes[2].set_xlabel('Date', fontsize = 9)
+axes[0].set_ylabel('Precipitation, (mm)', fontsize = 10, color = 'blue')
+axes[1].set_ylabel('Evapotranspiration (mm)', fontsize = 10, color = 'green')
+axes[2].set_ylabel('Flow (m\u00B3/s)', fontsize = 10, color = 'red')
 
-leg = sub.legend(loc = 'upper left', prop = {'size': 8})
+for ax in axes: ax.tick_params(axis = 'both', size = 9)
+fig.autofmt_xdate(rotation = 25)
+
+# show it
 
 pyplot.show()
+
