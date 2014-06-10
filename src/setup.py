@@ -139,7 +139,7 @@ setup(
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
         'Development Status :: 4 - Beta',
-        'Intended Audience :: Watershed modelers familiar with Python',
+        'Intended Audience :: Science/Research',
         ],
     packages = ['pyhspf', 
                 'pyhspf.core', 
