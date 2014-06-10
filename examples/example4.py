@@ -4,10 +4,10 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# Last updated: 08/18/2013
+# Last updated: 06/08/2014
 #
 # Purpose: Demonstrates how to use the Postprocessor class to analyze the 
-# results of an HSPF simulation. The example comes from the HSPF "expert" 
+# results of an HSPF simulation. The example comes from the HSPF "Expert" 
 # system (hspexp) for the Hunting Creek Watershed. Assumes the reader has 
 # some familiarity with Python, hydrology, and has done examples 1-3.
 
