@@ -1,0 +1,1569 @@
+RUN
+
+GLOBAL
+  Version 11 test run: PERLND and IMPLND w/ RCHRES (new features for V11)
+  START       1976              END    1976
+  RUN INTERP OUTPUT LEVEL    3
+  RESUME     0 RUN     1                   UNIT SYSTEM     1
+END GLOBAL
+
+*** This test run includes sections SPEC-ACTIONS, SNOW, PWATER, SEDMNT, PSTEMP,
+*** PWTGAS, MSTL, NITR, PHOS, IMPLND, HYDR, HTRCH, SEDTRN,
+*** RQUAL, DISPLY, PLTGEN, 
+
+*** New capabilites include:
+    Multiple WDM files ***
+    DSS files ***
+    Atmospheric Deposition ***
+    Yield-based plant uptake in NITR and PHOS ***
+    New nitrogen algorithms for forests in NITR ***
+    New streambed heat exchange algorithms ***
+    Conditional SPEC-ACTIONS ***
+    User-defined SPEC-ACTIONS ***
+    Distributed SPEC-ACTIONS ***
+
+FILES      
+<FILE>  <UN#>***<----FILE NAME------------------------------------------------->
+WDM        21   test.wdm
+WDM2       22   test2.wdm
+DSS1       31   test1.dss
+MESSU      23   test12.ech
+           01   test12.out
+           68   test12.d68
+           97   test12.p97
+END FILES
+
+OPN SEQUENCE
+    INGRP              INDELT 01:00
+      PERLND       1
+      DISPLY       1
+      DISPLY       2
+      IMPLND       1
+      RCHRES       1
+      PERLND       2
+      DISPLY       3
+      RCHRES       2
+      PLTGEN       1
+    END INGRP
+END OPN SEQUENCE
+
+PERLND
+  ACTIVITY
+    <PLS >          Active Sections (1=Active, 0=Inactive)             ***
+    # -  # ATMP SNOW PWAT  SED  PST  PWG PQAL MSTL PEST NITR PHOS TRAC ***
+    1              1    1    1    1    1         1         1    1
+    2              1    1    1    1    1         1         1
+  END ACTIVITY
+
+  PRINT-INFO
+    <PLS >          Print-flags                                    *** PIVL  PYR
+    # -  # ATMP SNOW PWAT  SED  PST  PWG PQAL MSTL PEST NITR PHOS TRAC       ***
+    1              4    4    4    4    4         4         4    4         1   12
+    2              4    4    4    4    4         4         4              1   12
+  END PRINT-INFO
+
+  GEN-INFO
+    <PLS ><-------Name------->        Unit-systems   Printer ***
+    # -  #                                t-series Engl Metr ***
+                                           in  out           ***
+    1      BICKNELL FARM                    1    1    1    0
+    2      LAUREN WOODS                     1    1    1    0
+  END GEN-INFO
+
+  *** Section SNOW ***
+
+  ICE-FLAG
+    <PLS >  0= Ice formation not simulated, 1= Simulated ***
+    # -  #ICEFG                                          ***
+    1    2    1
+  END ICE-FLAG
+
+  SNOW-PARM1
+    <PLS >  Snow input info: Part 1                          ***
+    # -  #       LAT     MELEV     SHADE    SNOWCF    COVIND ***
+    1    2       42.     1800.       0.0      1.45       0.5
+  END SNOW-PARM1
+
+  SNOW-PARM2
+    <PLS >  Snow input info: Part 2                                    ***
+    # -  #     RDCSN     TSNOW    SNOEVP    CCFACT    MWATER    MGMELT ***
+    1    2      0.12       32.      0.05       0.5      0.08    0.0001
+  END SNOW-PARM2
+
+  SNOW-INIT1
+    <PLS >  Initial snow conditions: Part 1                            ***
+    # -  #  PACKSNOW   PACKICE PACKWATER    RDENPF      DULL    PAKTMP ***
+    1    2       1.4       0.2       0.1       0.2      375.      27.5
+  END SNOW-INIT1
+
+  SNOW-INIT2
+    <PLS >  Initial snow conditions: Part 2 ***
+    # -  #    COVINX    XLNMLT    SKYCLR    ***
+    1    2      0.50       0.0       1.0
+  END SNOW-INIT2
+
+  *** Section PWATER ***
+
+  PWAT-PARM1
+    <PLS >  PWATER variable monthly parameter value flags ***
+    # -  # CSNO RTOP UZFG  VCS  VUZ  VNN VIFW VIRC  VLE   ***
+    1         0    1    1    1    1    1    0    0    1
+    2         0    1    1    1    0    0    0    0    0
+  END PWAT-PARM1
+
+  PWAT-PARM2
+    <PLS > ***  PWATER input info: Part 2
+    # -  # ***FOREST      LZSN    INFILT      LSUR     SLSUR     KVARY     AGWRC
+    1          0.000     8.000    0.0300      300.   0.07000     0.000     0.985
+    2          0.000     8.000      0.06      200.   0.22000     0.000     0.985
+  END PWAT-PARM2
+
+  PWAT-PARM3
+    <PLS > ***  PWATER input info: Part 3
+    # -  # ***PETMAX    PETMIN    INFEXP    INFILD    DEEPFR    BASETP    AGWETP
+    1    2       40.       35.       2.0       2.0       0.0       0.0       0.0
+  END PWAT-PARM3
+
+  PWAT-PARM4
+    <PLS >     PWATER input info: Part 4                               ***
+    # -  #     CEPSC      UZSN      NSUR     INTFW       IRC     LZETP ***
+    1           0.00     0.800     0.090     1.000     0.600     0.420
+    2           0.00     1.000     0.350     3.000     0.750     0.420
+  END PWAT-PARM4
+
+  MON-INTERCEP
+    <PLS>   Only required if VCSFG=1 in PWAT-PARM1                     ***
+    # -  #  Interception storage capacity at start of each month       ***
+            JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1      .030 .030 .030 .030 .015 .060 .120 .143 .135 .105 .050 .040
+    2      .060 .060 .060 .100 .160 .160 .160 .160 .160 .100 .060 .060
+  END MON-INTERCEP
+
+  MON-UZSN
+    <PLS>   Only required if VUZFG=1 in PWAT-PARM1                     ***
+    # -  #  Upper zone storage at start of each month                  ***
+            JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1      .300 .300 .300 .300 .280 .250 .250 .250 .250 .300 .300 .300
+  END MON-UZSN
+
+  MON-MANNING
+    <PLS >  Only required if VNNFG=1 in PWAT-PARM1                     ***
+    # -  #  Manning's n for overland flow at start of each month       ***
+            JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1      .100 .100 .100 .080 .080 .080 .080 .090 .090 .100 .100 .100
+  END MON-MANNING
+
+  MON-LZETPARM
+    <PLS >  Only required if VLEFG=1 in PWAT-PARM1                     ***
+    # -  #  Lower zone ET parameter at start of each month             ***
+            JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1      .100 .100 .100 .100 .250 .550 .550 .550 .450 .250 .150 .100
+  END MON-LZETPARM
+
+  PWAT-STATE1
+    <PLS > *** Initial conditions at start of simulation
+    # -  # ***  CEPS      SURS       UZS      IFWS       LZS      AGWS      GWVS
+    1    2     0.000     0.000     1.500     0.000     7.900     1.006     0.000
+  END PWAT-STATE1
+
+  *** Section SEDMNT ***
+
+  SED-PARM1      
+    #    #  CRV VSIV SDOP  ***
+    1         1    0    1
+  END SED-PARM1      
+ 
+  SED-PARM2      
+    #    #      SMPF      KRER      JRER     AFFIX     COVER      NVSI  ***
+    1          1.000     0.320     2.000     0.010     0.000     1.000
+    2          1.000     0.271     2.000     0.002     0.000     2.000
+  END SED-PARM2      
+ 
+  SED-PARM3      
+    #    #      KSER      JSER      KGER      JGER  ***
+    1           0.75     2.000     0.000     2.000
+    2          13.00     2.000     0.000     2.000
+  END SED-PARM3      
+ 
+  MON-COVER      
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    1      .230 .220 .150 .170 .280 .500 .750 .930 .930 .320 .290 .240
+    2      .970 .970 .970 .970 .970 .970 .970 .970 .970 .970 .970 .970
+  END MON-COVER      
+ 
+  SED-STOR       
+    #    #      DETS  ***
+    1           0.70
+    2           0.10
+  END SED-STOR       
+
+  *** Section PSTEMP ***
+
+  PSTEMP-PARM1   
+    #    # SLTV ULTV LGTV TSOP  ***
+    1    2    1    1    1    1
+  END PSTEMP-PARM1   
+
+  MON-ASLT      
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    1      33.9 33.9 37.5 43.0 49.6 55.8 59.8 59.8 53.5 44.8 40.0 35.7
+    2       33.  33.  35.  41.  47.  50.  50.  50.  50.  47.  40.  35.
+  END MON-ASLT
+
+  MON-BSLT      
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    1      0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50 0.50
+    2      0.30 0.30 0.35 0.45 0.52 0.57 0.57 0.57 0.56 0.52 0.45 0.42
+  END MON-BSLT
+     
+  MON-ULTP1      
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    1      34.6 34.6 40.7 50.7 62.4 74.0 81.2 81.2 69.7 53.2 45.2 37.7
+    2       36.  36.  37.  40.  45.  48.  48.  48.  48.  45.  40.  48.
+  END MON-ULTP1
+
+  MON-ULTP2      
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    1      0.10 0.10 0.10 0.10 0.10 0.10 0.10 0.10 0.10 0.10 0.10 0.10
+    2       .22  .22  .25  .40  .50  .55  .55  .55  .55  .50  .45  .25
+  END MON-ULTP2
+ 
+  MON-LGTP1      
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    1      50.0 50.0 52.0 54.0 56.0 58.0 60.0 62.0 58.0 55.0 52.0 50.0
+    2      49.0 48.5 50.0 55.0 58.0 60.0 61.0 61.5 59.5 56.0 52.0 49.5
+  END MON-LGTP1      
+ 
+  PSTEMP-TEMPS   
+    #    #     AIRTC     SLTMP     ULTMP     LGTMP  ***
+    1           32.0      32.0      32.0      49.0
+    2           32.0      32.0      32.0      50.0
+  END PSTEMP-TEMPS   
+
+  *** Section PWTGAS ***
+
+  PWT-PARM1      
+    #    #  IDV  ICV  GDV  GCV  ***
+    1    2    1    0    1    0
+  END PWT-PARM1      
+ 
+  PWT-PARM2      
+    #    #      ELEV     IDOXP     ICO2P     ADOXP     ACO2P  ***
+    1    2     1880.      8.80      0.00      8.80      0.00
+  END PWT-PARM2      
+ 
+  MON-IFWDOX     
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    1    2 12.7 12.7 11.2 9.70 7.40 6.50 5.50 5.50 6.00 8.40 9.40 11.6
+  END MON-IFWDOX     
+ 
+  MON-GRNDDOX    
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    1    2 12.0 12.0 11.0 10.0 7.50 5.50 4.50 4.00 4.50 7.50  9.0 10.0
+  END MON-GRNDDOX    
+ 
+  PWT-GASES      
+    #    #     SODOX     SOCO2     IODOX     IOCO2     AODOX     AOCO2  ***
+    1    2      14.5       0.0      12.7       0.0      10.0       0.0
+  END PWT-GASES      
+ 
+  *** Section MSTLAY ***
+
+  MST-PARM
+    FACTORS USED TO ADJUST SOLUTE LEACHING RATES ***
+    <PLS >     SLMPF      ULPF      LLPF   ***
+    #    #                                 ***
+    1    2       0.9       3.0       1.5
+  END MST-PARM
+
+  *** Section NITR ***
+
+  SOIL-DATA
+    <PLS > SOIL LAYER DEPTHS AND BULK DENSITIES  ***
+    # -  #           DEPTHS (IN)               BULK DENSITY (LB/FT3) ***
+           SURFACE   UPPER   LOWER GROUNDW SURFACE   UPPER   LOWER GROUNDW   ***
+    1         0.39    5.61   41.30     60.    74.9    81.2    84.3    90.5
+    2         0.39   11.42   35.43     60.    84.3    84.3    84.3    90.5
+  END SOIL-DATA
+
+  NIT-FLAGS
+    <PLS > NITROGEN FLAGS   ***
+    # -  # VNUT FORA ITMX BNUM CNUM NUPT FIXN AMVO ALPN VNPR ***
+    1              1  100    3    1    1      
+    2         1    1  100    3    1    2              1    1
+  END NIT-FLAGS
+  
+  NIT-AD-FLAGS
+             Atmospheric Deposition Flags ***
+                 NO3            NH3            ORGN    ***
+    <PLS >    sur    upp     sur    upp     sur    upp ***
+    # -  #   F  C   F  C    F  C   F  C    F  C   F  C ***
+    1    2  -1  0   0  0   -1  0   0  0   -1  0   0  0
+  END NIT-AD-FLAGS
+
+  SOIL-DATA2
+    <PLS >    SWILTP    UWILTP    LWILTP    AWILTP ***
+    # -  #   (IN/IN)   (IN/IN)   (IN/IN)   (IN/IN) ***
+    1           0.01      0.02      0.05      0.18
+  END SOIL-DATA2
+
+  CROP-DATES
+    <PLS >              CROP 1            CROP 2            CROP 3    ***
+    # -  # NCRP     PM PD   HM HD     PM PD   HM HD     PM PD   HM HD ***
+    1         1      1  1   12 31                   
+  END CROP-DATES
+
+  NIT-YIELD
+    <PLS >    NUPTGT    NMXRAT ***
+    # -  #   (LB/AC)           ***
+    1         145.00       2.0
+  END NIT-YIELD
+
+  MON-NUPT-FR1
+    <PLS >  Monthly fractions for plant uptake target                  ***
+    # -  #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1       .01  .04  .09 .115 .135 .145  .15  .14 .095  .05 .025 .005
+  END MON-NUPT-FR1
+
+  MON-NUPT-FR2
+    <PLS >  Monthly fractions for plant uptake target from surface     ***
+    # -  #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1       .01  .01  .01  .01  .01  .01  .01  .01  .01  .01  .01  .01
+  END MON-NUPT-FR2
+
+  MON-NUPT-FR2
+    <PLS >  Monthly fractions for plant uptake target from upper       ***
+    # -  #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1       .56  .56  .65  .65  .65  .65  .60  .55  .50  .45  .56  .56
+  END MON-NUPT-FR2
+
+  MON-NUPT-FR2
+    <PLS >  Monthly fractions for plant uptake target from lower       ***
+    # -  #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1       .43  .43  .34  .34  .34  .34  .39  .44  .49  .54  .43  .43
+  END MON-NUPT-FR2
+
+  MON-NUPT-FR2
+    <PLS >  Monthly fractions for plant uptake target from active gw   ***
+    # -  #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1        .0   .0   .0   .0   .0   .0   .0   .0   .0   .0   .0   .0
+  END MON-NUPT-FR2
+
+  NIT-UPIMCSAT        SURFACE LAYER
+    <PLS >     CSUNI     CSUAM     CSINI     CSIAM ***
+    # -  #    (UG/L)    (UG/L)    (UG/L)    (UG/L) ***
+    2            50.        5.       10.       2.0
+  END NIT-UPIMCSAT
+  
+  NIT-UPIMCSAT          UPPER LAYER
+    <PLS >     CSUNI     CSUAM     CSINI     CSIAM ***
+    # -  #    (UG/L)    (UG/L)    (UG/L)    (UG/L) ***
+    2            50.       10.       10.       2.0
+  END NIT-UPIMCSAT
+  
+  NIT-UPIMCSAT          LOWER LAYER
+    <PLS >     CSUNI     CSUAM     CSINI     CSIAM ***
+    # -  #    (UG/L)    (UG/L)    (UG/L)    (UG/L) ***
+    2            50.       20.       10.       2.0
+  END NIT-UPIMCSAT
+  
+  NIT-UPIMCSAT          GROUNDWATER LAYER
+    <PLS >     CSUNI     CSUAM     CSINI     CSIAM ***
+    # -  #    (UG/L)    (UG/L)    (UG/L)    (UG/L) ***
+    2           50.0       10.       10.       3.0
+  END NIT-UPIMCSAT
+  
+  MON-NITUPNI           SURFACE LAYER  
+    <PLS >  Maximum Plant Uptake Rate for Nitrate (mg/l/day)  ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2       10.  15.  15.  20.  25.  30.  30.  30.  30.  30.  25.  20.
+  END MON-NITUPNI 
+
+  MON-NITUPNI           UPPER LAYER    
+    <PLS >  Maximum Plant Uptake Rate for Nitrate (mg/l/day)  ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2       5.0  5.0  10.  15.  20.  20.  20.  20.  20.  15.  10.  5.0
+  END MON-NITUPNI 
+  
+  MON-NITUPNI           LOWER LAYER    
+    <PLS >  Maximum Plant Uptake Rate for Nitrate (mg/l/day)  ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2      0.50 0.60 0.70 0.70 0.90  1.0  1.0  1.0  1.0 0.80 0.70 0.60
+  END MON-NITUPNI 
+  
+  MON-NITUPNI           GROUND WATER LAYER
+    <PLS >  Maximum Plant Uptake Rate for Nitrate (mg/l/day)  ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2        0.   0.   0.   0.   0.   0.   0.   0.   0.   0.   0.   0.
+  END MON-NITUPNI 
+  
+  MON-NITUPAM           SURFACE LAYER  
+    <PLS >  Maximum Plant Uptake Rate for Ammonia (mg/l/day)  ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2       5.0  7.5  7.5  10. 12.5  15.  15.  15.  15.  15. 12.5  10.
+  END MON-NITUPAM 
+  
+  MON-NITUPAM           UPPER LAYER    
+    <PLS >  Maximum Plant Uptake Rate for Ammonia (mg/l/day)  ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2       10.  10. 12.0  15.  25.  25.  25.  25.  25.  20.  15.  10.
+  END MON-NITUPAM 
+  
+  MON-NITUPAM           LOWER LAYER  
+    <PLS >  Maximum Plant Uptake Rate for Ammonia (mg/l/day)  ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2       .50  .50  .60  .70  .80  .80  .80  .80  .80  .70  .60  .50
+  END MON-NITUPAM 
+  
+  MON-NITUPAM           GROUND WATER LAYER
+    <PLS >  Maximum Plant Uptake Rate for Ammonia (mg/l/day)  ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2        0.   0.   0.   0.   0.   0.   0.   0.   0.   0.   0.   0.
+  END MON-NITUPAM 
+  
+  MON-NITIMNI           SURFACE LAYER
+    <PLS >  Maximum Immobilization Rate for Nitrate (mg/l/day)  ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2       .05  .05  .05  .10  .10  .10  .15  .15  .10  .10  .10  .05
+  END MON-NITIMNI 
+  
+  MON-NITIMNI             UPPER LAYER
+    <PLS >  Maximum Immobilization Rate for Nitrate (mg/l/day)  ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2       .05  .05  .05  .05  .05  .10  .10  .10  .10  .05  .05  .05
+  END MON-NITIMNI 
+  
+  MON-NITIMNI             LOWER LAYER
+    <PLS >  Maximum Immobilization Rate for Nitrate (mg/l/day)  ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2       .02  .02  .02  .04  .04  .05  .05  .05  .04  .04  .04  .02
+  END MON-NITIMNI 
+  
+  MON-NITIMNI             GROUNDWATER LAYER
+    <PLS >  Maximum Immobilization Rate for Nitrate (mg/l/day)  ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2       .05  .05  .05  .10  .10  .10  .15  .15  .10  .10  .10  .05
+  END MON-NITIMNI 
+  
+  MON-NITIMAM           SURFACE LAYER
+    <PLS >  Maximum Immobilization Rate for Ammonia (mg/l/day)  ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2       .10  .10  .10  .10  .10  .20  .20  .20  .20  .10  .10  .10
+  END MON-NITIMAM 
+  
+  MON-NITIMAM             UPPER LAYER
+    <PLS >  Maximum Immobilization Rate for Ammonia (mg/l/day)  ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2       .10  .10  .10  .10  .10  .10  .10  .10  .10  .10  .10  .10
+  END MON-NITIMAM 
+  
+  MON-NITIMAM             LOWER LAYER
+    <PLS >  Maximum Immobilization Rate for Ammonia (mg/l/day)  ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2       .01  .01  .01  .01  .02  .02  .02  .02  .02  .01  .01  .01
+  END MON-NITIMAM 
+  
+  MON-NITIMAM             GROUNDWATER LAYER
+    <PLS >  Maximum Immobilization Rate for Ammonia (mg/l/day)  ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2       .05  .05  .05  .05  .05  .10  .10  .10  .10  .05  .05  .05
+  END MON-NITIMAM 
+  
+  MON-NITAGUTF               SURFACE LAYER
+    <PLS >  Monthly Above-Ground Fractions for Plant Uptake ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2        .3   .3   .3   .4   .5   .6   .6   .6   .6   .5   .4   .3
+  END MON-NITAGUTF
+  
+  MON-NITAGUTF                 UPPER LAYER
+    <PLS >  Monthly Above-Ground Fractions for Plant Uptake ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2        .3   .3   .3   .4   .5   .6   .6   .6   .6   .5   .4   .3
+  END MON-NITAGUTF
+  
+  MON-NITAGUTF                 LOWER LAYER
+    <PLS >  Monthly Above-Ground Fractions for Plant Uptake ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2        .3   .3   .3   .4   .5   .6   .6   .6   .6   .5   .4   .3
+  END MON-NITAGUTF
+  
+  MON-NITAGUTF             GROUNDWATER LAYER
+    <PLS >  Monthly Above-Ground Fractions for Plant Uptake ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2        0.   0.   0.   0.   0.   0.   0.   0.   0.   0.   0.   0.
+  END MON-NITAGUTF
+  
+  NIT-ORGPM
+    <PLS >    ORGANIC N TRANSFORMATION PARAMETERS FOR SURFACE LAYER ***
+    x -  x      KLON      KRON     KONLR     THNLR  ***
+    2          4500.  33000.00      .001      1.07
+  END NIT-ORGPM
+  
+  NIT-ORGPM
+    <PLS >    ORGANIC N TRANSFORMATION PARAMETERS FOR UPPER LAYER ***
+    x -  x      KLON      KRON     KONLR     THNLR  ***
+    2          4500.  33000.00    .00003      1.07
+  END NIT-ORGPM
+  
+  NIT-ORGPM
+    <PLS >    ORGANIC N TRANSFORMATION PARAMETERS FOR LOWER LAYER ***
+    x -  x      KLON      KRON     KONLR     THNLR  ***
+    2          4500.  33000.00    .00002      1.07
+  END NIT-ORGPM
+  
+  NIT-ORGPM
+    <PLS >    ORGANIC N TRANSFORMATION PARAMETERS FOR ACTIVE GW LAYER ***
+    x -  x      KLON      KRON     KONLR     THNLR  ***
+    2          4500.  33000.00    .00002      1.07
+  END NIT-ORGPM
+  
+  MON-NPRETBG                SURFACE LAYER
+    <PLS >  Return rates for below-ground plant N in surface layer (/day) ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2      .012 .012 .012 .036 .036 .036 .036 .036 .036 .036 .024 .012
+  END MON-NPRETBG  
+  
+  MON-NPRETBG                  UPPER LAYER
+    <PLS >  Return rates for below-ground plant N in upper layer ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2     3.E-43.E-43.E-43.E-43.E-43.E-43.E-43.E-43.E-43.E-43.E-43.E-4
+  END MON-NPRETBG 
+  
+  MON-NPRETBG                  LOWER LAYER
+    <PLS >  Return rates for below-ground plant N in lower layer     ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2     5.E-45.E-45.E-45.E-45.E-45.E-45.E-45.E-45.E-45.E-45.E-45.E-4
+  END MON-NPRETBG  
+  
+  MON-NPRETBG              GROUNDWATER LAYER
+    <PLS >  Return rates for below-ground plant N in GW layer ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2        0.   0.   0.   0.   0.   0.   0.   0.   0.   0.   0.   0.
+  END MON-NPRETBG  
+  
+  MON-NPRETFBG                                
+    <PLS >  Monthly refractory fractions for below-ground plant N return ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2        .3   .3   .3   .3   .3   .3   .3   .3   .3   .3   .3   .3
+  END MON-NPRETFBG  
+  
+  MON-NPRETAG                             
+    <PLS >  Monthly return rates for above-ground plant N to Litter  (/day) ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC  ***
+    2        0.   0.   0.   0.   0.   0.   0.   0.   0..0020   0.   0.
+  END MON-NPRETAG                                      
+  
+  MON-NPRETLI         SURFACE LAYER       
+    <PLS >  Monthly return rates for litter N to SZ                (/day) ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC    ***
+    2      .002 .002 .002 .002 .002 .002 .002 .002 .002 .002 .002 .002
+  END MON-NPRETLI  
+  
+  MON-NPRETLI         UPPER LAYER       
+    <PLS >  Monthly return rates for litter N to UZ                (/day) ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC    ***
+    2      .009 .009 .009 .009 .009 .009 .009 .009 .009 .009 .009 .009
+  END MON-NPRETLI  
+  
+  MON-NPRETFLI                           
+    <PLS >  Monthly refractory fractions for litter N return to SZ/UZ     ***
+    #    #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC    ***
+    2        .3   .3   .3   .3   .3   .3   .3   .3   .3   .3   .3   .3
+  END MON-NPRETFLI  
+  
+  NIT-FSTGEN
+    <PLS > UPT-FRAC.<----  TEMP-PARMS(THETA)               >***
+    #    #  NO3  NH4  PLN KDSA KADA KIMN  KAM KDNI  KNI KIMA***
+    1       0.8  0.2 1.07 1.05 1.05 1.07 1.07 1.07 1.05 1.07
+    2       0.2  0.8 1.07 1.05 1.05 1.07 1.07 1.07 1.05 1.07
+  END NIT-FSTGEN
+
+  NIT-FSTPM
+    <PLS >*** NITROGEN FIRST-ORDER RATES FOR SURFACE LAYER (/DAY)
+    #    #***  KDSAM     KADAM     KIMNI       KAM      KDNI       KNI     KIMAM
+    1                                 .0      .001        .0       10.       5.0
+    2                                 .0      .005        0.       10.       5.0
+  END NIT-FSTPM
+
+  NIT-FSTPM
+    <PLS >*** NITROGEN FIRST-ORDER RATES FOR UPPER LAYER (/DAY)
+    #    #***  KDSAM     KADAM     KIMNI       KAM      KDNI       KNI     KIMAM
+    1                                 .0    .00015      .000       5.0       2.0
+    2                                 .0     .0030        0.       10.       2.0
+  END NIT-FSTPM
+
+  NIT-FSTPM
+    <PLS >*** NITROGEN FIRST-ORDER RATES FOR LOWER LAYER (/DAY)
+    #    #***  KDSAM     KADAM     KIMNI       KAM      KDNI       KNI     KIMAM
+    1                                 .0    .00015      .005       3.0        .2
+    2                                 .0     .0030        0.        3.        .2
+  END NIT-FSTPM
+
+  NIT-FSTPM
+    <PLS >*** NITROGEN FIRST-ORDER RATES FOR GROUNDWATER LAYER (/DAY)
+    #    #***  KDSAM     KADAM     KIMNI       KAM      KDNI       KNI     KIMAM
+    1                                 .0       0.0      .030       .50        .0
+    2                                 .0     .0003        0.        3.        .0
+  END NIT-FSTPM
+
+  NIT-CMAX
+    <PLS >     MAXIMUM SOLUBILITY OF AMMONIUM      ***
+    #    #     CMAX                                ***
+              (PPM)                                ***
+    1    2     5000.
+  END NIT-CMAX
+
+  NIT-SVALPM        SURFACE
+    NITROGEN SINGLE VALUE FREUNDLICH ADSORPTION/DESORPTION PARAMTERS ***
+    <PLS >      XFIX        K1        N1***
+    #    #     (PPM)                    ***
+    1             5.       1.0      1.50
+    2             2.       1.0      1.50
+  END NIT-SVALPM
+
+  NIT-SVALPM        UPPER
+    NITROGEN SINGLE VALUE FREUNDLICH ADSORPTION/DESORPTION PARAMETERS ***
+    <PLS >      XFIX        K1        N1***
+    #    #     (PPM)                    ***
+    1             5.       1.0      1.20
+    2             2.       1.0      1.20
+  END NIT-SVALPM
+
+  NIT-SVALPM        LOWER
+    NITROGEN SINGLE VALUE FREUNDLICH ADSORPTOIN/DESORPTION PARAMETERS ***
+    <PLS >      XFIX        K1        N1***
+    #    #     (PPM)                    ***
+    1             .7       0.5      1.20
+    2             .7       0.5      1.20
+  END NIT-SVALPM
+
+  NIT-SVALPM        GROUNDWATER
+    NITROGEN SINGLE VALUE FREUNDLICH ADSORPTION/DESORPTION PARAMETERS ***
+    <PLS >      XFIX        K1        N1***
+    #    #     (PPM)                    ***
+    1             .3       0.5      1.10
+    2             .3       0.5      1.10
+  END NIT-SVALPM
+
+  NIT-STOR1         SURFACE-BLK 1
+    <PLS >INITIAL STORAGE OF N FORMS IN SURFACE LAYER LB/AC ***
+    #    #     LORGN      AMAD      AMSU       NO3      PLTN     RORGN *** 
+    1           180.      1.00      0.03       0.3        .0       .0
+    2            50.       .50      0.03        .1       50.      200.
+  END NIT-STOR1
+
+  NIT-STOR1         UPPER  -BLK 1
+    <PLS >INITIAL STORAGE OF N FORMS IN UPPER LAYER LB/AC ***
+    #    #     LORGN      AMAD      AMSU       NO3      PLTN     RORGN *** 
+    1           500.       5.0       0.5       2.0        .0       .0
+    2           550.       1.0       0.5        1.      400.     2200.
+  END NIT-STOR1
+
+  NIT-STOR1        LOWER LAYER   
+    <PLS >INITIAL STORAGE OF N FORMS IN LOWER LAYER LB/AC ***
+    #    #     LORGN      AMAD      AMSU       NO3      PLTN     RORGN *** 
+    1          1200.       5.0       1.0        8.        .0       .0
+    2           300.       1.0       0.5        1.      100.     1200. 
+  END NIT-STOR1
+
+  NIT-STOR1        GROUNDWATER LAYER
+    <PLS >INITIAL STORAGE OF N FORMS IN GROUNDWATER LAYER LB/AC ***
+    #    #     LORGN      AMAD      AMSU       NO3      PLTN     RORGN *** 
+    1           800.      6.00      0.50       1.0        .0       .0
+    2           200.       0.5      0.10        .5        .0     1000.
+  END NIT-STOR1
+
+  NIT-STOR2                          
+    <PLS >INITIAL N IN INTERFLOW, ABOVE GROUND, AND LITTER STORAGE (LB/AC) ***
+    #    #     IAMSU      INO3     ISLON     ISRON    AGPLTN    LITTRN ***
+    2                                                   500.       20.
+  END NIT-STOR2
+
+  *** Section PHOS ***
+
+  PHOS-FLAGS
+    <PLS > PHOSPHOROUS FLAGS ***
+    # -  # VPUT FORP ITMX BMUM CNUM PUPT ***
+    1              1  100    3    1    1
+  END PHOS-FLAGS
+
+  PHOS-YIELD
+    <PLS >    PUPTGT    PMXRAT ***
+    # -  #   (LB/AC)           ***
+    1          25.00       1.8
+  END PHOS-YIELD
+
+  MON-PUPT-FR1
+    <PLS >  Monthly fractions for plant uptake target                  ***
+    # -  #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1       .01  .04  .09 .115 .135 .145  .15  .14 .095  .05 .025 .005
+  END MON-PUPT-FR1
+
+  MON-PUPT-FR2
+    <PLS >  Monthly fractions for plant uptake target from surface     ***
+    # -  #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1       .05  .05  .05  .05  .05  .05  .05  .05  .05  .05  .05  .05
+  END MON-PUPT-FR2
+
+  MON-PUPT-FR2
+    <PLS >  Monthly fractions for plant uptake target from upper       ***
+    # -  #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1       .80  .80  .80  .80  .80  .80  .80  .80  .80  .80  .80  .80
+  END MON-PUPT-FR2
+
+  MON-PUPT-FR2
+    <PLS >  Monthly fractions for plant uptake target from lower       ***
+    # -  #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1       .15  .15  .15  .15  .15  .15  .15  .15  .15  .15  .15  .15
+  END MON-PUPT-FR2
+
+  MON-PUPT-FR2
+    <PLS >  Monthly fractions for plant uptake target from active gw   ***
+    # -  #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1        .0   .0   .0   .0   .0   .0   .0   .0   .0   .0   .0   .0
+  END MON-PUPT-FR2
+
+  PHOS-FSTGEN
+    <PLS > TEMPERATURE CORRECTION PARAMETERS FOR PHOSPHOROUS REACTIONS ***
+    #    #     THPLP    THKDSP    THKADP    THKIMP     THKMP           ***
+    1           1.07                          1.07       1.05
+  END PHOS-FSTGEN
+
+  PHOS-FSTPM
+    <PLS > PHOSPHOROUS FIRST-ORDER RATES FOR SURFACE LAYER (/DAY)    ***
+    #    #      KDSP      KADP      KIMP       KMP                   ***
+    1                               10.0     .0007
+  END PHOS-FSTPM
+
+  PHOS-FSTPM
+    <PLS > PHOSPHOROUS FIRST-ORDER RATES FOR UPPER LAYER (/DAY)      ***
+    #    #      KDSP      KADP      KIMP       KMP                   ***
+    1                               2.00    .00003
+  END PHOS-FSTPM
+
+  PHOS-FSTPM
+    <PLS > PHOSPHOROUS FIRST-ORDER RATES FOR LOWER LAYER (/DAY)      ***
+    #    #      KDSP      KADP      KIMP       KMP                   ***
+    1                               .100    .00005
+  END PHOS-FSTPM
+
+  PHOS-FSTPM
+    <PLS > PHOSPHOROUS FIRST-ORDER RATES FOR GROUNDWATER LAYER (/DAY)    ***
+    #    #      KDSP      KADP      KIMP       KMP                       ***
+    1                                 0.      0.00
+  END PHOS-FSTPM
+
+  PHOS-CMAX
+    <PLS > MAXIMUM SOLUBILITY OF PHOSPHATE   ***
+    #    #      CMAX                         ***
+               (PPM)                         ***
+    1           50.0
+  END PHOS-CMAX
+
+  PHOS-SVALPM        SURFACE
+    <PLS >      XFIX        K1        N1***
+    #    #     (PPM)                    ***
+    1            25.        5.      1.50
+  END PHOS-SVALPM
+
+  PHOS-SVALPM        UPPER
+    <PLS >      XFIX        K1        N1***
+    #    #     (PPM)                    ***
+    1            15.        5.      1.50
+  END PHOS-SVALPM
+
+  PHOS-SVALPM        LOWER
+    <PLS >      XFIX        K1        N1***
+    #    #     (PPM)                    ***
+    1            10.        5.      1.50
+  END PHOS-SVALPM
+
+  PHOS-SVALPM        GROUNDWATER
+    <PLS >      XFIX        K1        N1***
+    #    #     (PPM)                    ***
+    1            12.        6.      1.50
+  END PHOS-SVALPM
+
+  PHOS-STOR1
+    <PLS > INITIAL PHOSPHOROUS STORAGE IN SURFACE LAYER LB/AC ***
+    #    #      ORGP      P4AD      P4SU      PLTP            ***
+    1            50.      2.00      0.00        0.
+  END PHOS-STOR1
+
+  PHOS-STOR1
+    <PLS > INITIAL PHOSPHOROUS STORAGE IN UPPER LAYER LB/AC   ***
+    #    #      ORGP      P4AD      P4SU      PLTP            ***
+    1           100.      28.0      1.00        0.    
+  END PHOS-STOR1
+
+  PHOS-STOR1
+    <PLS > INITIAL PHOSPHOROUS STORAGE IN LOWER LAYER LB/AC   ***
+    #    #      ORGP      P4AD      P4SU      PLTP            ***
+    1            60.     130.0       1.5        0.    
+  END PHOS-STOR1
+
+  PHOS-STOR1
+    <PLS > INITIAL PHOSPHOROUS STORAGE IN GROUNDWATER LAYER LB/AC ***
+    #    #      ORGP      P4AD      P4SU      PLTP                ***
+    1            30.      210.      01.0        0.    
+  END PHOS-STOR1
+END PERLND
+
+IMPLND
+  ACTIVITY
+    <ILS >  Active Sections              ***
+    # -  # ATMP SNOW IWAT  SLD  IWG IQAL ***
+    1              1    1    1    1    1
+  END ACTIVITY
+
+  PRINT-INFO
+    <ILS >  Print-flags                            ***
+    # -  # ATMP SNOW IWAT  SLD  IWG IQAL PIVL  PYR ***
+    1              4    4    4    4    4    1   12
+  END PRINT-INFO
+
+  GEN-INFO
+    <ILS ><-------Name------->   Unit-systems   Printer ***
+    # -  #                           t-series Engl Metr ***
+                                      in  out           ***
+    1      DONIGIAN INDUSTRY           1    1    1    0
+  END GEN-INFO
+
+  *** Section SNOW ***
+
+  ICE-FLAG
+    <ILS >  0= Ice formation not simulated, 1= Simulated ***
+    # -  #ICEFG                                          ***
+    1         1
+  END ICE-FLAG
+
+  SNOW-PARM1
+    <ILS >  Snow input info: Part 1                          ***
+    # -  #       LAT     MELEV     SHADE    SNOWCF    COVIND ***
+    1            42.     1400.       0.0      1.45       0.5
+  END SNOW-PARM1
+
+  SNOW-PARM2
+    <ILS >  Snow input info: Part 2                                    ***
+    # -  #     RDCSN     TSNOW    SNOEVP    CCFACT    MWATER    MGMELT ***
+    1           0.12       32.      0.05       0.5      0.08    0.0001
+  END SNOW-PARM2
+
+  SNOW-INIT1
+    <ILS >  Initial snow conditions: Part 1                            ***
+    # -  #  PACKSNOW   PACKICE PACKWATER    RDENPF      DULL    PAKTMP ***
+    1            1.4       0.2       0.1       0.2      375.      27.5
+  END SNOW-INIT1
+
+  SNOW-INIT2
+    <ILS >  Initial snow conditions: Part 2 ***
+    # -  #    COVINX    XLNMLT    SKYCLR    ***
+    1           0.50       0.0       1.0
+  END SNOW-INIT2
+
+  *** Section IWATER ***
+
+  IWAT-PARM1
+    <ILS >           Flags          ***
+    # -  # CSNO RTOP  VRS  VNN RTLI ***
+    1         1                   1
+  END IWAT-PARM1
+
+  IWAT-PARM2
+    <ILS >                                         ***
+    # -  #      LSUR     SLSUR      NSUR     RETSC ***
+    1           250.    0.0350     0.030     0.000
+  END IWAT-PARM2
+
+  IWAT-PARM3
+    <ILS >                     ***
+    # -  #    PETMAX    PETMIN ***
+    1            40.       35.
+  END IWAT-PARM3
+
+  IWAT-STATE1
+    <ILS >  IWATER state variables ***
+    # -  #      RETS      SURS     ***
+    1            .01       .01
+  END IWAT-STATE1
+
+  *** Section SOLIDS ***
+
+  SLD-PARM2
+    <ILS >                                         ***
+    # -  #      KEIM      JEIM    ACCSDP    REMSDP ***
+    1            .08       1.9       .01        .5
+  END SLD-PARM2
+
+  SLD-STOR
+    <ILS >  Solids storage (tons/acre) ***
+    # -  #                             ***
+    1            0.2
+  END SLD-STOR
+
+  *** Section IWTGAS ***
+
+  IWT-PARM2
+    <ILS >                               ***
+    # -  #      ELEV      AWTF      BWTF ***
+    1          1400.       60.      0.15
+  END IWT-PARM2
+
+  *** Section IQUAL ***
+
+  NQUALS
+    <ILS >      ***
+    # -  #NQUAL ***
+    1         1
+  END NQUALS
+
+  QUAL-PROPS
+    <ILS >    Identifiers and Flags                ***
+    # -  #<--qualid-->    QTID  QSD VPFW  QSO  VQO ***
+    1     COD               LB    1         1
+  END QUAL-PROPS
+
+  QUAL-INPUT
+    <ILS >  Storage on surface and nonseasonal parameters ***
+    # -  #     SQO   POTFW   ACQOP  SQOLIM   WSQOP        ***
+    1         1.20    .175     .02     2.0     1.7
+  END QUAL-INPUT
+END IMPLND
+
+RCHRES
+  ACTIVITY
+    RCHRES  Active Sections (1=Active, 0=Inactive)           ***
+    # -  # HYFG ADFG CNFG HTFG SDFG GQFG OXFG NUFG PKFG PHFG ***
+    1    2    1    1         1    1         1    1    1
+  END ACTIVITY
+
+  PRINT-INFO
+    RCHRES  Print-flags                                                     ***
+    # -  # HYDR ADCA CONS HEAT  SED  GQL OXRX NUTR PLNK PHCB PIVL  PYR ***
+    1    2    4    4         4    4         4    4    4         1   12
+  END PRINT-INFO
+
+  GEN-INFO
+    RCHRES<-------Name------->Nexit   Unit Systems   Printer      ***
+    # -  #                               t-series  Engl Metr LKFG ***
+                                           in  out                ***
+    1     UPPER KITTLE CREEK      1         1    1    1    0
+    2     LOWER KITTLE CREEK      1         1    1    1    0
+  END GEN-INFO
+
+  *** Section HYDR ***
+
+  HYDR-PARM1
+    RCHRES  Flags for HYDR section                           ***
+    # -  #  VC A1 A2 A3  ODFVFG for each     ODGTFG for each *** FUNCT  for each
+            FG FG FG FG  possible   exit     possible   exit *** possible   exit
+                           1  2  3  4  5       1  2  3  4  5 ***
+
+    1    2      1  1  1    4
+  END HYDR-PARM1
+
+  HYDR-PARM2
+    RCHRES ***
+    # -  #  DSN FTBN       LEN     DELTH     STCOR        KS      DB50 ***
+    1              2       2.0       40.                  .5
+    2              2       3.0       40.                  .5
+  END HYDR-PARM2
+
+  HYDR-INIT
+    RCHRES  Initial conditions for HYDR section    ***
+    # -  #       VOL     Initial  value  of COLIND *** Initial  value  of OUTDGT
+             (ac-ft)     for  each  possible  exit *** for  each  possible  exit
+                           EX1  EX2  EX3  EX4  EX5 ***   EX1  EX2  EX3  EX4  EX5
+    1    2       1.0       4.0
+  END HYDR-INIT
+
+  *** Section HTRCH ***
+
+  HT-BED-FLAGS
+    RCHRES                ***
+    # -  # BDFG TGFG TSTP ***
+    1         3        55
+    2         2    3
+  END HT-BED-FLAGS
+  
+  HEAT-PARM
+    RCHRES      ELEV     ELDAT    CFSAEX    KATRAD     KCOND     KEVAP ***
+    # -  #                                                             ***
+    1          1400.      100.       .95
+    2          1300.      100.       .85
+  END HEAT-PARM
+  
+  HT-BED-PARM 
+    RCHRES    MUDDEP     TGRND      KMUD     KGRND  ***
+    # -  #        ft     deg F    (kcal/m2/C/hr)    ***
+    2            1.0                15.4      1.42
+  END HT-BED-PARM 
+  
+  MON-HT-TGRND                          
+    RCHRES  TG1  TG2  TG3  TG4  TG5  TG6  TG7  TG8  TG9 TG10 TG11 TG12*** 
+    # -  #                                                            *** 
+    2       63.  63.  64.  64.  65.  66.  67.  67.  66.  65.  64.  63.
+  END MON-HT-TGRND
+
+  HT-BED-DELH
+    RCHRES ***  DELH      DELH      DELH      DELH      DELH      DELH      DELH
+    # -  # ***     1         2         3         4         5         6         7
+    1         -2.917    -1.934    -1.599    -1.365    -1.183    -1.095    -1.024
+    1         -.9639    -.9144    -.8739    -.7811    -.8044    -.7228    -.7505
+    1         -.6744    -.7083    -.6339    -.6189    -.6050    -.6361    -.5744
+    1         -.5628    -.5994    -.5369    -.5275    -.5185    -.5104    -.5465
+    1         -.5513    -.4828    -.4758    -.4692    -.4627    -.4564    -.4904
+    1         -.4414    -.4362    -.4308    -.4258    -.4208    -.4159    -.4115
+    1         -.4456    -.3999    -.3960    -.3920    -.3880    -.3844    -.3809
+    1         -.3770    -.3738    -.3705    -.3670    -.3990    -.3586          
+  END HT-BED-DELH 
+                         
+  HT-BED-DELTT
+    RCHRES *** DELTT     DELTT     DELTT     DELTT     DELTT     DELTT     DELTT
+    # -  # ***     1         2         3         4         5         6         7
+    1           -1.0      -1.1      -1.2      -1.2      -1.2      -1.2      -1.2
+    1           -1.2      -0.2       0.3       0.4       0.6       1.3       1.3
+    1            1.3       1.1       0.6      -0.4      -0.5      -0.5      -0.5
+    1           -0.7      -0.9      -1.0      -1.0      -1.1      -1.0      -1.2
+    1           -1.2      -1.2      -1.2      -1.2      -0.2       0.3       0.4
+    1            0.6       1.3       1.3       1.3       1.1       0.6      -0.4
+    1           -0.5      -0.5      -0.5      -0.7      -0.9      -1.0      -1.0
+    1           -1.1      -1.2      -1.2      -1.2      -1.2      -1.2          
+  END HT-BED-DELTT 
+
+  HEAT-INIT
+    RCHRES        TW    AIRTMP ***
+    # -  #                     ***
+    1    2       41.       46.
+  END HEAT-INIT
+
+  *** Section SEDTRN ***
+
+  SANDFG
+    RCHRES       ***
+    # -  # SNDFG ***
+    1    2     3
+  END SANDFG
+
+  SED-GENPARM
+    RCHRES    BEDWID    BEDWRN       POR ***
+    # -  #                               ***
+    1            2.0        2.
+    2           2.66        2.
+  END SED-GENPARM
+
+  SAND-PM
+    RCHRES         D         W       RHO     KSAND    EXPSND ***
+    # -  #                                                   ***
+    1    2      .014       2.5                 1.5       1.2
+  END SAND-PM
+
+  SILT-CLAY-PM
+    RCHRES         D         W       RHO     TAUCD     TAUCS         M ***
+    # -  #                                                             ***
+    1    2    .00063     .0066       2.2        .2        .4        .5
+  END SILT-CLAY-PM
+
+  SILT-CLAY-PM
+    RCHRES         D         W       RHO     TAUCD     TAUCS         M ***
+    # -  #                                                             ***
+    1    2   .000055   .000034       2.0       .15        .3       .75
+  END SILT-CLAY-PM
+
+  SSED-INIT
+    RCHRES     Suspended sed concs (mg/l) ***
+    # -  #      Sand      Silt      Clay  ***
+    1    2        5.       20.       30.
+  END SSED-INIT
+
+  BED-INIT
+    RCHRES    BEDDEP  Initial bed composition      ***
+    # -  #      (ft)      Sand      Silt      Clay ***
+    1    2        1.        .8        .1        .1
+  END BED-INIT
+
+  *** Section RQUAL ***
+
+  BENTH-FLAG
+    RCHRES BENF ***
+    # -  #      ***
+    1    2    1
+  END BENTH-FLAG
+
+  SCOUR-PARMS
+    RCHRES    SCRVEL    SCRMUL ***
+    # -  #                     ***
+    1    2        3.
+  END SCOUR-PARMS
+
+  *** Section OXRX ***
+
+  OX-FLAGS
+    RCHRES REAM ***
+    # -  #      ***
+    1         3
+    2         2
+  END OX-FLAGS
+
+  OX-GENPARM
+    RCHRES    KBOD20     TCBOD    KODSET    SUPSAT ***
+    # -  #       /hr                               ***
+    1    2        .1                  8.
+  END OX-GENPARM
+
+  OX-BENPARM
+    RCHRES     BENOD     TCBEN     EXPOD  BRBOD(1)  BRBOD(2)    EXPREL ***
+    # -  #  mg/m2.hr                      mg/m2.hr  mg/m2.hr           *** 
+    1    2       10.       1.1       1.2       20.       25.       1.3 
+  END OX-BENPARM
+
+  OX-REAPARM
+    RCHRES    TCGINV      REAK    EXPRED    EXPREV ***
+    # -  #                 /hr                     ***
+    1                      2.0      -1.1       1.1
+  END OX-REAPARM
+
+  OX-INIT
+    RCHRES       DOX       BOD     SATDO ***
+    # -  #      mg/l      mg/l      mg/l ***
+    1    2        8.      100.
+  END OX-INIT
+
+  *** Section NUTRX ***
+
+  NUT-FLAGS
+    RCHRES  TAM  NO2  PO4  AMV  DEN ADNH ADPO PHFL ***
+    # -  #                                         ***
+    1    2    1    1    1    1    1    0    0
+  END NUT-FLAGS
+
+  NUT-AD-FLAGS    
+    Atmospheric Deposition Flags ***
+    RCHRES    NO3    NH3    PO4  ***
+    # -  #   F  C   F  C   F  C  ***
+    1    2  -1  0  -1  0   0  0
+  END NUT-AD-FLAGS    
+
+  NUT-BENPARM
+    RCHRES  BRTAM(1)  BRTAM(2)  BRPO4(1)  BRPO4(2)     ANAER  ***   
+    # -  #  mg/m2.hr  mg/m2.hr  mg/m2.hr  mg/m2.hr      mg/l  *** 
+    1    2      11.0      33.0       1.1       2.2    0.0005
+  END NUT-BENPARM             
+                                                                       
+  NUT-NITDENIT
+    RCHRES    KTAM20    KNO220     TCNIT    KNO320     TCDEN    DENOXT *** 
+    # -  #       /hr       /hr                 /hr                mg/l *** 
+    1    2      .002      .004      1.07      .001      1.04       0.2
+  END NUT-NITDENIT
+                     
+  NUT-NH3VOLAT
+    RCHRES    EXPNVG    EXPNVL ***       
+    # -  #                     ***     
+    1    2       .50    0.6667
+  END NUT-NH3VOLAT             
+                            
+  NUT-BEDCONC   
+    RCHRES       Bed concentrations of NH4 & PO4 (mg/mg)               ***
+    # -  #  NH4-sand  NH4-silt  NH4-clay  PO4-sand  PO4-silt  PO4-clay ***
+    1    2   0.00001   0.00001   0.00001   0.00001   0.00001   0.00001
+  END NUT-BEDCONC                
+                                
+  NUT-ADSPARM   
+    RCHRES       Partition coefficients for NH4 AND PO4  (l/mg)        ***
+    # -  #  NH4-sand  NH4-silt  NH4-clay  PO4-sand  PO4-silt  PO4-clay ***
+    1    2    0.0001    0.0001    0.0001       10.       10.       10.
+  END NUT-ADSPARM
+                            
+  NUT-DINIT   
+    RCHRES       NO3       TAM       NO2       PO4     PHVAL  ***
+    # -  #      mg/l      mg/l      mg/l      mg/l ph units   *** 
+    1    2       40.       10.        1.       50.       7.0
+  END NUT-DINIT
+                                           
+  NUT-ADSINIT                        
+    RCHRES        Initial suspended NH4 and PO4 concentrations (mg/mg) ***
+    # -  #  NH4-sand  NH4-silt  NH4-clay  PO4-sand  PO4-silt  PO4-clay ***
+    1    2        0.        0.        0.        0.        0.        0.
+  END NUT-ADSINIT          
+
+  *** Section PLANK ***
+
+  PLNK-FLAGS
+    RCHRES PHYF ZOOF BALF SDLT AMRF DECF NSFG ZFOO ***
+    # -  #                                         ***
+    1    2    1    1    1    1    1         1
+  END PLNK-FLAGS
+
+  PLNK-AD-FLAGS    
+    Atmospheric Deposition Flags ***
+    RCHRES    ORN    ORP    ORC  ***
+    # -  #   F  C   F  C   F  C  ***
+    1    2  -1  0   0  0   0  0
+  END PLNK-AD-FLAGS    
+
+  PLNK-PARM1
+    RCHRES    RATCLP    NONREF    LITSED     ALNPR      EXTB     MALGR ***
+    # -  #                                               /ft       /hr ***
+    1    2                                               4.5
+  END PLNK-PARM1
+
+  PHYTO-PARM
+    RCHRES      SEED    MXSTAY      OREF    CLALDH    PHYSET    REFSET ***
+    # -  #      mg/l      mg/l                ug/l                     ***
+    1    2        .1        .1                            .5        .5
+  END PHYTO-PARM
+
+  ZOO-PARM1
+    RCHRES    MZOEAT    ZFIL20    ZRES20        ZD      OXZD ***
+    # -  #  mg/l.hr l/mgzoo.hr       /hr       /hr       /hr ***
+    1    2                  .2
+  END ZOO-PARM1
+
+  PLNK-INIT
+    RCHRES     PHYTO       ZOO     BENAL       ORN       ORP       ORC ***
+    # -  #      mg/l     org/l     mg/m2      mg/l      mg/l      mg/l ***
+    1    2       40.      200.        5.       20.       20.       20.
+  END PLNK-INIT
+END RCHRES
+
+FTABLES
+  FTABLE      1
+ ROWS COLS ***
+   13    4
+     DEPTH      AREA    VOLUME     DISCH  FLO-THRU ***
+      (FT)   (ACRES)   (AC-FT)     (CFS)     (MIN) ***
+      .000      .000     .0000      .000       0.0
+      .250      .848     .1970     .9024     158.5
+      .500      .970     .4242    2.8860     106.7
+      .750     1.091     .6818    5.7642      85.9
+     1.000     1.212     .9697    9.5120      74.0
+     1.250     1.333    1.2879   14.1431      66.1
+     1.500     1.455    1.6364   19.6862      60.3
+     2.000     1.697    2.4242   33.6545      52.3
+     2.500     1.939    3.3333   51.7323      46.8
+     3.000     2.182    4.3636   74.2486      42.7
+     4.000    11.879   11.3939  155.5774      53.2
+     5.000    21.576   28.1212  296.8633      68.8
+     6.000    31.273   54.5454  522.1440      75.8
+  END FTABLE  1
+
+  FTABLE      2
+ ROWS COLS ***
+   13    4
+     DEPTH      AREA    VOLUME     DISCH  FLO-THRU ***
+      (FT)   (ACRES)   (AC-FT)     (CFS)     (MIN) ***
+      .000      .000     .0000      .000       0.0
+      .333     1.697     .5253    1.5869     240.3
+      .667     1.939    1.1313    5.0752     161.8
+     1.000     2.182    1.8182   10.1370     130.2
+     1.333     2.424    2.5859   16.7279     112.2
+     1.667     2.667    3.4343   24.8719     100.2
+     2.000     2.909    4.3636   34.6200      91.5
+     2.667     3.394    6.4646   59.1848      79.3
+     3.333     3.879    8.8889   90.9763      70.9
+     4.000     4.364   11.6364  130.5731      64.7
+     5.333    36.687   39.0034  284.8886      99.4
+     6.667    69.010  109.4680  593.7734     133.8
+     8.000   101.333  223.0302 1129.6948     143.3
+  END FTABLE  2
+END FTABLES
+
+DISPLY
+  DISPLY-INFO1
+    # -  #<----------Title----------->***TRAN PIVL DIG1 FIL1  PYR DIG2 FIL2 YRND
+    1     ATMOSPHERIC DEPOSITION LB/AC   SUM                    1    3   68   12
+    2     TOTAL PLANT NITROGEN   LB/AC   LAST                   1    2   68   12
+    3     TOTAL FOREST N OUTFLOW LB/AC   SUM                    1    3   68   12
+  END DISPLY-INFO1
+END DISPLY
+
+PLTGEN
+  PLOTINFO
+    # -  # FILE  NPT  NMN LABL  PYR PIVL ***
+    1        97    2    4        12    6
+  END PLOTINFO
+
+  GEN-LABELS
+    # -  #<----------------Title ---------------->   ***    <------Y axis------>
+    1     WATER TEMPERATURE AND HEAT EXCHANGE               DEG F OR BTU/6HR
+  END GEN-LABELS
+
+  SCALING
+    # -  #      YMIN      YMAX     IVLIN ***
+    1             0.        1.       20.
+  END SCALING
+
+  CURV-DATA         (first curve)
+              <-Curve label--> Line Intg  Col Tran ***
+    # -  #                     type  eqv code code ***
+    1         TW - REACH 1             1    1 LAST
+  END CURV-DATA
+
+  CURV-DATA         (second curve)
+              <-Curve label--> Line Intg  Col Tran ***
+    # -  #                     type  eqv code code ***
+    1         TW - REACH 2             1    1 LAST
+  END CURV-DATA
+
+  CURV-DATA         (third curve)
+              <-Curve label--> Line Intg  Col Tran ***
+    # -  #                     type  eqv code code ***
+    1         QBED - REACH 1           1    1 SUM
+  END CURV-DATA
+
+  CURV-DATA         (fourth curve)
+              <-Curve label--> Line Intg  Col Tran ***
+    # -  #                     type  eqv code code ***
+    1         QBED - REACH 2           1    1 SUM
+  END CURV-DATA
+
+  CURV-DATA         (fifth curve)
+              <-Curve label--> Line Intg  Col Tran ***
+    # -  #                     type  eqv code code ***
+    1         HTEXCH - REACH 1         1    1 SUM
+  END CURV-DATA
+
+  CURV-DATA         (sixth curve)
+              <-Curve label--> Line Intg  Col Tran ***
+    # -  #                     type  eqv code code ***
+    1         HTEXCH - REACH 2         1    1 SUM
+  END CURV-DATA
+END PLTGEN
+
+EXT SOURCES
+<-Volume-> <Member> SsysSgap<--Mult-->Tran <-Target vols> <-Grp> <-Member->  ***
+<Name>   # <Name> # tem strg<-factor->strg <Name>   #   #        <Name> # #  ***
+WDM     39 PREC     ENGLZERO          SAME PERLND   1   2 EXTNL  PREC
+WDM    131 PREC     ENGLZERO          SAME IMPLND   1     EXTNL  PREC
+WDM    131 PREC     ENGLZERO          SAME RCHRES   1   2 EXTNL  PREC
+WDM    123 ATMP     ENGL              SAME PERLND   1   2 ATEMP  AIRTMP
+WDM    122 ATMP     ENGL              SAME IMPLND   1     ATEMP  AIRTMP
+WDM    122 ATMP     ENGL              SAME RCHRES   1   2 EXTNL  GATMP
+WDM     41 EVAP     ENGL        .7    DIV  PERLND   1   2 EXTNL  PETINP
+WDM     41 EVAP     ENGL        .7    DIV  IMPLND   1     EXTNL  PETINP
+WDM     41 EVAP     ENGL        .7    DIV  RCHRES   1   2 EXTNL  POTEV
+WDM     42 WIND     ENGL              DIV  PERLND   1   2 EXTNL  WINMOV
+WDM     42 WIND     ENGL              DIV  IMPLND   1     EXTNL  WINMOV
+WDM     42 WIND     ENGL              DIV  RCHRES   1   2 EXTNL  WIND
+WDM     46 SOLR     ENGL              DIV  PERLND   1   2 EXTNL  SOLRAD
+WDM     46 SOLR     ENGL              DIV  IMPLND   1     EXTNL  SOLRAD
+WDM     46 SOLR     ENGL              DIV  RCHRES   1   2 EXTNL  SOLRAD
+WDM    126 DEWP     ENGL              SAME PERLND   1   2 EXTNL  DTMPG
+WDM    125 DEWP     ENGL              SAME IMPLND   1     EXTNL  DTMPG
+WDM    125 DEWP     ENGL              SAME RCHRES   1   2 EXTNL  DEWTMP
+WDM    135 CLDC     ENGL              SAME PERLND   1   2 EXTNL  CLOUD
+WDM    135 CLDC     ENGL              SAME IMPLND   1     EXTNL  CLOUD
+WDM    135 CLDC     ENGL              SAME RCHRES   1   2 EXTNL  CLOUD
+WDM2   201 NO3X     ENGL              DIV  PERLND   1   2 EXTNL  NIADFX 1 1
+WDM2   202 NH4X     ENGL              DIV  PERLND   1   2 EXTNL  NIADFX 2 1
+WDM2   203 ORGN     ENGL              DIV  PERLND   1   2 EXTNL  NIADFX 3 1
+WDM2   201 NO3X     ENGL              DIV  RCHRES   1   2 EXTNL  NUADFX 1
+WDM2   202 NH4X     ENGL              DIV  RCHRES   1   2 EXTNL  NUADFX 2
+WDM2   203 ORGN     ENGL              DIV  RCHRES   1   2 EXTNL  PLADFX 1
+END EXT SOURCES
+
+SCHEMATIC
+<-Source->                <--Area-->       <-Target->  <ML->  ***
+<Name>   #                <-factor->       <Name>   #      #  ***
+PERLND   1                      500.       RCHRES   1      1
+IMPLND   1                      500.       RCHRES   1      2
+PERLND   2                      500.       RCHRES   2      3
+RCHRES   1                                 RCHRES   2      4  
+END SCHEMATIC
+
+MASS-LINK
+  MASS-LINK        1
+<Srce>     <-Grp> <-Member-><--Mult-->     <Targ>         <-Grp> <-Member-> ***
+<Name>     <Name> <Name> # #<-factor->     <Name>         <Name> <Name> # # ***
+PERLND     PWATER PERO       0.0833333     RCHRES         INFLOW IVOL
+PERLND     SEDMNT SOSED  1   0.05          RCHRES         INFLOW ISED   1
+PERLND     SEDMNT SOSED  1   0.69          RCHRES         INFLOW ISED   2
+PERLND     SEDMNT SOSED  1   0.26          RCHRES         INFLOW ISED   3
+PERLND     PWTGAS POHT                     RCHRES         INFLOW IHEAT
+PERLND     PWTGAS PODOXM                   RCHRES         INFLOW OXIF   1
+PERLND     NITR   PONO3                    RCHRES         INFLOW NUIF1  1
+PERLND     NITR   TSAMS  1                 RCHRES         INFLOW NUIF1  2
+PERLND     NITR   TSAMS  5                 RCHRES         INFLOW NUIF1  2
+PERLND     NITR   SSAMS  3                 RCHRES         INFLOW NUIF1  2
+PERLND     NITR   SEDN   2   0.73          RCHRES         INFLOW NUIF2  2 1
+PERLND     NITR   SEDN   2   0.27          RCHRES         INFLOW NUIF2  3 1
+PERLND     NITR   SEDN   1                 RCHRES         INFLOW PKIF   3
+PERLND     PHOS   TSP4S  1                 RCHRES         INFLOW NUIF1  4
+PERLND     PHOS   TSP4S  5                 RCHRES         INFLOW NUIF1  4
+PERLND     PHOS   SSP4S  3                 RCHRES         INFLOW NUIF1  4
+PERLND     PHOS   SEDP   2   0.73          RCHRES         INFLOW NUIF2  2 2
+PERLND     PHOS   SEDP   2   0.27          RCHRES         INFLOW NUIF2  3 2
+PERLND     PHOS   SEDP   1                 RCHRES         INFLOW PKIF   4
+  END MASS-LINK    1
+
+  MASS-LINK        2
+<Srce>     <-Grp> <-Member-><--Mult-->     <Targ>         <-Grp> <-Member-> ***
+<Name>     <Name> <Name> # #<-factor->     <Name>         <Name> <Name> # # ***
+IMPLND     IWATER SURO       0.0833333     RCHRES         INFLOW IVOL
+IMPLND     SOLIDS SOSLD         0.10       RCHRES         INFLOW ISED   1
+IMPLND     SOLIDS SOSLD         0.46       RCHRES         INFLOW ISED   2
+IMPLND     SOLIDS SOSLD         0.44       RCHRES         INFLOW ISED   3
+IMPLND     IWTGAS SOHT                     RCHRES         INFLOW IHEAT
+IMPLND     IWTGAS SODOXM                   RCHRES         INFLOW OXIF   1
+IMPLND     IQUAL  SOQUAL 1                 RCHRES         INFLOW OXIF   2
+  END MASS-LINK    2
+
+  MASS-LINK        3
+<Srce>     <-Grp> <-Member-><--Mult-->     <Targ>         <-Grp> <-Member-> ***
+<Name>     <Name> <Name> # #<-factor->     <Name>         <Name> <Name> # # ***
+PERLND     PWATER PERO       0.0833333     RCHRES         INFLOW IVOL
+PERLND     SEDMNT SOSED  1   0.05          RCHRES         INFLOW ISED   1
+PERLND     SEDMNT SOSED  1   0.69          RCHRES         INFLOW ISED   2
+PERLND     SEDMNT SOSED  1   0.26          RCHRES         INFLOW ISED   3
+PERLND     PWTGAS POHT                     RCHRES         INFLOW IHEAT
+PERLND     PWTGAS PODOXM                   RCHRES         INFLOW OXIF   1
+PERLND     NITR   PONO3                    RCHRES         INFLOW NUIF1  1
+PERLND     NITR   TSAMS  1                 RCHRES         INFLOW NUIF1  2
+PERLND     NITR   TSAMS  5                 RCHRES         INFLOW NUIF1  2
+PERLND     NITR   SSAMS  3                 RCHRES         INFLOW NUIF1  2
+PERLND     NITR   SEDN   2   0.73          RCHRES         INFLOW NUIF2  2 1
+PERLND     NITR   SEDN   2   0.27          RCHRES         INFLOW NUIF2  3 1
+PERLND     NITR   TSSLN  1                 RCHRES         INFLOW PKIF   3
+PERLND     NITR   TSSLN  5                 RCHRES         INFLOW PKIF   3
+PERLND     NITR   SSSLN  3                 RCHRES         INFLOW PKIF   3
+PERLND     NITR   TSSRN  1                 RCHRES         INFLOW PKIF   3
+PERLND     NITR   TSSRN  5                 RCHRES         INFLOW PKIF   3
+PERLND     NITR   SSSRN  3                 RCHRES         INFLOW PKIF   3
+PERLND     NITR   SEDN   1                 RCHRES         INFLOW PKIF   3
+PERLND     NITR   SEDN   3                 RCHRES         INFLOW PKIF   3
+  END MASS-LINK    3
+
+  MASS-LINK        4
+<Srce>     <-Grp> <-Member-><--Mult-->     <Targ>         <-Grp> <-Member-> ***
+<Name>     <Name> <Name> # #<-factor->     <Name>         <Name> <Name> # # ***
+RCHRES     ROFLOW                          RCHRES         INFLOW
+  END MASS-LINK    4
+END MASS-LINK
+
+NETWORK
+<-Volume-> <-Grp> <-Member-><--Mult-->Tran <-Target vols> <-Grp> <-Member->  ***
+<Name>   #        <Name> # #<-factor->strg <Name>   #   #        <Name> # #  ***
+PERLND   1 NITR   NIADDR 1                 DISPLY   1     INPUT  TIMSER
+PERLND   1 NITR   TN     5                 DISPLY   2     INPUT  TIMSER
+PERLND   2 NITR   PONITR                   DISPLY   3     INPUT  TIMSER
+RCHRES   1 HTRCH  TW                       PLTGEN   1     INPUT  POINT  1
+RCHRES   2 HTRCH  TW                       PLTGEN   1     INPUT  POINT  2
+RCHRES   1 HTRCH  HTCF4  7                 PLTGEN   1     INPUT  MEAN   1
+RCHRES   2 HTRCH  HTCF4  7                 PLTGEN   1     INPUT  MEAN   2
+RCHRES   1 HTRCH  HTEXCH                   PLTGEN   1     INPUT  MEAN   3
+RCHRES   2 HTRCH  HTEXCH                   PLTGEN   1     INPUT  MEAN   4
+END NETWORK
+
+EXT TARGETS
+<-Volume-> <-Grp> <-Member-><--Mult-->Tran <-Volume-> <Member> Tsys Tgap Amd ***
+<Name>   #        <Name> # #<-factor->strg <Name>   # <Name> #  tem strg strg***
+PERLND   1 NITR   NIADDR 1                 WDM2   301 TEST     ENGL AGGR REPL
+PERLND   1 NITR   TN     5                 WDM2   302 TEST     ENGL AGGR REPL
+PERLND   2 NITR   PONITR                   WDM2   303 TEST     ENGL AGGR REPL
+RCHRES   1 HTRCH  TW                       WDM2   304 TEST     ENGL AGGR REPL
+RCHRES   2 HTRCH  TW                       WDM2   305 TEST     ENGL AGGR REPL
+RCHRES   1 HTRCH  HTCF4  7                 WDM2   306 TEST     ENGL AGGR REPL
+RCHRES   2 HTRCH  HTCF4  7                 WDM2   307 TEST     ENGL AGGR REPL
+RCHRES   1 HTRCH  HTEXCH                   WDM2   308 TEST     ENGL AGGR REPL
+RCHRES   2 HTRCH  HTEXCH                   WDM2   309 TEST     ENGL AGGR REPL
+PERLND   1 NITR   NIADDR 1                 DSS    301 TEST     ENGL AGGR REPL
+PERLND   1 NITR   TN     5                 DSS    302 TEST     ENGL AGGR REPL
+PERLND   2 NITR   PONITR                   DSS    303 TEST     ENGL AGGR REPL
+RCHRES   1 HTRCH  TW                       DSS    304 TEST     ENGL AGGR REPL
+RCHRES   2 HTRCH  TW                       DSS    305 TEST     ENGL AGGR REPL
+RCHRES   1 HTRCH  HTCF4  7                 DSS    306 TEST     ENGL AGGR REPL
+RCHRES   2 HTRCH  HTCF4  7                 DSS    307 TEST     ENGL AGGR REPL
+RCHRES   1 HTRCH  HTEXCH                   DSS    308 TEST     ENGL AGGR REPL
+RCHRES   2 HTRCH  HTEXCH                   DSS    309 TEST     ENGL AGGR REPL
+END EXT TARGETS
+
+PATHNAMES
+<ds>f# <ctype-> <***************************pathname***************************>
+ 301 1 PER-CUM  /TEST/TEST12/ATMOS DEP NO3//1DAY/SIMULATED-LB|AC/
+ 302 1 INST-VAL /TEST/TEST12/TOTAL PLANT N//1DAY/SIMULATED-LB|AC/
+ 303 1 PER-CUM  /TEST/TEST12/TOTAL N OUTFLOW//1DAY/SIMULATED-LB|AC/
+ 304 1 INST-VAL /TEST/TEST12/WATER TEMP-REACH 1//1DAY/SIMULATED-DEG F/
+ 305 1 INST-VAL /TEST/TEST12/WATER TEMP-REACH 2//1DAY/SIMULATED-DEG F/
+ 306 1 PER-CUM  /TEST/TEST12/BED HEAT FLUX-REACH 1//1DAY/SIMULATED-BTU|FT2/
+ 307 1 PER-CUM  /TEST/TEST12/BED HEAT FLUX-REACH 2//1DAY/SIMULATED-BTU|FT2/
+ 308 1 PER-CUM  /TEST/TEST12/TOTAL HEAT EXCHANGE-REACH 1//1DAY/SIMULATED-BTU/
+ 309 1 PER-CUM  /TEST/TEST12/TOTAL HEAT EXCHANGE-REACH 2//1DAY/SIMULATED-BTU/
+END PATHNAMES
+
+SPEC-ACTIONS
+*** User-Defined Variable Quantity Lines
+***                          addr
+***                        <------>
+*** kwd  varnam optyp  opn  vari  s1 s2 s3 tp multiply  lc ls ac as agfn ***
+  <****> <----> <----> <-> <----><-><-><-><-><--------> <><-> <><-> <--> ***
+  UVQUAN prec   PERLND   1 PREC             3                 DY  1 SUM
+  
+  DISTRB  4  10 DY   1 SHIFT    .20  .20  .20  .20  .20    0    0    0    0    0
+
+*** Nitrogen Fertilizer Application - 50% Surface and 50% Upper Layer ***
+  UVNAME  NO355   2 SNO3              0.5 QUAN    UNO3              0.5 QUAN
+  UVNAME  NH455   2 SAMAD             0.5 QUAN    UAMAD             0.5 QUAN
+  UVNAME  ORN55   2 SORGN             0.5 QUAN    UORGN             0.5 QUAN
+
+*** Nitrogen Fertilizer Application - 10% Surface and 90% Upper Layer ***
+  UVNAME  NO319   2 SNO3              0.1 QUAN    UNO3              0.9 QUAN
+  UVNAME  NH419   2 SAMAD             0.1 QUAN    UAMAD             0.9 QUAN
+
+*** Nitrogen Fertilizer Application - 100% Surface Layer ***
+  UVNAME  NO310   1 SNO3              1.0 QUAN                                 
+  UVNAME  NH410   1 SAMAD             1.0 QUAN    
+
+*** Phosphorus Fertilizer Application - 50% Surface and 50% Upper Layer ***
+  UVNAME  PO455   2 SP4AD             0.5 QUAN    UP4AD             0.5 QUAN
+  UVNAME  ORP55   2 SORGP             0.5 QUAN    UORGP             0.5 QUAN
+
+*** Phosphorus Fertilizer Application - 10% Surface and 90% Upper Layer ***
+  UVNAME  PO419   2 SP4AD             0.1 QUAN    UP4AD             0.9 QUAN
+
+*** Action Lines ***
+
+  <****><f><-l>dcdts<yr><m><d><h><n>dstp  <vari><1><2><3><a><-value--> tc tst nu
+
+IF (prec < 0.05) THEN    
+  PERLND  1    DY  11976  2 15         3  NH455            2     10.50
+  PERLND  1    DY  11976  2 15         3  ORN55            2     14.70
+  PERLND  1    DY  11976  2 15         3  PO455            2      3.96
+  PERLND  1    DY  11976  2 15         3  ORP55            2      3.96
+  PERLND  1    DY  11976  3  6       4 3  NH410            2     12.02
+  PERLND  1    DY  11976  3  6       4 3  NO310            2      4.01
+  PERLND  1    DY  11976  4 13         3  DETS             1       3.0
+  PERLND  1    DY  11976  4 20       4 3  NH419            2     36.74
+  PERLND  1    DY  11976  4 20       4 3  NO319            2     12.24
+  PERLND  1    DY  11976  4 20       4 3  PO419            2     22.31
+  PERLND  1    DY  11976  5 15         3  NH455            2      3.02
+  PERLND  1    DY  11976  5 15         3  ORN55            2      4.22
+  PERLND  1    DY  11976  5 15         3  PO455            2      1.14
+  PERLND  1    DY  11976  5 15         3  ORP55            2      1.14
+  PERLND  1    DY  11976  5 12         3  DETS             1       1.5
+  PERLND  1    DY  11976  6 15       4 3  NH455            2     36.64
+  PERLND  1    DY  11976  6 15       4 3  NO355            2     12.21
+  PERLND  1    DY  11976  7 15         3  NH455            2      3.02
+  PERLND  1    DY  11976  7 15         3  ORN55            2      4.22
+  PERLND  1    DY  11976  7 15         3  PO455            2      1.14
+  PERLND  1    DY  11976  7 15         3  ORP55            2      1.14
+  PERLND  1    DY  11976  9 15         3  NH455            2      3.02
+  PERLND  1    DY  11976  9 15         3  ORN55            2      4.22
+  PERLND  1    DY  11976  9 15         3  PO455            2      1.14
+  PERLND  1    DY  11976  9 15         3  ORP55            2      1.14
+  PERLND  1    DY  11976 10  1       4 3  NH419            2      3.00
+  PERLND  1    DY  11976 10  1       4 3  NO319            2      1.00
+  PERLND  1    DY  11976 10  1       4 3  PO419            2      6.78
+  PERLND  1    DY  11976 10 15         3  DETS             1       1.0
+  PERLND  1    DY  11976 10 15         3  NH455            2     10.50
+  PERLND  1    DY  11976 10 15         3  ORN55            2     14.70
+  PERLND  1    DY  11976 10 15         3  PO455            2      3.96
+  PERLND  1    DY  11976 10 15         3  ORP55            2      3.96
+  PERLND  1    DY  11976 12 15         3  NH455            2     10.50
+  PERLND  1    DY  11976 12 15         3  ORN55            2     14.70
+  PERLND  1    DY  11976 12 15         3  PO455            2      3.96
+  PERLND  1    DY  11976 12 15         3  ORP55            2      3.96
+END IF    
+
+END SPEC-ACTIONS
+
+END RUN

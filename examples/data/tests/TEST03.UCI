@@ -1,0 +1,45 @@
+RUN
+
+GLOBAL
+  Version 11 test run:  Inputting test data to WDM
+  START       1976              END    1976
+  RUN INTERP OUTPUT LEVEL    3
+  RESUME     0 RUN     1                   UNIT SYSTEM     1
+END GLOBAL
+
+FILES      
+<FILE>  <UN#>***<----FILE NAME------------------------------------------------->
+WDM        21   test.wdm
+MESSU      22   test03.ech
+           57   test03dt.s57
+           58   test03dt.s58
+END FILES
+
+OPN SEQUENCE
+      COPY         1   INDELT 24:00
+END OPN SEQUENCE
+
+COPY
+  TIMESERIES
+    # -  #  NPT  NMN ***
+    1              2
+  END TIMESERIES
+END COPY
+
+EXT SOURCES
+<-Volume-> <Srcfmt> SsysSgap<--Mult-->Tran <-Target vols> <-Grp> <-Member->  ***
+<Name>   #          tem strg<-factor->strg <Name>   #   #        <Name> # #  ***
+
+SEQ     57 HYDDAY   ENGLZERO               COPY     1     INPUT  MEAN   1
+SEQ     58 HYDDAY   ENGLZERO               COPY     1     INPUT  MEAN   2
+END EXT SOURCES
+
+EXT TARGETS
+<-Volume-> <-Grp> <-Member-><--Mult-->Tran <-Volume-> <Member> Tsys Tgap Amd ***
+<Name>   #        <Name> # #<-factor->strg <Name>   # <Name> #  tem strg strg***
+
+COPY     1 OUTPUT MEAN   1                 WDM    140 CLND     ENGL      REPL
+COPY     1 OUTPUT MEAN   2                 WDM    135 CLDC     ENGL      REPL
+END EXT TARGETS
+
+END RUN

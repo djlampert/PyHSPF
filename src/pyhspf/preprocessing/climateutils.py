@@ -4,18 +4,18 @@
 #
 # by David J. Lampert, PhD, PE (djlampert@gmail.com)
 #
-# Last updated: 11/16/2013
+# Last updated: 06/12/2014
 #
 # Purpose: imports climate data files to Python classes
 
-import io, datetime, subprocess
+import os, io, datetime, subprocess
 
 from urllib import request
 
 from pyhspf.preprocessing.ncdcstations import NSRDBStation
 from pyhspf.preprocessing.ncdcstations import GSODStation
 from pyhspf.preprocessing.ncdcstations import GHCNDStation
-from pyhspf.preprocessing.ncdcstations import Prec3240Station
+from pyhspf.preprocessing.ncdcstations import Precip3240Station
 
 def is_number(s):
     """Tests if string "s" is a number."""
@@ -304,12 +304,68 @@ def find_gsod(bbox,
 
     return stations
 
-def find_prec3240(bbox, 
-                  NCDC = 'http://www.ncdc.noaa.gov/', 
-                  metafile = 'homr/file/coop-stations.txt',
-                  dates = None, 
-                  verbose = True
-                  ):
+def download_state_precip3240(state, directory,
+                              NCDC = 'ftp://ftp.ncdc.noaa.gov/pub/data',
+                              verbose = True):
+    """Downloads the Precip 3240 data for a state."""
+
+    if verbose:
+ 
+        print('downloading hourly precipitation data for state ' + 
+              '{}\n'.format(state))
+
+    # figure out which files are on the website
+
+    baseurl = '{0}/hourly_precip-3240/{1}'.format(NCDC, state)
+
+    req = request.Request(baseurl)
+
+    # read the state's web page and find all the compressed archives
+
+    try:
+
+        with io.StringIO(request.urlopen(req).read().decode()) as s:
+
+            archives = [a[-17:] for a in s.read().split('.tar.Z')]
+            
+        archives = [a for a in archives if is_integer(a[-4:])]
+
+    except: 
+
+        print('unable to connect to the hourly precipitation database')
+        print('make sure that you are online')
+        raise
+
+    for a in archives:
+
+        url        = '{0}/{1}.tar.Z'.format(baseurl, a)
+        compressed = '{}/{}.tar.Z'.format(directory, a)
+
+        if not os.path.isfile(compressed):
+
+            if verbose: print(url)
+
+            try: 
+
+                req = request.Request(url)
+
+                # write the compressed archive into the directory
+
+                with open(compressed, 'wb') as f: 
+                    
+                    f.write(request.urlopen(req).read())
+
+            except:
+
+                print('error: unable to connect to {}'.format(url))
+                raise   
+    
+def find_precip3240(bbox, 
+                    NCDC = 'http://www.ncdc.noaa.gov/', 
+                    metafile = 'homr/file/coop-stations.txt',
+                    dates = None, 
+                    verbose = True
+                    ):
     """Finds stations meeting the requirements from the hourly precipitation
     online NCDC database."""
 
@@ -421,19 +477,19 @@ def find_prec3240(bbox,
                 if is_number(elev): el = float(elev)
                 else:               el = None
 
-                stations.append(Prec3240Station(coop.strip(),
-                                                wban.strip(),
-                                                desc.strip(),
-                                                lat,
-                                                lon, 
-                                                el, 
-                                                st,
-                                                statecodes[st],
-                                                )
+                stations.append(Precip3240Station(coop.strip(),
+                                                  wban.strip(),
+                                                  desc.strip(),
+                                                  lat,
+                                                  lon, 
+                                                  el, 
+                                                  st,
+                                                  statecodes[st],
+                                                  )
                                 )
 
                 if verbose: print('found hourly precipitation station ' +
-                                  '{}, coop {}'.format(desc, coop))
+                                  '{}, coop {}'.format(desc.strip(), coop))
 
     return stations
 

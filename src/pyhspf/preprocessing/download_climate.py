@@ -4,7 +4,7 @@
 #
 # by David J. Lampert, PhD, PE (djlampert@gmail.com)
 #
-# Last updated: 11/16/2013
+# Last updated: 06/13/2014
 #
 # Purpose: imports climate data files to Python classes
 
@@ -15,8 +15,9 @@ from shapefile import Reader
 
 from pyhspf.preprocessing.climateutils import find_ghcnd
 from pyhspf.preprocessing.climateutils import find_gsod
-from pyhspf.preprocessing.climateutils import find_prec3240
+from pyhspf.preprocessing.climateutils import find_precip3240
 from pyhspf.preprocessing.climateutils import find_nsrdb
+from pyhspf.preprocessing.climateutils import download_state_precip3240
 from pyhspf.preprocessing.climateutils import decompress7z
 from pyhspf.preprocessing.climateutils import decompresszcat
 
@@ -184,7 +185,7 @@ def extract_precip3240(directory, HUC8, start, end,
 
     # find the precipitation stations in the bounding box
 
-    stations = find_prec3240(bbox, verbose = verbose)
+    stations = find_precip3240(bbox, verbose = verbose)
 
     if verbose: print('')
 
@@ -194,56 +195,18 @@ def extract_precip3240(directory, HUC8, start, end,
 
     # download the state data for each year
     
-    for state in states:
+    for state in states: download_state_precip3240(state, d, verbose = verbose)
 
-        if verbose: print('downloading hourly precipitation data for state ' +
-                          '{}\n'.format(state))
+    archives = ['{}/{}'.format(d, a) for a in os.listdir(d)
+                if a[-6:] == '.tar.Z']
 
-        # figure out which files are on the website
+    for a in archives:
 
-        baseurl = '{0}/hourly_precip-3240/{1}'.format(NCDC, state)
+        # decompress the archive
 
-        req = request.Request(baseurl)
-
-        # read the state's web page and find all the compressed archives
-
-        with io.StringIO(request.urlopen(req).read().decode()) as s:
-
-            archives = [a[-17:] for a in s.read().split('.tar.Z')]
-            
-        archives = [a for a in archives if is_integer(a[-4:])]
-
-        #except: 
-        #else:
-        #    print('unable to connect to the hourly precipitation database')
-        #    print('make sure that you are online')
-        #    raise
-                
-        # download the state's archives for all the years
-
-        for a in archives:
-
-            url        = '{0}/{1}.tar.Z'.format(baseurl, a)
-            compressed = '{}/{}.tar.Z'.format(d, a)
-
-            if not os.path.isfile(compressed):
-
-                if verbose: print(url)
-
-                req = request.Request(url)
-
-                # read the data from the server into memory
-
-                    # write the compressed archive into the directory
-
-                with open(compressed, 'wb') as f: 
-                    f.write(request.urlopen(req).read())
-
-            # decompress the archive
-
-            if not os.path.isfile(compressed[:-6]): 
-                decompress(compressed, d)
-                if verbose: print('')
+        if not os.path.isfile(a[:-2]): 
+            decompress(a, d)
+            if verbose: print('')
             
     # import the data
 

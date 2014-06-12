@@ -29,3 +29,4 @@ Changed directories to one source "src" (trying to use the GitHub version contor
 Modified the setup.py file to remove the download from source, and make directory "misc" that has a file that can compile HSPF (separate from Python) and generate the message file.
 Re-organized and updated climate data extraction tools
 New example climate data download tools
+New tests running existing HSPF UCI files from the main HSPF source code

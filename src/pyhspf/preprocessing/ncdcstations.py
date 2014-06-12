@@ -278,7 +278,7 @@ class GSODStation:
                       show = show)
         except: print('warning: unable to plot GSOD data')
 
-class Prec3240Station:
+class Precip3240Station:
     """A class to store meteorology data from the NCDC Hourly Precipitation
     Dataset."""
 

@@ -1,0 +1,249 @@
+RUN
+
+GLOBAL
+  Version 11 test run:  PERLND w/ SNOW, PWATER, COPY, DISPLY, PLTGEN - Metric
+  START       1976              END    1976
+  RUN INTERP OUTPUT LEVEL    4
+  RESUME     0 RUN     1                   UNIT SYSTEM     2
+END GLOBAL
+
+FILES      
+<FILE>  <UN#>***<----FILE NAME------------------------------------------------->
+WDM        21   test.wdm
+MESSU      22   test11.ech
+           01   test11.eng
+           02   test11.met
+           67   test11.d67
+           96   test11.p96
+END FILES
+
+OPN SEQUENCE
+    INGRP              INDELT 00:30
+      PERLND       1
+      PERLND       2
+      PERLND       3
+      COPY         1
+      COPY         2
+      COPY         3
+      DISPLY       1
+      PLTGEN       1
+    END INGRP
+END OPN SEQUENCE
+
+PERLND
+  ACTIVITY
+    <PLS >          Active Sections (1=Active; 0=Inactive)             ***
+    # -  # ATMP SNOW PWAT  SED  PST  PWG PQAL MSTL PEST NITR PHOS TRAC ***
+    1    3         1    1
+  END ACTIVITY
+
+  PRINT-INFO
+    <PLS >          Print-flags                                    *** PIVL  PYR
+    # -  # ATMP SNOW PWAT  SED  PST  PWG PQAL MSTL PEST NITR PHOS TRAC       ***
+    1    3         4    4                                                     12
+  END PRINT-INFO
+
+  GEN-INFO
+    <PLS ><-------Name------->        Unit-systems   Printer ***
+    # -  #                                t-series Engl Metr ***
+                                           in  out           ***
+    1     BEANS                             2    2    1    2
+    2     CORN                              2    2    1    2
+    3     OTHER                             2    2    1    2
+  END GEN-INFO
+
+  *** Section SNOW ***
+
+  ICE-FLAG
+    <PLS >  0= Ice formation not simulated; 1= Simulated ***
+    # -  #ICEFG                                          ***
+    1    3    1
+  END ICE-FLAG
+
+  SNOW-PARM1
+    <PLS >  Snow input info: Part 1                          ***
+    # -  #       LAT     MELEV     SHADE    SNOWCF    COVIND ***
+    1    3       43.     373.5       0.0      1.45      12.7
+  END SNOW-PARM1
+
+  SNOW-PARM2
+    <PLS >  Snow input info: Part 2                                    ***
+    # -  #     RDCSN     TSNOW    SNOEVP    CCFACT    MWATER    MGMELT ***
+    1    3      0.12        0.      0.05       0.5      0.08    .00254
+  END SNOW-PARM2
+
+  SNOW-INIT1
+    <PLS >  Initial snow conditions: Part 1                            ***
+    # -  #  PACKSNOW   PACKICE PACKWATER    RDENPF      DULL    PAKTMP ***
+    1    3      35.5       5.0       2.5       0.2      375.      -2.5
+  END SNOW-INIT1
+
+  SNOW-INIT2
+    <PLS >  Initial snow conditions: Part 2 ***
+    # -  #    COVINX    XLNMLT    SKYCLR    ***
+    1    3      12.7       0.0       1.0
+  END SNOW-INIT2
+
+  *** Section PWATER ***
+
+  PWAT-PARM1
+    <PLS >  PWATER variable monthly parameter value flags ***
+    # -  # CSNO RTOP UZFG  VCS  VUZ  VNN VIFW VIRC  VLE   ***
+    1    3    1    0    0    1    1    1    0    0    1
+  END PWAT-PARM1
+
+  PWAT-PARM2
+    <PLS > ***  PWATER input info: Part 2
+    # -  # ***FOREST      LZSN    INFILT      LSUR     SLSUR     KVARY     AGWRC
+    1    2     0.000     203.0      2.54      100.     0.010       .02      0.98
+    3          0.010     228.4      3.81      100.     0.010       .02      0.98
+  END PWAT-PARM2
+
+  PWAT-PARM3
+    <PLS > ***  PWATER input info: Part 3
+    # -  # ***PETMAX    PETMIN    INFEXP    INFILD    DEEPFR    BASETP    AGWETP
+    1    3       4.5       1.7       2.0       2.0      0.10       0.0      0.08
+  END PWAT-PARM3
+
+  PWAT-PARM4
+    <PLS >     PWATER input info: Part 4                               ***
+    # -  #     CEPSC      UZSN      NSUR     INTFW       IRC     LZETP ***
+    1    2                0.25       0.1       1.0      0.60
+    3                     0.25       0.1       1.2      0.80
+  END PWAT-PARM4
+
+  MON-INTERCEP
+    <PLS>   Only required if VCSFG=1 in PWAT-PARM1                     ***
+    # -  #  Interception storage capacity at start of each month       ***
+            JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1       1.0  1.0  .76  .76  .76  .76  2.5  4.3  4.8  3.6  1.3  1.0
+    2     3.0463.0463.0463.0461.2692.0303.5534.8225.0763.8073.2993.299
+    3     1.5231.5231.5231.7771.7772.0302.5382.5382.5382.5381.7771.523
+  END MON-INTERCEP
+
+  MON-UZSN
+    <PLS>   Only required if VUZFG=1 in PWAT-PARM1                     ***
+    # -  #  Upper zone storage at start of each month                  ***
+            JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1      10.2 10.2 10.2 10.2 40.6 27.9 27.9 33.0 33.0 33.0 27.9 22.8
+    2      10.2 10.2 10.2 10.2 35.5 25.4 25.4 30.5 30.5 30.5 25.4 22.8
+    3      20.3 20.3 20.3 20.3 35.5 40.6 40.6 40.6 40.6 40.6 33.0 27.9
+  END MON-UZSN
+
+  MON-MANNING
+    <PLS >  Only required if VNNFG=1 in PWAT-PARM1                     ***
+    # -  #  Manning's n for overland flow at start of each month       ***
+            JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1    2 0.30 0.30 0.30 0.30 0.27 0.25 0.25 0.25 0.25 0.25 0.35 0.33
+    3      0.30 0.30 0.30 0.30 0.30 0.30 0.30 0.30 0.30 0.30 0.30 0.30
+  END MON-MANNING
+
+  MON-LZETPARM
+    <PLS >  Only required if VLEFG=1 in PWAT-PARM1                     ***
+    # -  #  Lower zone ET parameter at start of each month             ***
+            JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1    2 0.20 0.20 0.20 0.23 0.23 0.25 0.60 0.80 0.75 0.50 0.30 0.20
+    3      0.25 0.25 0.25 0.25 0.30 0.35 0.40 0.40 0.45 0.35 0.30 0.25
+  END MON-LZETPARM
+
+  PWAT-STATE1
+    <PLS > *** Initial conditions at start of simulation
+    # -  # ***  CEPS      SURS       UZS      IFWS       LZS      AGWS      GWVS
+    1           1.27       0.0      3.81       0.0      100.      1.27      1.27
+    2           2.54       0.0      2.54       0.0      100.      1.27      1.27
+    3           1.27       0.0      7.61       0.0      165.      3.81      2.54
+  END PWAT-STATE1
+END PERLND
+
+DISPLY
+  DISPLY-INFO1
+*** # -  #<----------Title----------->***TRAN PIVL DIG1 FIL1  PYR DIG2 FIL2 YRND
+    1     SIMULATED FLOW (CMS)           AVER                   1    2   67   12
+  END DISPLY-INFO1
+END DISPLY
+
+COPY
+  TIMESERIES
+    # -  #  NPT  NMN ***
+    1              1
+    2              1
+    3              1
+  END TIMESERIES
+END COPY
+
+PLTGEN
+  PLOTINFO
+    # -  # FILE  NPT  NMN LABL  PYR PIVL ***
+    1        96         4             24
+  END PLOTINFO
+
+  GEN-LABELS
+    # -  #<----------------Title----------------->   ***    <------Y axis------>
+    1     SIMULATED FLOW                                    CMS
+  END GEN-LABELS
+
+  SCALING
+    # -  #      YMIN      YMAX     IVLIN ***
+    1             0.     1500.       20.
+  END SCALING
+
+  CURV-DATA         (first curve)
+              <-Curve label--> Line Intg  Col Tran ***
+    # -  #                     type  eqv code code ***
+    1         SIM GROUNDWATER          5    1 AVER
+  END CURV-DATA
+
+  CURV-DATA         (second curve)
+              <-Curve label--> Line Intg  Col Tran ***
+    # -  #                     type  eqv code code ***
+    1         SIM INTERFLOW            4    1 AVER
+  END CURV-DATA
+
+  CURV-DATA         (third curve)
+              <-Curve label--> Line Intg  Col Tran ***
+    # -  #                     type  eqv code code ***
+    1         SIM TOTAL RUNOFF    1    1    1 AVER
+  END CURV-DATA
+
+  CURV-DATA         (fourth curve)
+              <-Curve label--> Line Intg  Col Tran ***
+    # -  #                     type  eqv code code ***
+    1         OBS TOTAL RUNOFF    2    8    2 AVER
+  END CURV-DATA
+END PLTGEN
+
+EXT SOURCES
+<-Volume-> <Member> SsysSgap<--Mult-->Tran <-Target vols> <-Grp> <-Member->  ***
+<Name>   # <Name> # tem strg<-factor->strg <Name>   #   #        <Name> # #  ***
+WDM     39 PREC     ENGLZERO               PERLND   1   2 EXTNL  PREC
+WDM    131 PREC     ENGLZERO               PERLND   3     EXTNL  PREC
+WDM    123 ATMP     ENGL              SAME PERLND   1   2 ATEMP  AIRTMP
+WDM    122 ATMP     ENGL              SAME PERLND   3     ATEMP  AIRTMP
+WDM     41 EVAP     ENGL        .7    DIV  PERLND   1   3 EXTNL  PETINP
+WDM     42 WIND     ENGL              DIV  PERLND   1   3 EXTNL  WINMOV
+WDM     46 SOLR     ENGL              DIV  PERLND   1   3 EXTNL  SOLRAD
+WDM    126 DEWP     ENGL              SAME PERLND   1   2 EXTNL  DTMPG
+WDM    125 DEWP     ENGL              SAME PERLND   3     EXTNL  DTMPG
+WDM    136 FLOW     ENGL     .028     SAME PLTGEN   1     INPUT  MEAN   4
+END EXT SOURCES
+
+NETWORK
+<-Volume-> <-Grp> <-Member-><--Mult-->Tran <-Target vols> <-Grp> <-Member->  ***
+<Name>   #        <Name> # #<-factor->strg <Name>   #   #        <Name> # #  ***
+PERLND   1 PWATER AGWO       136.0         COPY     1     INPUT  MEAN   1
+PERLND   2 PWATER AGWO       196.5         COPY     1     INPUT  MEAN   1
+PERLND   3 PWATER AGWO        84.2         COPY     1     INPUT  MEAN   1
+PERLND   1 PWATER IFWO       136.0         COPY     2     INPUT  MEAN   1
+PERLND   2 PWATER IFWO       196.5         COPY     2     INPUT  MEAN   1
+PERLND   3 PWATER IFWO        84.2         COPY     2     INPUT  MEAN   1
+COPY     1 OUTPUT MEAN   1         1.      COPY     2     INPUT  MEAN   1
+PERLND   1 PWATER PERO       136.0         COPY     3     INPUT  MEAN   1
+PERLND   2 PWATER PERO       196.5         COPY     3     INPUT  MEAN   1
+PERLND   3 PWATER PERO        84.2         COPY     3     INPUT  MEAN   1
+COPY     3 OUTPUT MEAN   1         1.      DISPLY   1     INPUT  TIMSER
+COPY     1 OUTPUT MEAN   1         1.      PLTGEN   1     INPUT  MEAN   1
+COPY     2 OUTPUT MEAN   1         1.      PLTGEN   1     INPUT  MEAN   2
+COPY     3 OUTPUT MEAN   1         1.      PLTGEN   1     INPUT  MEAN   3
+END NETWORK
+
+END RUN

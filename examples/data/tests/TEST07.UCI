@@ -1,0 +1,481 @@
+RUN
+
+GLOBAL
+  Version 11 test run: PERLND w/ PEST
+  START       1976              END    1976
+  RUN INTERP OUTPUT LEVEL    4
+  RESUME     0 RUN     1                   UNIT SYSTEM     1
+END GLOBAL
+
+*** This test run includes sections SPEC-ACTIONS, ATEMP, SNOW, PWATER,
+*** SEDMNT, PSTEMP, PWTGAS, PQUAL, MSTLAY, PEST, DISPLY
+
+FILES      
+<FILE>  <UN#>***<----FILE NAME------------------------------------------------->
+WDM        21   test.wdm
+MESSU      25   test07.ech
+           01   test07.out
+           63   test07.d63
+END FILES
+
+OPN SEQUENCE
+    INGRP              INDELT 01:00
+      PERLND       1
+      PERLND       2
+      PERLND       3
+      DISPLY       1
+      DISPLY       2
+      DISPLY       3
+      DISPLY       4
+    END INGRP
+END OPN SEQUENCE
+
+SPEC-ACTIONS
+  Operation         Date and time   Type  Variab  Subscr  Ac  Quantity ***
+  Type    # - #                     code         S1 S2 S3 cd           ***
+                                          or Addr#                     ***
+
+  *** INCREASE INFILT DUE TO THAWED GROUND (UNITS: IN/IVL)
+  PERLND  1         1976/04/15         3  INFILT           1      0.10
+  *** PLOWING
+  PERLND  1         1976/04/29 12      3  DETS             1       1.2
+  *** INCREASE INFILT FOR TILLAGE
+  PERLND  1         1976/04/29 12      3  INFILT           1      0.13
+  *** DISKING
+  PERLND  1         1976/05/27 12      3  DETS             1       2.0
+  *** ALACHLOR APPLICATION OF 2.5 LB/AC APPLIED TO SURFACE ADSORBED STORAGE
+  *** (TOTAL RATE DISTRIBUTED OVER THREE SEPARATE APPLICATIONS: 25% 50% 25%)
+  PERLND  1         1976/06/05 12      3  SPS     2  1     2     0.625
+  PERLND  1         1976/06/13 12      3  SPS     2  1     2      1.25
+  PERLND  1         1976/06/20 12      3  SPS     2  1     2     0.625
+  *** RESET ALACHLOR DECAY RATE
+  PERLND  1         1976/06/30         3  SPSPM   8  1     1      0.06
+  *** CULTIVATION
+  PERLND  1         1976/07/01 12      3  DETS             1       1.5
+  *** CULTIVATION
+  PERLND  1         1976/07/25 12      3  DETS             1       1.5
+  *** RESET INFILT TO NOMINAL VALUE
+  PERLND  1         1976/08/25         3  INFILT           1      0.10
+  *** REDUCE INFILT FOR FROZEN GROUND
+  PERLND  1         1976/12/02         3  INFILT           1      0.06
+
+  *** INCREASE INFILT DUE TO THAWED GROUND (UNITS: IN/IVL)
+  PERLND  2         1976/04/15         3  INFILT           1      0.10
+  *** DISKING
+  PERLND  2         1976/05/07 12      3  INFILT           1      0.13
+  *** DISKING
+  PERLND  2         1976/05/07 12      3  DETS             1       2.0
+  *** ALACHLOR APPLICATION OF 2.5 LB/AC APPLIED TO SURFACE ADSORBED STORAGE
+  *** (TOTAL RATE DISTRIBUTED OVER THREE SEPARATE APPLICATIONS: 25% 50% 25%)
+  PERLND  2         1976/05/10 12      3  SPS     2  1     2     0.625
+  PERLND  2         1976/05/20 12      3  SPS     2  1     2      1.25
+  PERLND  2         1976/05/30 12      3  SPS     2  1     2     0.625
+  *** RESET ALACHLOR DECAY RATE
+  PERLND  2         1976/06/10         3  SPSPM   8  1     1      0.06
+  *** CULTIVATION
+  PERLND  2         1976/06/20 12      3  DETS             1       1.5
+  *** CULTIVATION
+  PERLND  2         1976/07/15 12      3  DETS             1       1.5
+  *** RESET INFILT TO NOMINAL VALUE
+  PERLND  2         1976/08/25         3  INFILT           1      0.10
+  *** REDUCE INFILT FOR FROZEN GROUND
+  PERLND  2         1976/12/02         3  INFILT           1      0.06
+
+  *** INCREASE INFILT DUE TO THAWED GROUND
+  PERLND  3         1976/04/10         3  INFILT           1      0.15
+  *** ALACHLOR APPLICATION OF 2.5 LB/AC APPLIED TO SURFACE ADSORBED STORAGE
+  *** (TOTAL RATE DISTRIBUTED OVER THREE SEPARATE APPLICATIONS: 25% 50% 25%)
+  PERLND  3         1976/05/10 12      3  SPS     2  1     2     0.625
+  PERLND  3         1976/05/20 12      3  SPS     2  1     2      1.25
+  PERLND  3         1976/05/30 12      3  SPS     2  1     2     0.625
+  *** RESET ALACHLOR DECAY RATE
+  PERLND  3         1976/06/10         3  SPSPM   8  1     1      0.06
+  *** REDUCE INFILT FOR FROZEN GROUND
+  PERLND  3         1976/12/06         3  INFILT           1      0.08
+END SPEC-ACTIONS
+
+PERLND
+  ACTIVITY
+    <PLS >          Active Sections (1=Active, 0=Inactive)             ***
+    # -  # ATMP SNOW PWAT  SED  PST  PWG PQAL MSTL PEST NITR PHOS TRAC ***
+    1    3    1    1    1    1    1    1    1    1    1
+  END ACTIVITY
+
+  PRINT-INFO
+    <PLS >          Print-flags                                    *** PIVL  PYR
+    # -  # ATMP SNOW PWAT  SED  PST  PWG PQAL MSTL PEST NITR PHOS TRAC       ***
+    1    3    4    4    4    4    4    4    4    4    4                       12
+  END PRINT-INFO
+
+  GEN-INFO
+    <PLS ><-------Name------->        Unit-systems   Printer ***
+    # -  #                                t-series Engl Metr ***
+                                           in  out           ***
+    1     BEANS                             1    1    1    0
+    2     CORN                              1    1    1    0
+    3     OTHER                             1    1    1    0
+  END GEN-INFO
+
+  *** SECTION ATEMP ***
+
+  ATEMP-DAT
+    <PLS >   El-diff    Airtmp ***
+    # -  #    (ft)      (DegF) ***
+    1    3      100.       25.
+  END ATEMP-DAT
+
+  *** Section SNOW ***
+
+  ICE-FLAG
+    <PLS >  0= Ice formation not simulated, 1= Simulated ***
+    # -  #ICEFG                                          ***
+    1    3    1
+  END ICE-FLAG
+
+  SNOW-PARM1
+    <PLS >  Snow input info: Part 1                          ***
+    # -  #       LAT     MELEV     SHADE    SNOWCF    COVIND ***
+    1    3       43.     1225.       0.0      1.45       0.5
+  END SNOW-PARM1
+
+  SNOW-PARM2
+    <PLS >  Snow input info: Part 2                                    ***
+    # -  #     RDCSN     TSNOW    SNOEVP    CCFACT    MWATER    MGMELT ***
+    1    3      0.12       32.      0.05       0.5      0.08    0.0001
+  END SNOW-PARM2
+
+  SNOW-INIT1
+    <PLS >  Initial snow conditions: Part 1                            ***
+    # -  #  PACKSNOW   PACKICE PACKWATER    RDENPF      DULL    PAKTMP ***
+    1    3       1.4       0.2       0.1       0.2      375.      27.5
+  END SNOW-INIT1
+
+  SNOW-INIT2
+    <PLS >  Initial snow conditions: Part 2 ***
+    # -  #    COVINX    XLNMLT    SKYCLR    ***
+    1    3      0.50       0.0       1.0
+  END SNOW-INIT2
+
+  *** Section PWATER ***
+
+  PWAT-PARM1
+    <PLS >  PWATER variable monthly parameter value flags    ***
+    # -  # CSNO RTOP UZFG  VCS  VUZ  VNN VIFW VIRC  VLE IFFC ***
+    1    3    1    0    0    1    1    1    0    0    1    2
+  END PWAT-PARM1
+
+  PWAT-PARM2
+    <PLS >      PWATER input info: Part 2         ***
+    *** Input INFILT values are for frozen ground ***
+    # -  # ***FOREST      LZSN    INFILT      LSUR     SLSUR     KVARY     AGWRC
+    1    2     0.000       8.0     0.030      250.     0.050       0.5      0.98
+    3          0.010       9.0     0.040      250.     0.050       0.5      0.98
+  END PWAT-PARM2
+
+  PWAT-PARM3
+    <PLS > ***  PWATER input info: Part 3
+    # -  # ***PETMAX    PETMIN    INFEXP    INFILD    DEEPFR    BASETP    AGWETP
+    1    3       40.       35.       2.0       2.0      0.10       0.0      0.08
+  END PWAT-PARM3
+
+  PWAT-PARM4
+    <PLS >     PWATER input info: Part 4                               ***
+    # -  #     CEPSC      UZSN      NSUR     INTFW       IRC     LZETP ***
+    1    2                0.01       0.1       1.0      0.60
+    3                     0.01       0.1       1.2      0.80
+  END PWAT-PARM4
+
+  PWAT-PARM5
+    <PLS >     PWATER input info: Part 5 ***
+    # -  #       FZG      FZGL           ***
+    1    3       0.5      0.85
+  END PWAT-PARM5
+
+  MON-INTERCEP
+    <PLS>   Only required if VCSFG=1 in PWAT-PARM1                     ***
+    # -  #  Interception storage capacity at start of each month       ***
+            JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1      0.04 0.04 0.03 0.03 0.03 0.03 0.10 0.17 0.19 0.14 0.05 0.04
+    2      0.12 0.12 0.12 0.12 0.05 0.08 0.14 0.19 0.20 0.15 0.13 0.13
+    3      0.06 0.06 0.06 0.07 0.07 0.08 0.10 0.10 0.10 0.10 0.07 0.06
+  END MON-INTERCEP
+
+  MON-UZSN
+    <PLS>   Only required if VUZFG=1 in PWAT-PARM1                     ***
+    # -  #  Upper zone storage at start of each month                  ***
+            JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1       0.4  0.4  0.4  0.4  1.6  1.1  1.1  1.3  1.3  1.3  1.1  0.9
+    2       0.4  0.4  0.4  0.4  1.4  1.0  1.0  1.2  1.2  1.2  1.0  0.9
+    3       0.8  0.8  0.8  0.8  1.4  1.6  1.6  1.6  1.6  1.6  1.3  1.1
+  END MON-UZSN
+
+  MON-MANNING
+    <PLS >  Only required if VNNFG=1 in PWAT-PARM1                     ***
+    # -  #  Manning's n for overland flow at start of each month       ***
+            JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1    2 0.30 0.30 0.30 0.30 0.27 0.25 0.25 0.25 0.25 0.25 0.35 0.33
+    3      0.30 0.30 0.30 0.30 0.30 0.30 0.30 0.30 0.30 0.30 0.30 0.30
+  END MON-MANNING
+
+  MON-LZETPARM
+    <PLS >  Only required if VLEFG=1 in PWAT-PARM1                     ***
+    # -  #  Lower zone ET parameter at start of each month             ***
+            JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1    2 0.20 0.20 0.20 0.23 0.23 0.25 0.60 0.80 0.75 0.50 0.30 0.20
+    3      0.25 0.25 0.25 0.25 0.30 0.35 0.40 0.40 0.45 0.35 0.30 0.25
+  END MON-LZETPARM
+
+  PWAT-STATE1
+    <PLS > *** Initial conditions at start of simulation
+    # -  # ***  CEPS      SURS       UZS      IFWS       LZS      AGWS      GWVS
+    1           0.05       0.0      0.15       0.0       4.0      0.05      0.05
+    2           0.10       0.0      0.10       0.0       4.0      0.05      0.05
+    3           0.05       0.0      0.30       0.0       6.5      0.15      0.10
+  END PWAT-STATE1
+
+  *** SECTION SEDMNT ***
+
+  SED-PARM1
+    <PLS > ***
+    # -  #  CRV VSIV SDOP ***
+    1    2    1    0    1
+    3         1    0    0
+  END SED-PARM1
+
+  SED-PARM2
+    <PLS > ***
+    # -  #      SMPF      KRER      JRER     AFFIX     COVER      NVSI ***
+    1    2       1.0       .40       2.2      .030       1.0       0.0
+    3            1.0       .35       2.2      .003       1.0       0.0
+  END SED-PARM2
+
+  SED-PARM3
+    <PLS > ***
+    # -  #      KSER      JSER      KGER      JGER ***
+    1            5.0       2.2       1.0       1.0
+    2            4.0       2.0       1.0       1.0
+    3            3.0       2.0       1.0       1.0
+  END SED-PARM3
+
+  MON-COVER
+    <PLS >  Monthly values for erosion-related land cover              ***
+    # -  #  JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1       .17  .13  .09  .06  .01  .03  .43  .67  .77  .61  .26  .21
+    2       .25  .22  .20  .18  .03  .08  .40  .70  .62  .51  .38  .29
+    3       .90  .90  .90  .90  .90  .90  .90  .90  .90  .90  .90  .90
+  END MON-COVER
+
+  SED-STOR
+    <PLS >  Detached sediment storage (tons/acre)            ***
+    # -  #    BLOCK1      BLK2      BLK3      BLK4      BLK5 ***
+    1    2       0.2
+    3            0.1
+  END SED-STOR
+
+  *** Section PSTEMP ***
+
+  PSTEMP-PARM1
+    <PLS >        Flags        ***
+    # -  # SLTV ULTV LGTV TSOP ***
+    1    3                   2
+  END PSTEMP-PARM1
+
+  PSTEMP-PARM2
+    <PLS >                                                             ***
+    # -  #      ASLT      BSLT     ULTP1     ULTP2     LGTP1     LGTP2 ***
+    1    3       35.       0.8      0.15        2.       0.1        6.
+  END PSTEMP-PARM2
+
+  *** Section PWTGAS ***
+
+  PWT-PARM2
+    <PLS > ***
+    # -  #      ELEV     IDOXP     ICO2P     ADOXP     ACO2P ***
+    1    3     1000.        6.       .05        5.       .05
+  END PWT-PARM2
+
+  *** Section PQUAL ***
+
+  NQUALS
+    <PLS >      ***
+    # -  #NQUAL ***
+    1    3    1
+  END NQUALS
+
+  QUAL-PROPS
+    <PLS >*** Identifiers and flags
+    # -  #<--qualid-->*** QTID  QSD VPFW VPFS  QSO  VQO QIFW VIQC QAGW VAQC
+    1    3   CHEM3B         LB    1              1         1         1
+  END QUAL-PROPS
+
+  QUAL-INPUT
+    <PLS >  Storage on surface and nonseasonal parameters                  ***
+    # -  #     SQO   POTFW   POTFS   ACQOP  SQOLIM   WSQOP    IOQC    AOQC ***
+    1    3     10.      .5      .5     .01     20.     1.7    .002   .0002
+  END QUAL-INPUT
+
+  *** Section MSTLAY ***
+
+  MST-PARM
+    <PLS >     SLMPF      ULPF      LLPF  ***
+    # -  #                                ***
+    1    2       0.7       5.0       1.5
+    3            0.5       5.0       1.5
+  END MST-PARM
+
+  *** Section PEST ***
+
+  PEST-FLAGS
+    <PLS >  Options for simulation of up to 3 different pesticides ***
+    # -  # NPST MAX ITERATIONS ADSORP OPTION                       ***
+                PST1 PST2 PST3 PST1 PST2 PST3                      ***
+    1         1   20              1
+    2         1   20              2
+    3         1   20              3
+  END PEST-FLAGS
+
+  SOIL-DATA
+    <PLS >  Soil layer depths and bulk densities                           ***
+    # -  #            Depths (in)              Bulk density (lb/ft3)       ***
+           SURFACE   UPPER   LOWER GROUNDW SURFACE   UPPER   LOWER GROUNDW ***
+    1    3    0.25    5.71   41.30     60.    62.4    79.2    81.7    85.5
+  END SOIL-DATA
+
+  PEST-ID
+    <PLS >                     ***
+    # -  #<--Pesticide Name--> ***
+    1    3   ANT KILLER #2
+  END PEST-ID
+
+  PEST-FIRSTPM      SURFACE LAYER
+    <PLS >First-order parms (/day) ***
+    # -  #     KDSPS     KADPS     ***
+    1            .02       .05
+  END PEST-FIRSTPM
+
+  PEST-FIRSTPM      UPPER LAYER
+    <PLS >First-order parms (/day) ***
+    # -  #     KDSPS     KADPS     ***
+    1            .02       .05
+  END PEST-FIRSTPM
+
+  PEST-FIRSTPM      LOWER LAYER
+    <PLS >First-order parms (/day) ***
+    # -  #     KDSPS     KADPS     ***
+    1            .02       .05
+  END PEST-FIRSTPM
+
+  PEST-FIRSTPM      GROUNDWATER LAYER
+    <PLS >First-order parms (/day) ***
+    # -  #     KDSPS     KADPS     ***
+    1            .02       .05
+  END PEST-FIRSTPM
+
+  PEST-CMAX
+    <PLS >  Only used if ADOPFG=2 or 3 in PEST-FLAGS ***
+    # -  #      CMAX                                 ***
+               (PPM)                                 ***
+    2    3      242.
+  END PEST-CMAX
+
+  PEST-SVALPM       SURFACE LAYER
+    <PLS >  Only used if ADOPFG=2 (Single Value Freundlich) in PEST-FLAGS ***
+    # -  #      XFIX        K1        N1                                  ***
+               (PPM)                                                      ***
+    2            0.0        4.       1.4
+  END PEST-SVALPM
+
+  PEST-SVALPM       UPPER LAYER
+    <PLS >  Only used if ADOPFG=2 (Single Value Freundlich) in PEST-FLAGS ***
+    # -  #      XFIX        K1        N1                                  ***
+               (PPM)                                                      ***
+    2            0.0        4.       1.4
+  END PEST-SVALPM
+
+  PEST-SVALPM       LOWER LAYER
+    <PLS >  Only used if ADOPFG=2 (Single Value Freundlich) in PEST-FLAGS ***
+    # -  #      XFIX        K1        N1                                  ***
+               (PPM)                                                      ***
+    2            0.0        3.       1.4
+  END PEST-SVALPM
+
+  PEST-SVALPM       GROUNDWATER LAYER
+    <PLS >  Only used if ADOPFG=2 (Single Value Freundlich) in PEST-FLAGS ***
+    # -  #      XFIX        K1        N1                                  ***
+               (PPM)                                                      ***
+    2            0.0        3.       1.4
+  END PEST-SVALPM
+
+  PEST-NONSVPM      SURFACE LAYER
+    <PLS >      XFIX        K1        N1        N2 ***
+    # -  #     (PPM)                               ***
+    3            0.0        4.       1.4       1.2
+  END PEST-NONSVPM
+
+  PEST-NONSVPM      UPPER LAYER
+    <PLS >      XFIX        K1        N1        N2 ***
+    # -  #     (PPM)                               ***
+    3            0.0        4.       1.4       1.2
+  END PEST-NONSVPM
+
+  PEST-NONSVPM      LOWER LAYER
+    <PLS >      XFIX        K1        N1        N2 ***
+    # -  #     (PPM)                               ***
+    3            0.0        3.       1.4       1.2
+  END PEST-NONSVPM
+
+  PEST-NONSVPM      GROUNDWATER LAYER
+    <PLS >      XFIX        K1        N1        N2 ***
+    # -  #     (PPM)                               ***
+    3            0.0        3.       1.4       1.2
+  END PEST-NONSVPM
+
+  PEST-DEGRAD
+    <PLS >  Pesticide degradation rates (/day)     ***
+    # -  #   SURFACE     UPPER     LOWER   GROUNDW ***
+    1    3     0.120     0.045      0.04      0.04
+  END PEST-DEGRAD
+END PERLND
+
+DISPLY
+  DISPLY-INFO1
+*** # -  #<----------Title----------->***TRAN PIVL DIG1 FIL1  PYR DIG2 FIL2 YEND
+    1     SIM SEDIMENT LOAD (LB/AC)      SUM                    1    2   63   12
+    2     SOLN PEST LOAD (LB/ACx1000)    SUM                    1    2   63   12
+    3     SED PEST LOAD(LB/ACx1000000)   SUM                    1    2   63   12
+    4     TOTAL FLUX OF CHEM3B (LB/AC)   SUM                    1    2   63   12
+  END DISPLY-INFO1
+END DISPLY
+
+EXT SOURCES
+<-Volume-> <Member> SsysSgap<--Mult-->Tran <-Target vols> <-Grp> <-Member->  ***
+<Name>   # <Name> # tem strg<-factor->strg <Name>   #   #        <Name> # #  ***
+WDM     39 PREC     ENGLZERO          SAME PERLND   1   2 EXTNL  PREC
+WDM    131 PREC     ENGLZERO          SAME PERLND   3     EXTNL  PREC
+WDM    123 ATMP     ENGL              SAME PERLND   1   2 EXTNL  GATMP
+WDM    122 ATMP     ENGL              SAME PERLND   3     EXTNL  GATMP
+WDM     41 EVAP     ENGL        .7    DIV  PERLND   1   3 EXTNL  PETINP
+WDM     42 WIND     ENGL              DIV  PERLND   1   3 EXTNL  WINMOV
+WDM     46 SOLR     ENGL              DIV  PERLND   1   3 EXTNL  SOLRAD
+WDM    126 DEWP     ENGL              SAME PERLND   1   2 EXTNL  DTMPG
+WDM    125 DEWP     ENGL              SAME PERLND   3     EXTNL  DTMPG
+END EXT SOURCES
+
+NETWORK
+<-Volume-> <-Grp> <-Member-><--Mult-->Tran <-Target vols> <-Grp> <-Member->  ***
+<Name>   #        <Name> # #<-factor->strg <Name>   #   #        <Name> # #  ***
+PERLND   1 SEDMNT SOSED         2000.      DISPLY   1     INPUT  TIMSER
+PERLND   2 SEDMNT SOSED         2000.      DISPLY   1     INPUT  TIMSER
+PERLND   3 SEDMNT SOSED         2000.      DISPLY   1     INPUT  TIMSER
+PERLND   1 PEST   POPST  1      1000.      DISPLY   2     INPUT  TIMSER
+PERLND   2 PEST   POPST  1      1000.      DISPLY   2     INPUT  TIMSER
+PERLND   3 PEST   POPST  1      1000.      DISPLY   2     INPUT  TIMSER
+PERLND   1 PEST   SOSDPS 1   1000000.      DISPLY   3     INPUT  TIMSER
+PERLND   2 PEST   SOSDPS 1   1000000.      DISPLY   3     INPUT  TIMSER
+PERLND   3 PEST   SOSDPS 1   1000000.      DISPLY   3     INPUT  TIMSER
+PERLND   1 PQUAL  POQUAL 1         1.      DISPLY   4     INPUT  TIMSER
+PERLND   2 PQUAL  POQUAL 1         1.      DISPLY   4     INPUT  TIMSER
+PERLND   3 PQUAL  POQUAL 1         1.      DISPLY   4     INPUT  TIMSER
+END NETWORK
+
+END RUN

@@ -4,7 +4,6 @@ __all__ = [
     'build_watershed',
     'calculate_landuse',
     'climateplots',
-    'climateutils',
     'combine_catchments',
     'combine_flowlines',
     'combine_subbasins',
@@ -40,11 +39,10 @@ __all__ = [
 
 from pyhspf.preprocessing.preprocessor import preprocessor
 from pyhspf.preprocessing.climateplots import *
-from pyhspf.preprocessing.climateutils import *
 from pyhspf.preprocessing.gisplots     import *
 from pyhspf.preprocessing.dbf          import read_dbf
 from pyhspf.preprocessing.ncdcstations import NSRDBStation
 from pyhspf.preprocessing.ncdcstations import GSODStation
 from pyhspf.preprocessing.ncdcstations import GHCNDStation
-from pyhspf.preprocessing.ncdcstations import Prec3240Station
+from pyhspf.preprocessing.ncdcstations import Precip3240Station
 from pyhspf.preprocessing.gagestation  import GageStation

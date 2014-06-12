@@ -78,7 +78,7 @@ class WDMUtil:
             self.openfiles[self.messagepath] = 9
             if self.verbose: print('successfully opened message file')
         elif self.verbose: print('unable to open message file')
-        self.message = 9#self.openfiles[self.messagepath]
+        self.message = 9
 
     def open(self, wdmpath, mode):
         """Opens a WDM file for read/write, read-only, or overwrite. Returns 
@@ -104,12 +104,27 @@ class WDMUtil:
 
             retcode = hspf.wdbopnpy(len(self.openfiles) + 11, wdmpath, ronwfg)
 
+            # this is a hack fix i've run into with some simulations
+
+            if retcode == -5004: 
+
+                if self.verbose: 
+
+                    print('warning, file is already open')
+                    print('trying to close open files\n')
+
+                for i in range(100): hspf.seqclose(i)
+
+                retcode = hspf.wdbopnpy(len(self.openfiles) + 11, wdmpath, 
+                                        ronwfg)
+
             if retcode == 0 and self.verbose: 
                 print('opened %s %s' % (wdmpath, choice[ronwfg]))
             if retcode == 1 and self.verbose: 
                 print('opened file %s' % wdmpath + ' but invalid filename')
             if retcode  < 0:
-                print('unable to open file %s' % wdmpath)
+                print('error: unable to open file {}\n'.format(wdmpath))
+                raise
             self.openfiles[wdmpath] = len(self.openfiles) + 11
 
             # make a list of the dsns in file

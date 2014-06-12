@@ -1,0 +1,361 @@
+RUN
+
+GLOBAL
+  Version 11 test run: PERLND w/ SNOW,PWATER,RCHRES,FTABLES,DISPLY,PLTGEN
+  START       1976              END    1976
+  RUN INTERP OUTPUT LEVEL    3
+  RESUME     0 RUN     1                   UNIT SYSTEM     1
+END GLOBAL
+
+FILES      
+<FILE>  <UN#>***<----FILE NAME------------------------------------------------->
+WDM        21   test.wdm
+MESSU      22   test09.ech
+           01   test09.out
+           65   test09.d65
+           93   test09.p93
+END FILES
+
+OPN SEQUENCE
+    INGRP              INDELT 01:00
+      PERLND       1
+      RCHRES       1
+      RCHRES       2
+      RCHRES       3
+      RCHRES       4
+      DISPLY       1
+      DISPLY       2
+      DISPLY       3
+      PLTGEN       1
+    END INGRP
+END OPN SEQUENCE
+
+PERLND
+  ACTIVITY
+    <PLS >          Active Sections (1=Active; 0=Inactive)             ***
+    # -  # ATMP SNOW PWAT  SED  PST  PWG PQAL MSTL PEST NITR PHOS TRAC ***
+    1              1    1
+  END ACTIVITY
+
+  PRINT-INFO
+    <PLS >          Print-flags                                    *** PIVL  PYR
+    # -  # ATMP SNOW PWAT  SED  PST  PWG PQAL MSTL PEST NITR PHOS TRAC       ***
+    1              4    4                                                     12
+  END PRINT-INFO
+
+  GEN-INFO
+    <PLS ><-------Name------->        Unit-systems   Printer ***
+    # -  #                                t-series Engl Metr ***
+                                           in  out           ***
+    1     BICKNELL FARM                     1    1    1    0
+  END GEN-INFO
+
+  *** Section SNOW ***
+
+  ICE-FLAG
+    <PLS >  0= Ice formation not simulated; 1= Simulated ***
+    # -  #ICEFG                                          ***
+    1         1
+  END ICE-FLAG
+
+  SNOW-PARM1
+    <PLS >  Snow input info: Part 1                          ***
+    # -  #       LAT     MELEV     SHADE    SNOWCF    COVIND ***
+    1            42.      520.       0.0      1.45       0.5
+  END SNOW-PARM1
+
+  SNOW-PARM2
+    <PLS >  Snow input info: Part 2                                    ***
+    # -  #     RDCSN     TSNOW    SNOEVP    CCFACT    MWATER    MGMELT ***
+    1           0.12       32.      0.05       0.5      0.08    0.0001
+  END SNOW-PARM2
+
+  SNOW-INIT1
+    <PLS >  Initial snow conditions: Part 1                            ***
+    # -  #  PACKSNOW   PACKICE PACKWATER    RDENPF      DULL    PAKTMP ***
+    1            1.4       0.2       0.1       0.2      375.      27.5
+  END SNOW-INIT1
+
+  SNOW-INIT2
+    <PLS >  Initial snow conditions: Part 2 ***
+    # -  #    COVINX    XLNMLT    SKYCLR    ***
+    1           0.50       0.0       1.0
+  END SNOW-INIT2
+
+  *** Section PWATER ***
+
+  PWAT-PARM1
+    <PLS >  PWATER variable monthly parameter value flags ***
+    # -  # CSNO RTOP UZFG  VCS  VUZ  VNN VIFW VIRC  VLE   ***
+    1         1    0    0    1    1    1    0    0    1
+  END PWAT-PARM1
+
+  PWAT-PARM2
+    <PLS > ***  PWATER input info: Part 2
+    # -  # ***FOREST      LZSN    INFILT      LSUR     SLSUR     KVARY     AGWRC
+    1          0.010       8.0     0.150      250.     0.050       0.5      0.98
+  END PWAT-PARM2
+
+  PWAT-PARM3
+    <PLS > ***  PWATER input info: Part 3
+    # -  # ***PETMAX    PETMIN    INFEXP    INFILD    DEEPFR    BASETP    AGWETP
+    1            40.       35.       2.0       2.0      0.10       0.0      0.08
+  END PWAT-PARM3
+
+  PWAT-PARM4
+    <PLS >     PWATER input info: Part 4                               ***
+    # -  #     CEPSC      UZSN      NSUR     INTFW       IRC     LZETP ***
+    1                     0.01       0.1       1.0      0.60
+  END PWAT-PARM4
+
+  MON-INTERCEP
+    <PLS>   Only required if VCSFG=1 in PWAT-PARM1                     ***
+    # -  #  Interception storage capacity at start of each month       ***
+            JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1      0.04 0.04 0.03 0.03 0.03 0.03 0.10 0.17 0.19 0.14 0.05 0.04
+  END MON-INTERCEP
+
+  MON-UZSN
+    <PLS>   Only required if VUZFG=1 in PWAT-PARM1                     ***
+    # -  #  Upper zone storage at start of each month                  ***
+            JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1       0.4  0.4  0.4  0.4  1.6  1.1  1.1  1.3  1.3  1.3  1.1  0.9
+  END MON-UZSN
+
+  MON-MANNING
+    <PLS >  Only required if VNNFG=1 in PWAT-PARM1                     ***
+    # -  #  Manning's n for overland flow at start of each month       ***
+            JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1      0.30 0.30 0.30 0.30 0.27 0.25 0.25 0.25 0.25 0.25 0.35 0.33
+  END MON-MANNING
+
+  MON-LZETPARM
+    <PLS >  Only required if VLEFG=1 in PWAT-PARM1                     ***
+    # -  #  Lower zone ET parameter at start of each month             ***
+            JAN  FEB  MAR  APR  MAY  JUN  JUL  AUG  SEP  OCT  NOV  DEC ***
+    1      0.20 0.20 0.20 0.23 0.23 0.25 0.60 0.80 0.75 0.50 0.30 0.20
+  END MON-LZETPARM
+
+  PWAT-STATE1
+    <PLS > *** Initial conditions at start of simulation
+    # -  # ***  CEPS      SURS       UZS      IFWS       LZS      AGWS      GWVS
+    1           0.05       0.0      0.15       0.0       4.0      0.05      0.05
+  END PWAT-STATE1
+END PERLND
+
+RCHRES
+  ACTIVITY
+    RCHRES  Active Sections (1=Active; 0=Inactive)           ***
+    # -  # HYFG ADFG CNFG HTFG SDFG GQFG OXFG NUFG PKFG PHFG ***
+    1    4    1
+  END ACTIVITY
+
+  PRINT-INFO
+            Print-flags                                                ***
+    # -  # HYDR ADCA CONS HEAT  SED  GQL OXRX NUTR PLNK   PH       PYR ***
+    1    4    4                                                     12
+  END PRINT-INFO
+
+  GEN-INFO
+    RCHRES<-------Name------->Nexit   Unit Systems   Printer      ***
+    # -  #                               t-series  Engl Metr LKFG ***
+                                           in  out                ***
+    1      MEIER POND             2         1    1    1    0    1
+    2      OUTLET                 1         1    1    1    0
+    3      SPILLWAY               1         1    1    1    0
+    4      KITTLE CREEK           1         1    1    1    0
+  END GEN-INFO
+
+  HYDR-PARM1
+    RCHRES  Flags for HYDR section                           ***
+    # -  #  VC A1 A2 A3  ODFVFG for each     ODGTFG for each *** FUNCT  for each
+            FG FG FG FG  possible   exit     possible   exit *** possible   exit
+                1  2  3    1  2  3  4  5       1  2  3  4  5 ***
+
+    1           1  1      -1  6
+    2    4      1  1       4
+  END HYDR-PARM1
+
+  HYDR-PARM2
+    RCHRES ***
+    # -  #  DSN FTBN       LEN     DELTH     STCOR        KS ***
+    1              1       0.5        1.                  .5
+    2        00    2      0.25       20.                  .5
+    3        00    3      0.25       30.                  .5
+    4        00    4       2.0       40.                  .5
+  END HYDR-PARM2
+
+  HYDR-INIT
+    RCHRES  Initial conditions for HYDR            ***
+    # -  #       VOL     Initial  value  of COLIND *** Initial  value  of OUTDGT
+             (ac-ft)     for  each  possible  exit *** for  each  possible  exit
+                           EX1  EX2  EX3  EX4  EX5 ***   EX1  EX2  EX3  EX4  EX5
+    1            30.       4.0  5.0
+    2            0.0       4.0
+    3            0.0       4.0
+    4            0.0       4.0
+  END HYDR-INIT
+END RCHRES
+
+FTABLES
+  FTABLE      1
+ ROWS COLS ***
+   14    6
+                                  WINTER    SUMMER    SPLWAY ***
+     DEPTH      AREA    VOLUME    OUTLET    OUTLET     DISCH ***
+      (FT)   (ACRES)   (AC-FT)     DISCH     DISCH     (CFS) ***
+                                   (CFS)     (CFS)           ***
+      .000      .000     .0000     .0000     .0000     .0000
+     2.000     1.212    1.2120    0.0000     .0000     .0000
+     4.000     2.424    4.8480    0.0000     .0000     .0000
+     6.000     3.636   10.9080    0.0000     .0000     .0000
+     8.000     4.848   19.3920    0.0000     .0000     .0000
+    10.000     6.061   30.3050    0.0000     .0000     .0000
+    12.000     7.273   43.6380    5.0000    3.5000     .0000
+    14.000     8.485   59.3950    6.2500    4.3750     .0000
+    16.000     9.697   77.5760    7.5000    5.2500     .0000
+    18.000    10.909   98.1810    8.7500    6.1250     .0000
+    20.000    12.121  121.2100   10.0000    7.0000     .0000
+    21.000    12.727  133.6360   10.6250    7.4375   50.0000
+    22.000    13.333  146.6630   11.2500    7.8750  100.0000
+    23.000    13.939  160.3030   11.8750    8.3125  500.0000
+  END FTABLE  1
+
+  FTABLE      2
+ ROWS COLS ***
+   13    4
+     DEPTH      AREA    VOLUME     DISCH  FLO-THRU ***
+      (FT)   (ACRES)   (AC-FT)     (CFS)     (MIN) ***
+      .000      .000     .0000      .000       0.0
+      .167      .071     .0109    1.2241       6.5
+      .333      .081     .0236    3.9148       4.4
+      .500      .091     .0379    7.8193       3.5
+      .667      .101     .0539   12.9032       3.0
+      .833      .111     .0715   19.1853       2.7
+     1.000      .121     .0909   26.7046       2.5
+     1.333      .141     .1347   45.6529       2.1
+     1.667      .162     .1852   70.1757       1.9
+     2.000      .182     .2424  100.7192       1.7
+     2.667      .586     .4983  201.9005       1.8
+     3.333      .990    1.0236  344.6344       2.2
+     4.000     1.394    1.8182  537.0775       2.5
+  END FTABLE  2
+
+  FTABLE      3
+ ROWS COLS ***
+   13    4
+     DEPTH      AREA    VOLUME     DISCH  FLO-THRU ***
+      (FT)   (ACRES)   (AC-FT)     (CFS)     (MIN) ***
+      .000      .000     .0000      .000       0.0
+      .167      .071     .0109    1.4992       5.3
+      .333      .081     .0236    4.7947       3.6
+      .500      .091     .0379    9.5766       2.9
+      .667      .101     .0539   15.8032       2.5
+      .833      .111     .0715   23.4971       2.2
+     1.000      .121     .0909   32.7063       2.0
+     1.333      .141     .1347   55.9132       1.7
+     1.667      .162     .1852   85.9474       1.6
+     2.000      .182     .2424  123.3553       1.4
+     2.667      .586     .4983  247.2766       1.5
+     3.333      .990    1.0236  422.0892       1.8
+     4.000     1.394    1.8182  657.7828       2.0
+  END FTABLE  3
+
+  FTABLE      4
+ ROWS COLS ***
+   13    4
+     DEPTH      AREA    VOLUME     DISCH  FLO-THRU ***
+      (FT)   (ACRES)   (AC-FT)     (CFS)     (MIN) ***
+      .000      .000     .0000      .000       0.0
+      .250      .848     .1970     .9024     158.5
+      .500      .970     .4242    2.8860     106.7
+      .750     1.091     .6818    5.7642      85.9
+     1.000     1.212     .9697    9.5120      74.0
+     1.250     1.333    1.2879   14.1431      66.1
+     1.500     1.455    1.6364   19.6862      60.3
+     2.000     1.697    2.4242   33.6545      52.3
+     2.500     1.939    3.3333   51.7323      46.8
+     3.000     2.182    4.3636   74.2486      42.7
+     4.000    11.879   11.3939  155.5774      53.2
+     5.000    21.576   28.1212  296.8633      68.8
+     6.000    31.273   54.5454  522.1440      75.8
+  END FTABLE  4
+
+END FTABLES
+
+DISPLY
+  DISPLY-INFO1
+*** # -  #<----------Title----------->   TRAN PIVL DIG1 FIL1  PYR DIG2 FIL2 YRND
+    1     OUTLET INFLOW (CFS)            AVER                   1    2   65   12
+    2     SPILLWAY INFLOW (CFS)          AVER                   1    2   65   12
+    3     KITTLE CREEK FLOW (CFS)        AVER                   1    2   65   12
+  END DISPLY-INFO1
+END DISPLY
+
+PLTGEN
+  PLOTINFO
+    # -  # FILE  NPT  NMN LABL  PYR PIVL ***
+    1        93         3             24
+  END PLOTINFO
+
+  GEN-LABELS
+    # -  #<----------------Title----------------->   ***    <------Y axis------>
+    1     SIMULATED FLOWS (CFS)                             CFS
+  END GEN-LABELS
+
+  SCALING
+    # -  #      YMIN      YMAX     IVLIN ***
+    1             0.       25.       20.
+  END SCALING
+
+  CURV-DATA         (first curve)
+              <-Curve label--> Line Intg  Col Tran ***
+    # -  #                     type  eqv code code ***
+    1         SPILLWAY INFLOW          1    1 AVER
+  END CURV-DATA
+
+  CURV-DATA         (second curve)
+              <-Curve label--> Line Intg  Col Tran ***
+    # -  #                     type  eqv code code ***
+    1         OUTLET INFLOW       1    3    1 AVER
+  END CURV-DATA
+
+  CURV-DATA         (third curve)
+              <-Curve label--> Line Intg  Col Tran ***
+    # -  #                     type  eqv code code ***
+    1         KITTLE CREEK        2    8    2 AVER
+  END CURV-DATA
+END PLTGEN
+
+EXT SOURCES
+<-Volume-> <Member> SsysSgap<--Mult-->Tran <-Target vols> <-Grp> <-Member->  ***
+<Name>   # <Name> # tem strg<-factor->strg <Name>   #   #        <Name> # #  ***
+WDM     39 PREC     ENGLZERO          SAME PERLND   1     EXTNL  PREC
+WDM     39 PREC     ENGLZERO          SAME RCHRES   1     EXTNL  PREC
+WDM    123 ATMP     ENGL              SAME PERLND   1     ATEMP  AIRTMP
+WDM     41 EVAP     ENGL        .7    DIV  PERLND   1     EXTNL  PETINP
+WDM     41 EVAP     ENGL        .7    DIV  RCHRES   1     EXTNL  POTEV
+WDM     42 WIND     ENGL              DIV  PERLND   1     EXTNL  WINMOV
+WDM     46 SOLR     ENGL              DIV  PERLND   1     EXTNL  SOLRAD
+WDM    126 DEWP     ENGL              SAME PERLND   1     EXTNL  DTMPG
+WDM    140 CLND     ENGL              SAME RCHRES   1     EXTNL  COLIND
+END EXT SOURCES
+
+NETWORK
+<-Volume-> <-Grp> <-Member-><--Mult-->Tran <-Target vols> <-Grp> <-Member->  ***
+<Name>   #        <Name> # #<-factor->strg <Name>   #   #        <Name> # #  ***
+PERLND   1 PWATER PERO          500.       RCHRES   1     EXTNL  IVOL
+RCHRES   1 HYDR   OVOL   1        1.       RCHRES   2     EXTNL  IVOL
+RCHRES   1 HYDR   OVOL   1       12.1      DISPLY   1     INPUT  TIMSER
+RCHRES   1 HYDR   OVOL   1       12.1      PLTGEN   1     INPUT  MEAN   2
+RCHRES   1 HYDR   OVOL   2        1.       RCHRES   3     EXTNL  IVOL
+RCHRES   1 HYDR   OVOL   2       12.1      DISPLY   2     INPUT  TIMSER
+RCHRES   1 HYDR   OVOL   2       12.1      PLTGEN   1     INPUT  MEAN   1
+RCHRES   2 HYDR   ROVOL           1.       RCHRES   4     EXTNL  IVOL
+RCHRES   3 HYDR   ROVOL           1.       RCHRES   4     EXTNL  IVOL
+RCHRES   4 HYDR   ROVOL          12.1      DISPLY   3     INPUT  TIMSER
+RCHRES   4 HYDR   ROVOL          12.1      PLTGEN   1     INPUT  MEAN   3
+END NETWORK
+
+END RUN
+

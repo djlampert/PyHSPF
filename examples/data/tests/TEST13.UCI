@@ -1,0 +1,448 @@
+RUN
+
+GLOBAL
+  Version 11 test run: Water categories and conditional SPEC-ACTIONS
+  START       1976              END    1976
+  RUN INTERP OUTPUT LEVEL    4    2
+  RESUME     0 RUN     1                   UNIT SYSTEM     1
+END GLOBAL
+
+FILES
+<ftyp>  <fun>***<-----------------fname---------------------------------------->
+MESSU      25   test13.ech
+WDM        26   test.wdm
+            2   test13.out
+           69   test13.d69
+           98   test13.p98
+END FILES
+
+OPN SEQUENCE
+    INGRP              INDELT 24:00
+      GENER        1
+      GENER        2
+      GENER        3
+      RCHRES       1
+      DISPLY       1
+      DISPLY       2
+      RCHRES       2
+      DISPLY       3
+      RCHRES       3
+      DISPLY       4
+      RCHRES       4
+      DISPLY       5
+      PLTGEN       1
+    END INGRP
+END OPN SEQUENCE
+
+CATEGORY  
+   <> <-----name-----> ***
+   fw fish & wildlife
+   mu municipal
+END CATEGORY
+
+GENER
+  OPCODE
+    #    # OPCD ***
+    1    4   24
+  END OPCODE
+
+  PARM
+    #    #         K ***
+    1    2        0.
+    3          1000.
+  END PARM
+END GENER
+
+DISPLY
+  DISPLY-INFO1
+    # -  #<----------Title----------->***TRAN PIVL DIG1 FIL1  PYR DIG2 FIL2 YRND
+    1     LAKE DUDA F&W OUTFLOW          AVER                   1    1   69   12
+    2     LAKE DUDA MUNICIPAL RELEASE    AVER                   1    1   69   12
+    3     RADHA RESERVOIR F&W RELEASE    AVER                   1    1   69   12
+    4     BRASCHER CK MUNI DIVERSION     AVER                   1    1   69   12
+    5     HUMMEL R TOTAL FLOW            AVER                   1    1   69   12
+  END DISPLY-INFO1
+END DISPLY
+
+PLTGEN
+  PLOTINFO
+    # -  # FILE  NPT  NMN LABL  PYR PIVL ***
+    1        98    3             12    1
+  END PLOTINFO
+
+  GEN-LABELS
+    # -  #<----------------Title ---------------->   ***    <------Y axis------>
+    1     CATEGORY STORAGES                                 ACRE-FEET       
+  END GEN-LABELS
+
+  SCALING
+    # -  #      YMIN      YMAX     IVLIN ***
+    1             0.        1.       20.
+  END SCALING
+
+  CURV-DATA         (first curve)
+              <-Curve label--> Line Intg  Col Tran ***
+    # -  #                     type  eqv code code ***
+    1         L DUDA - F&W             1    1 LAST
+  END CURV-DATA
+
+  CURV-DATA         (second curve)
+              <-Curve label--> Line Intg  Col Tran ***
+    # -  #                     type  eqv code code ***
+    1         L DUDA - MUNI            1    1 LAST
+  END CURV-DATA
+
+  CURV-DATA         (third curve)
+              <-Curve label--> Line Intg  Col Tran ***
+    # -  #                     type  eqv code code ***
+    1         RADHA RES - VOL          1    1 SUM
+  END CURV-DATA
+END PLTGEN
+
+
+RCHRES
+  ACTIVITY
+    RCHRES  Active Sections (1=Active; 0=Inactive)           ***
+    # -  # HYFG ADFG CNFG HTFG SDFG GQFG OXFG NUFG PKFG PHFG ***
+    1    4    1
+  END ACTIVITY
+
+  PRINT-INFO
+    RCHRES  Print-flags                                                ***
+    # -  # HYDR ADCA CONS HEAT  SED  GQL OXRX NUTR PLNK   PH PIVL  PYR ***
+    1    4    4                                                 1   12
+  END PRINT-INFO
+
+  GEN-INFO
+    RCHRES<-------Name------->Nexit   Unit Systems   Printer      ***
+    # -  #                               t-series  Engl Metr LKFG ***
+                                           in  out                ***
+    1     LAKE DUDA               2         1    1    2    0    1
+    2     RADHA RESERVOIR         2         1    1    2    0    1
+    3     BRASCHER CREEK          2         1    1    2    0    0
+    4     HUMMEL RIVER            1         1    1    2    0    0
+  END GEN-INFO
+
+  HYDR-PARM1
+    RCHRES  Flags for HYDR section                           ***
+    # -  #  VC A1 A2 A3  ODFVFG for each     ODGTFG for each *** FUNCT  for each
+            FG FG FG FG  possible   exit     possible   exit *** possible   exit
+                1  2  3    1  2  3  4  5       1  2  3  4  5 ***
+    1           1             4                1
+    2           1             4                1
+    3           1             4                1
+    4           1          4
+  END HYDR-PARM1
+
+  HYDR-PARM2
+    RCHRES ***
+    # -  #  DSN FTBN       LEN     DELTH     STCOR        KS ***
+    1              1      21.9                           0.5
+    2              2       1.7                           0.5
+    3              3       3.4                           0.5
+    4              4       5.6                           0.5
+  END HYDR-PARM2
+
+  HYDR-INIT
+          Initial conditions for HYDR section      ***
+  RCHRES         VOL  CAT Initial value  of COLIND *** initial  value  of OUTDGT
+    # -  #     ac-ft      for each possible   exit *** for  each  possible  exit
+                           EX1  EX2  EX3  EX4  EX5 ***   EX1  EX2  EX3  EX4  EX5
+    1         15000.    2       4.0
+    2         10000.   fw       4.0
+    3            16.   fw       4.0
+    4            16.   fw  4.0
+  END HYDR-INIT
+
+  HYDR-CINIT 
+*** RCHRES  Category Fractions for Precipitation
+*** # -  #   c  frac   c  frac   c  frac   c  frac   c  frac   c  frac   c  frac
+    1       fw   0.7  mu   0.3
+  END HYDR-CINIT 
+
+  HYDR-CATEGORY 
+       Categories specified for Outflows, Precipitation and Evaporation ***
+    RCHRES Categories associated with:                                  ***
+    # -  # prec evap  fv1  fv2  fv3  fv4  fv5   gt                      ***
+    1         2    2         2                   2
+    2        fw   fw                             1
+    3        fw   fw        fw                   1
+    4        fw   fw
+  END HYDR-CATEGORY
+
+  HYDR-CPREC
+*** RCHRES  Category Fractions for Precipitation
+*** # -  #   c  frac   c  frac   c  frac   c  frac   c  frac   c  frac   c  frac
+    1       fw    .5  mu    .5
+  END HYDR-CPREC
+
+  HYDR-CEVAP
+    RCHRES  Category Fractions and Priorities for Evaporation               ***
+    # -  #   c pr  frac   c pr  frac   c pr  frac   c pr  frac   c pr  frac ***
+    1       fw  1    .5  mu  1    .5
+  END HYDR-CEVAP
+
+  HYDR-CFVOL
+    RCHRES  Category Fractions and Priorities for F(VOL) Outflow       ***
+    # -  #   c x pr  frac   c x pr  frac   c x pr  frac   c x pr  frac ***
+    1       fw 2  1        mu 2  2
+  END HYDR-CFVOL
+
+  HYDR-CDEMAND
+  Category Priorities and Initial Values for G(T) Demands  ***
+             c x  Priority  COTDGT   c x  Priority  COTDGT ***
+    RCHRES      (yyyy/mm/dd) (cfs)      (yyyy/mm/dd) (cfs) ***
+    # -  #  <><> <--> <> <> <---->  <><> <--> <> <> <----> ***
+    1       fw 1               70.  mu 1               15.
+    2       fw 1               12.
+    3       mu 1                0.
+  END HYDR-CDEMAND
+END RCHRES
+
+EXT SOURCES
+<-Volume-> <Member> SsysSgap<--Mult-->Tran <-Target vols> <-Grp> <-Member-> ***
+<Name>   # <Name> # tem strg<-factor->strg <Name>   #   #        <Name> # # ***
+WDM    113 FLOW     ENGL           .7      RCHRES   1     EXTNL  CIVOL fw
+WDM    113 FLOW     ENGL           .3      RCHRES   1     EXTNL  CIVOL mu
+WDM    119 FLOW     ENGL          .02      RCHRES   2     EXTNL  CIVOL fw
+WDM     39 PREC     ENGL                   RCHRES   1   4 EXTNL  PREC
+WDM     41 EVAP     ENGL           .7      RCHRES   1   4 EXTNL  POTEV
+WDM    136 FLOW     ENGL                   RCHRES   1     EXTNL  COTDGT 1mu
+END EXT SOURCES
+
+SCHEMATIC 
+<-Source->                <--Area-->       <-Target->  <ML->  ***
+<Name>   #                <-factor->       <Name>   #      #  ***
+RCHRES   1                                 RCHRES   3      1    
+RCHRES   2                                 RCHRES   3      1    
+RCHRES   3                                 RCHRES   4      2    
+END SCHEMATIC 
+
+MASS-LINK 
+  MASS-LINK        1  
+<Srce>     <-Grp> <-Member-><--Mult-->     <Targ>         <-Grp> <-Member-> ***
+<Name>     <Name> <Name> # #<-factor->     <Name>         <Name> <Name> # # ***
+RCHRES     ROFLOW                          RCHRES         INFLOW
+  END MASS-LINK    1
+
+  MASS-LINK        2  
+<Srce>     <-Grp> <-Member-><--Mult-->     <Targ>         <-Grp> <-Member-> ***
+<Name>     <Name> <Name> # #<-factor->     <Name>         <Name> <Name> # # ***
+RCHRES     OFLOW         2                 RCHRES         INFLOW
+  END MASS-LINK    2  
+END MASS-LINK  
+
+NETWORK
+<-Volume-> <-Grp> <-Member-><--Mult-->Tran <-Target vols> <-Grp> <-Member->  ***
+<Name>   #        <Name> # #<-factor->strg <Name>   #   #        <Name> # #  ***
+GENER    1 OUTPUT TIMSER                   RCHRES   1     EXTNL  COTDGT 1fw
+GENER    2 OUTPUT TIMSER                   RCHRES   2     EXTNL  COTDGT 1fw
+GENER    3 OUTPUT TIMSER                   RCHRES   3     EXTNL  COTDGT 1mu
+RCHRES   1 HYDR   CRO   fw                 DISPLY   1     INPUT  TIMSER
+RCHRES   1 HYDR   CO     1mu               DISPLY   2     INPUT  TIMSER
+RCHRES   2 HYDR   CRO   fw                 DISPLY   3     INPUT  TIMSER
+RCHRES   3 HYDR   CO     1mu               DISPLY   4     INPUT  TIMSER
+RCHRES   4 HYDR   RO                       DISPLY   5     INPUT  TIMSER
+RCHRES   1 HYDR   CVOL  fw                 PLTGEN   1     INPUT  POINT  1
+RCHRES   1 HYDR   CVOL  mu                 PLTGEN   1     INPUT  POINT  2
+RCHRES   2 HYDR   VOL                      PLTGEN   1     INPUT  POINT  3
+END NETWORK
+
+SPEC-ACTIONS
+*** User-Defined Variable Quantity Lines
+***                          addr
+***                        <------>
+*** kwd  varnam optyp  opn  vari  s1 s2 s3 tp multiply  lc ls ac as agfn ***
+  <****> <----> <----> <-> <----><-><-><-><-><--------> <><-> <><-> <--> ***
+  UVQUAN lfprop GENER    1 K       1        3
+  UVQUAN month  GENER    1 MON              2
+  UVQUAN lmstor RCHRES   1 CVOL   mu        4
+  UVQUAN lfavl  RCHRES   1 CVOL   fw        4 1.1574e-5
+  UVQUAN lfrel  RCHRES   1 CRO    fw        3
+  UVQUAN rfrel  RCHRES   2 CRO    fw        3
+  UVQUAN rstor  RCHRES   2 VOL              4 2.2957e-5
+  UVQUAN totflo RCHRES   4 RO               3
+
+*** User-Defined Target Variable Names 
+***                  addr or                       addr or
+***                 <------>                      <------>
+*** kwd   varnam ct  vari  s1 s2 s3  frac oper     vari  s1 s2 s3  frac oper
+  <****>  <----><-> <----><-><-><-> <---> <-->    <----><-><-><-> <---> <-->
+  UVNAME  LFPROP  1 K       1         1.0 QUAN
+  UVNAME  RFPROP  1 K       1         1.0 QUAN
+  UVNAME  LFSTOR  1 CVOL   fw         1.0 QUAN
+  UVNAME  LMSTOR  1 CVOL   mu         1.0 QUAN
+
+*** Action Lines
+***                                        addr or              uvq or
+***                                       <------>              <---->
+*** opt foplop dcdts  yr mo dy hr mn d t   vnam  s1 s2 s3 ac quantity  tc  ts rp
+  <****><-><--><><-><--> <> <> <> <><><>  <----><-><-><-><-><--------> <> <-><->
+
+*** Determine Lake Release
+
+Set proposed release of fish & wildlife water from lake to same as ***
+yesterday's, plus or minus the amount that the downstream river flow must ***
+change to reach the target of 100 cfs. ***
+
+  GENER   1                               LFPROP          =     lfrel
+  GENER   1                               LFPROP         +=       100.
+  GENER   1                               LFPROP         -=     totflo
+  GENER   1                               LFPROP         MAX        0.
+
+*** Determine Reservoir Release
+
+Make up any shortfall in lake release ***
+
+IF (lfprop > lfavl) THEN
+  GENER   2                               RFPROP         +=     lfprop
+  GENER   2                               RFPROP         -=     lfavl
+END IF
+
+Release minimum flow ***
+
+  GENER   2                               RFPROP          =        10.
+
+Make additional spawning releases ***
+
+IF ( (month >= 3) AND (month <= 5) ) THEN
+ Increase flow from reservoir for spring fish spawning run ***
+ IF (rstor >= 20000) THEN
+  Release maximum spawning rate when storage is above 20,000 ac-ft ***
+  GENER   2                               RFPROP         MIN       50.
+ ELSE IF (rstor >= 10000) THEN
+  Release normal spawning rate when storage is above 10,000 ac-ft ***
+  GENER   2                               RFPROP         MIN       40.
+ ELSE
+  Release minimum spawning rate when storage is below 10,000 ac-ft ***
+  GENER   2                               RFPROP         MIN       30.
+ END IF
+END IF
+
+*** Monthly Account Exchange
+
+IF (lmstor > 1.5246e8) THEN
+  at the first of every month, transfer excess municipal storage above ***
+  4000 ac-ft to fish & wildlife ***
+  (use internal units of ft3: 4000 ac-ft * 43560 = 1.7424e8 ft3) ***
+  RCHRES  1         1976  1  1         4  LFSTOR         +=     lmstor MO   1 12
+  RCHRES  1         1976  1  1         4  LFSTOR         -=   1.7424e8 MO   1 12
+  RCHRES  1         1976  1  1         4  LMSTOR          =   1.7424e8 MO   1 12
+END IF
+
+END SPEC-ACTIONS
+
+FTABLES
+  FTABLE      1
+ ROWS COLS ***
+   25    4
+     DEPTH      AREA    VOLUME     DISCH ***
+      (FT)   (ACRES)   (AC-FT)     (CFS) ***
+       0.0       0.0       0.0      0.00
+       8.0       4.0      17.0      0.00
+      18.0      24.0     143.0      0.00
+      28.0      47.0     491.0      0.00
+      33.0      66.0     770.0      0.00 
+      38.0      86.0    1148.0      0.00
+      38.6      89.0    1201.0      0.00
+      43.0     109.0    1633.0      0.00
+      48.0     132.0    2230.0      0.00
+      53.0     157.0    2948.0      0.00
+      58.0     182.0    3791.0      0.00
+      63.0     212.0    4771.0      0.00
+      68.0     242.0    5901.0      0.00
+      73.0     274.0    7187.0      0.00
+      78.0     307.0    8636.0      0.00
+      83.0     352.0   10278.0      0.00
+      88.0     398.0   12147.0      0.00
+      93.0     451.0   14262.0      0.00
+      98.0     504.0   16643.0      0.00
+     103.0     559.0   19294.0      0.00
+     108.0     614.0   22220.0      0.00
+     113.0     674.0   25434.0     35.00
+     118.0     734.0   28949.0    117.00
+     123.0     818.0   32806.0    638.00
+     138.0    1069.0   46936.0   2345.00
+  END FTABLE  1
+  FTABLE      2
+ ROWS COLS ***
+   25    4
+     DEPTH      AREA    VOLUME     DISCH ***
+      (FT)   (ACRES)   (AC-FT)     (CFS) ***
+       0.0       0.0       0.0      0.00
+       8.0       4.0      17.0      0.00
+      18.0      24.0     143.0      0.00
+      28.0      47.0     491.0      0.00
+      33.0      66.0     770.0      0.00 
+      38.0      86.0    1148.0      0.00
+      38.6      89.0    1201.0      0.00
+      43.0     109.0    1633.0      0.00
+      48.0     132.0    2230.0      0.00
+      53.0     157.0    2948.0      0.00
+      58.0     182.0    3791.0      0.00
+      63.0     212.0    4771.0      0.00
+      68.0     242.0    5901.0      0.00
+      73.0     274.0    7187.0      0.00
+      78.0     307.0    8636.0      0.00
+      83.0     352.0   10278.0      0.00
+      88.0     398.0   12147.0      0.00
+      93.0     451.0   14262.0      0.00
+      98.0     504.0   16643.0      0.00
+     103.0     559.0   19294.0      0.00
+     108.0     614.0   22220.0      0.00
+     113.0     674.0   25434.0     35.00
+     118.0     734.0   28949.0    117.00
+     123.0     818.0   32806.0    638.00
+     138.0    1069.0   46936.0   2345.00
+  END FTABLE  2
+  FTABLE      3
+ Rows Cols ***
+   18    4
+     DEPTH      AREA    VOLUME     DISCH ***
+      (FT)   (ACRES)   (AC-FT)     (CFS) ***
+       0.0     0.000     0.000      0.00
+       2.3     2.339     0.369      1.00
+       3.1     7.223     3.849     17.00
+       3.7    13.243     8.954     46.00
+       4.5    20.406    20.509    138.00
+       5.3    24.510    36.397    318.00
+       6.3    27.225    58.513    666.00
+       7.5    29.836    90.116   1302.00
+       8.3    31.797   113.364   1847.00
+       9.1    33.356   138.003   2486.00
+       9.9    34.756   163.636   3208.00
+      10.9    36.283   197.485   4258.00
+      11.9    37.368   233.321   5482.00
+      13.1    39.329   278.197   7136.00
+      14.3    42.080   325.800   8993.00
+      15.5    43.339   373.742  11009.00
+      16.9    45.015   432.516  13643.00
+      18.5    47.576   498.040  16671.00
+  END FTABLE  3
+  FTABLE      4
+ Rows Cols ***
+   18    4
+     DEPTH      AREA    VOLUME     DISCH ***
+      (FT)   (ACRES)   (AC-FT)     (CFS) ***
+       0.0     0.000     0.000      0.00
+       2.3     2.339     0.369      1.00
+       3.1     7.223     3.849     17.00
+       3.7    13.243     8.954     46.00
+       4.5    20.406    20.509    138.00
+       5.3    24.510    36.397    318.00
+       6.3    27.225    58.513    666.00
+       7.5    29.836    90.116   1302.00
+       8.3    31.797   113.364   1847.00
+       9.1    33.356   138.003   2486.00
+       9.9    34.756   163.636   3208.00
+      10.9    36.283   197.485   4258.00
+      11.9    37.368   233.321   5482.00
+      13.1    39.329   278.197   7136.00
+      14.3    42.080   325.800   8993.00
+      15.5    43.339   373.742  11009.00
+      16.9    45.015   432.516  13643.00
+      18.5    47.576   498.040  16671.00
+  END FTABLE  4
+END FTABLES
+
+END RUN
