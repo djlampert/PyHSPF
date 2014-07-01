@@ -108,7 +108,7 @@ wdm.close('test.wdm')
 # Run example1.uci--this simulation just inputs data from TEST01DT.91 to the
 # test.wdm file we just made
 
-hspf.hsppy('TEST01.UCI', messagepath)
+hspf.hsppy('test01.uci', messagepath)
 
 # let's go back into the test.wdm and pull out the data and graph it (you may 
 # get a warning about the file being open--i've worked around it but needs

@@ -4,7 +4,7 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# last updated: 10/19/2013
+# last updated: 06/30/2014
 #
 # The WDMUtil class can be used to work with WDM files with Python. 
 # The class was inspired by the Python extensions "wdmtoolbox," although

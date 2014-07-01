@@ -41,6 +41,6 @@ wdm.close('test.wdm')
 
 # run it
 
-hspf.hsppy('TEST03.UCI', messagepath)
+hspf.hsppy('test03.uci', messagepath)
 
 

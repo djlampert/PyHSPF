@@ -25,7 +25,7 @@ print('')
 
 for i in range(4, 16):
 
-    p = 'TEST{:02d}.UCI'.format(i)
+    p = 'test{:02d}.uci'.format(i)
     if os.path.isfile(p): 
         print('performing HSPF simulation {}'.format(p))
         hspf.hsppy(p, messagepath)

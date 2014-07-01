@@ -4,6 +4,8 @@
 #
 # this is a repeat of tests 4 to 15 but shows how you can run them in parallel!
 # running parallel simulations can speed up the calibration process
+# of course the runtime will not be faster if you don't have multiple cores
+# on your computer
 
 # Import the hspf library et al
 
@@ -16,10 +18,6 @@ import os, time
 
 pyhspfdirectory = os.path.dirname(hspf.__file__)
 messagepath = '{}/pyhspf/core/hspfmsg.wdm'.format(pyhspfdirectory)
-
-# there is really nothing to do but just run these--but if you feel creative
-# and wish to contribute it would be nice if someone would pull out the results
-# of these and make plots to illustrate what the simulations do.
 
 # create a function for mapping the processes
 
@@ -34,7 +32,7 @@ def run(ucifile):
 def main():    
 
     os.chdir('data/tests')
-    ucis = ['TEST{:02d}.UCI'.format(i) for i in range(4,16)]
+    ucis = ['test{:02d}.uci'.format(i) for i in range(4,16)]
 
     # keep track of the time
 
