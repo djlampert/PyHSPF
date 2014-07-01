@@ -1,0 +1,90 @@
+@echo off
+
+::this is a batch routine to make a new directory, copy needed files, compile objects,
+::then link them together in a DLL for access to HSPF routines
+::
+::to use the file, change it to a batch by changing the suffix from ".txt" to ".bat" then it can be 
+::run by double-clicking it or calling from the DOS prompt
+::
+::the file assumes the following:
+::
+::1. it is located in the LIB3.0/src subdirectory of the HSPF12.2 source code that is located at: 
+::
+::   http://hspf.com/ftp/hspf/HSPF12.2SourceForBASINS4.0.zip
+::
+::2. the "djl" subdirectory in the zipped file "HSPF13.zip" has been placed within the LIB3.0/src
+::
+::3. gfortran and gcc compilers are available as environment variables
+::
+::if you run this it will give you lots of warnings (you can ignore those) but if successful
+::it will create a "libhspf.dll" file in the HSPF13 subdirectory. The DLL has the main
+::HSPF subroutine available through the HSPPY subroutine that requires only the UCI
+::and message file (HSPFMSG.WDM) as inputs so it should be trivial to link your
+::application to this subroutine
+
+::files from util
+
+set UTILf=utchar.for utdate.for utgnrl.for utnumb.for utsort.for utcpgn.for ckfsdg.for uscnvt.for datsys77.for
+set UTILc=dirlis_.c getdir_.c MALLO~BA.c FILEN~AI.c
+
+set UTILo=utchar.o utdate.o utgnrl.o utnumb.o utsort.o utcpgn.o ckfsdg.o uscnvt.o datsys77.o dirlis_.o getdir_.o MALLO~BA.o FILEN~AI.o
+
+::files from adwdm
+
+set ADWDM=utwdmd.for utwdmf.for utwdt1.for wdmess.for wdatm1.for msimpt.for msexpt.for msopen.for prtfil.for ztwdmf.for adutil.for usysux.for wdopux.for
+
+set ADWDMo=utwdmd.o utwdmf.o utwdt1.o wdmess.o wdatm1.o msimpt.o msexpt.o msopen.o prtfil.o ztwdmf.o adutil.o usysux.o wdopux.o
+
+::files from wdm
+
+set WDM=wdbtch.for wdatrb.for wdatm2.for wdsptm.for wdimpt.for wdexpt.for wdtms2.for wdtms1.for wdtble.for wdtbl2.for wddlg.for wdatru.for tsbufr.for wdtms3.for wdmid.for
+
+set WDMo=wdbtch.o wdatrb.o wdatm2.o wdsptm.o wdimpt.o wdexpt.o wdtms2.o wdtms1.o wdtble.o wdtbl2.o wddlg.o wdatru.o tsbufr.o wdtms3.o wdmid.o
+
+
+::files from hspf122
+
+set HSPF=hosuper.for hdatut.for hgenut.for himp.for himpgas.for himpqua.for himpsld.for himpwat.for hioosup.for hioosv.for hiotsin.for hiouci.for hiowrk.for hper.for hperagut.for hperair.for hpergas.for hpermst.for hperpes.for hperpho.for hperqua.for hpersed.for hpertmp.for hpertra.for hperwat.for hpernit.for hpersno.for hprbut.for hrch.for hrchaci.for hrchcon.for hrchgqu.for hrchhtr.for hrchnut.for hrchoxr.for hrchphc.for hrchplk.for hrchrq.for hrchut.for hrchhyd.for hrchsed.for hringen.for hringeut.for hrinoput.for hrinseq.for hrints.for hrunut.for hruntsgp.for hruntsgq.for hruntsgt.for hruntsgw.for hruntsut.for hrintss.for hrinwdm.for hruntspt.for hruntspw.for htsinsi.for htsinsz.for htssut.for hutop.for hutopinp.for hwdmut.for hutdura.for specact.for hspf.for hspfec.for hspfitab.for hrinopn.for hextutil.for
+set HSPFo=hosuper.o hdatut.o hgenut.o himp.o himpgas.o himpqua.o himpsld.o himpwat.o hioosup.o hioosv.o hiotsin.o hiouci.o hiowrk.o hper.o hperagut.o hperair.o hpergas.o hpermst.o hperpes.o hperpho.o hperqua.o hpersed.o hpertmp.o hpertra.o hperwat.o hpernit.o hpersno.o hprbut.o hrch.o hrchaci.o hrchcon.o hrchgqu.o hrchhtr.o hrchnut.o hrchoxr.o hrchphc.o hrchplk.o hrchrq.o hrchut.o hrchhyd.o hrchsed.o hringen.o hringeut.o hrinoput.o hrinseq.o hrints.o hrunut.o hruntsgp.o hruntsgq.o hruntsgt.o hruntsgw.o hruntsut.o hrintss.o hrinwdm.o hruntspt.o hruntspw.o htsinsi.o htsinsz.o htssut.o hutop.o hutopinp.o hwdmut.o hutdura.o specact.o hspf.o hspfec.o hspfitab.o hrinopn.o hextutil.o
+
+::new files from v12 (not in v11)
+
+set HSPF12=hbmprac.for hreport.for hiosta.for hirrig.for hrchshd.for hpestut.for 
+set HSPF12o=hbmprac.o hreport.o hiosta.o hirrig.o hrchshd.o hpestut.o 
+
+::make a new directory to work in
+
+mkdir HSPF13
+
+::copy needed files
+
+for %%a in (%UTILc% %UTILf%) do copy util\%%a HSPF13
+for %%a in (%ADWDM%) do copy adwdm\%%a HSPF13
+for %%a in (%WDM%) do copy wdm\%%a HSPF13
+for %%a in (%HSPF% %HSPF12%) do copy hspf122\%%a HSPF13
+copy hspnodss\hdssx.for HSPF13
+
+::include files
+
+copy util\*.inc HSPF13
+copy adwdm\*.inc HSPF13
+copy wdm\*.inc HSPF13
+copy hspf122\*.inc HSPF13
+
+::files modified for this compilation
+
+for %%a in (djl.f hfiles.for hspf_f2py_module.f make_messagefile.py) do copy djl\%%a HSPF13
+copy djl\*.inc HSPF13
+
+::go into the directory and compile
+
+cd HSPF13
+
+::make the objects
+
+gcc -ansi -O3 -c %UTILc%
+
+gfortran -c -O3 -fno-automatic -fno-align-commons %UTILf% %ADWDM% %WDM% %HSPF% %HSPF12% hdssx.for djl.f hfiles.for
+gfortran -shared -O3 -mrtd -o hspflib.dll %UTILo% %ADWDMo% %WDMo% %HSPF% %HSPF12% hdssx.o djl.o hfiles.o
+
+cd ..

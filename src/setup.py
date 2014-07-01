@@ -31,19 +31,19 @@ Cropland Data Layer (CDL). The "core" module requires NumPy, SciPy, and
 Matplotlib, and can be used for generating input files. The preprocessing 
 routines require GDAL, PyShp, and Pillow and make a series of specific
 assumptions about the location and availability of data sources on the 
-computer. For more info contact me.
+computer.
 
 PyHSPF can be used to assimilate the data into an HSPF model, build the 
 HSPF input files, simulate the model over a period of time, and then 
 provide statistics and plots of the simulation output. A series 
-of examples are provided (independently) to illustrate PyHSPF usage."""
+of examples are provided to illustrate PyHSPF usage."""
 )
 
 _s = """Python Extensions for utilizing the Hydrological 
 Simulation Program in Fortran (HSPF) Version 12.2"""
 
 _l = """
-PyHSPF, Version 0.1.3
+PyHSPF, Version 0.1.4
 
 Copyright (c) 2014, UChicago Argonne, LLC
 All rights reserved.

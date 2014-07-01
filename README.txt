@@ -1,5 +1,5 @@
 PyHSPF, Version 0.1.4
-last updated: 06/08/2014
+last updated: 06/30/2014
 Developed by David J. Lampert and May M. Wu, Argonne National Laboratory
 
 Summary: PyHSPF contains a library of subroutines to run the Hydrological 
@@ -53,21 +53,22 @@ Python Imaging Library (Pillow)
 
 Installation: Extract the source zip files, then open a command prompt,
 navigate to the PyHSPF directory, and run "python setup.py install." 
-I am providing a few pre-built distributions in addition, but I have 
-had trouble porting these to different machines. The binaries can be 
-rebuilt using the open source GNU compiler collection (other compilers 
-may work but are untested). The HSPF13 folder contains the source code
-including some minor modifications needed to simplify the compilation.
-Assuming gfortran and gcc are available as environment variables, the 
-HSPF library can be rebuilt by navigating as before, running "python 
-setup.py build," and then (as adminstrator) "python setup.py install." 
-Contact me if you have trouble with the installation.
+I am providing a few pre-built distributions in addition, although I
+cannot guarantee that they will port to different machines. The binaries 
+can be rebuilt using the open source GNU compiler collection (other 
+compilers may work but are untested). The HSPF13 folder contains the 
+source code including some minor modifications needed to simplify the 
+compilation. Assuming gfortran and gcc are available as environment 
+variables, the HSPF library can be rebuilt by navigating as before, 
+running "python setup.py build," and then (as adminstrator) 
+"python setup.py install." Contact me if you have trouble with the 
+installation.
 
 Testing: Open the python interpreter (from a command prompt simply type 
 "python"). Then try "import pyhspf"; the base Fortran subroutines can be
 accessed from pyhspf.hspf. If the import succeeds, then try to run 
 pyhspf.hspf.sydatepy(), which should print the date as a tuple. There 
-are five examples scripts provided. The examples are simple and designed to
+are numerous examples scripts provided. The examples are simple and designed to
 illustrate the basic concepts used to build HSPF models. Each example 
 contains a detailed explanation of about the particular HSPF model 
 used and how to build the model with PyHSPF.
