@@ -42,7 +42,7 @@ def build_watershed(subbasinfile, flowfile, outletfile, damfile, gagefile,
         elevation = record[elev_index]
 
         subbasin  = Subbasin(comid)
-        subbasin.add_flowplane(length, slope, tot_area, centroid, elevation)
+        subbasin.add_flowplane(length, slope, 0, centroid, elevation)
 
         subbasins[comid] = subbasin
 

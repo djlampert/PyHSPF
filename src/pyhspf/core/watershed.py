@@ -13,7 +13,6 @@ class FlowPlane:
 
         self.length    = length
         self.slope     = slope
-        self.area      = area
         self.centroid  = centroid
         self.avgelev   = elev
 

@@ -1,5 +1,5 @@
 PyHSPF, Version 0.1.4
-last updated: 06/30/2014
+last updated: 07/05/2014
 Developed by David J. Lampert and May M. Wu, Argonne National Laboratory
 
 Summary: PyHSPF contains a library of subroutines to run the Hydrological 
@@ -36,7 +36,7 @@ Radiation Database (NSRDB), Global Historical Climate Network Daily
 Database (DSI-3240), and the National Water Information System (NWIS). 
 The preprocessing modules can calculate daily or hourly reference 
 evapotranspiration time series using the ASCE Penman-Monteith Equation, 
-a major difference from other databases available for HSPF.  The climate 
+a major difference from other databases available for HSPF. The climate 
 data extractors/Penman calculator can be used completely outside HSPF.
 
 Core Dependencies: 
@@ -47,7 +47,7 @@ Matplotlib
 
 Preprocessing and Calibration Dependencies:
 Geospatial Data Abstract Library (GDAL)
-Python Shapefile Library (pyshp)
+Python Shapefile Library (PyShp)
 Python Imaging Library (Pillow)
 7-zip (Windows only)
 
@@ -64,14 +64,14 @@ running "python setup.py build," and then (as adminstrator)
 "python setup.py install." Contact me if you have trouble with the 
 installation.
 
-Testing: Open the python interpreter (from a command prompt simply type 
+Testing: Open the Python interpreter (from a command prompt simply type 
 "python"). Then try "import pyhspf"; the base Fortran subroutines can be
 accessed from pyhspf.hspf. If the import succeeds, then try to run 
 pyhspf.hspf.sydatepy(), which should print the date as a tuple. There 
-are numerous examples scripts provided. The examples are simple and designed to
-illustrate the basic concepts used to build HSPF models. Each example 
-contains a detailed explanation of about the particular HSPF model 
-used and how to build the model with PyHSPF.
+are numerous examples scripts provided. The examples are simple and designed
+to illustrate the basic concepts used to build HSPF models. Each example 
+contains a detailed explanation of about the particular HSPF model used
+and how to build the model with PyHSPF.
 
 Acknowledgements: Developed with funding from the United States Department of 
 Energy, Energy Efficiency & Renewable Energy, Bioenergy Technologies Office

@@ -10,7 +10,19 @@ from pyhspf import hspf, WDMUtil
 
 import os
 
-os.chdir('data/tests')
+if os.path.isdir('data/tests'):
+
+    os.chdir('data/tests')
+
+else:
+    print('you appear to be missing the data files in the data/tests')
+    print('directory that are needed for this simulation')
+    raise
+
+if not os.path.isfile('test.wdm'):
+    print('warning, this simulation assumes the test.wdm file from test01')
+    print('and exists; please run this example first')
+    raise
 
 # this is the path to the message file in PyHSPF (hspfmsg.wdm)
 

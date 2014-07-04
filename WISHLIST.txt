@@ -2,14 +2,14 @@ PyHSPF is in need of further development. This is a list of things that I
 want to add. Please contact me if you have other suggestions or are
 interested in contributing to the development of these applications.
 
-1.  Examples of GIS data extraction (NHDPlus and NASS CDL)
+1.  Examples of GIS data extraction/integration (NHDPlus and NASS CDL)
 2.  Examples of snow simulations
 3.  Examples of sediment transport simulations
 4.  Examples of HydrologyCalibrator application
-4.  PyHSPF temperature modules for HSPF operations (PERLND, IMPLND, RCHRES)
-5.  HSPF utility operations to improve memory allocation (COPY)
-6.  PyHSPF Qualtiy modules for HSPF operations (PERLND, IMPLND, RCHRES)
-7.  Auto-calibration routines
+4.  Add PyHSPF temperature modules for HSPF operations (PERLND, IMPLND, RCHRES)
+5.  Add PyHSPF utility modules to improve memory allocation (COPY)
+6.  Add PyHSPF qualtiy modules for HSPF operations (PERLND, IMPLND, RCHRES)
+7.  Developing auto-calibration routines
 8.  PyHSPF nitrogen, phosphorous, and pesticide modules
 9.  Integration with watershed delineation tools (e.g., TauDEM)
-10. Variable land use modules
+10. Variable land use with time modules

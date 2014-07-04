@@ -2,9 +2,9 @@
 #
 # David Lampert (djlampert@gmail.com)
 #
-# this is a repeat of tests 4 to 15 but shows how you can run them in parallel!
+# this is a repeat of tests 04 to 15 but shows how you can run them in parallel!
 # running parallel simulations can speed up the calibration process
-# of course the runtime will not be faster if you don't have multiple cores
+# of course the run time will not be faster if you don't have multiple cores
 # on your computer
 
 # Import the hspf library et al
@@ -14,7 +14,11 @@ from multiprocessing import Pool, cpu_count
 
 import os, time
 
-# this is the path to the message file in PyHSPF (hspfmsg.wdm)
+# parallel or serial flag
+
+parallel = True
+
+# path to the message file in PyHSPF (hspfmsg.wdm)
 
 pyhspfdirectory = os.path.dirname(hspf.__file__)
 messagepath = '{}/pyhspf/core/hspfmsg.wdm'.format(pyhspfdirectory)
@@ -38,19 +42,19 @@ def main():
 
     start = time.time()
 
-    # serial run
+    # serial or parallel run
 
-    for f in ucis: run(f)
+    if parallel:
 
-    # parallel run
+        pool = Pool(cpu_count())
+        pool.map(run, ucis)
 
-    pstart = time.time()
-    pool = Pool(cpu_count())
-    pool.map(run, ucis)
+    else:
+        
+        for f in ucis: run(f)
 
     end = time.time()
     
-    print('\nserial run time = {:.2f} seconds\n'.format(pstart - start))
-    print('parallel run time = {:.2f} seconds\n'.format(end - pstart))
+    print('run time = {:.2f} seconds\n'.format(end - start))
 
 if __name__ == '__main__': main()

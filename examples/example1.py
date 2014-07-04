@@ -9,7 +9,7 @@
 # of the user's background in Python. The idea is to learn how the 
 # "think in HSPF."
 #
-# Last updated: 05/01/2014
+# Last updated: 07/05/2014
 #
 # This is a very basic example of how to create an HSPF model in Python using 
 # PyHSPF. No external data files are needed. Python can be used to script the
@@ -56,11 +56,10 @@ subbasin = Subbasin(number)  # created subbasin "100"
 # subbasins are defined by many attributes, which are grouped into categories 
 # including:
 #
-# --the flowplane (slope length, area, centroid, average elevation)
+# --the flowplane (length, slope, area, centroid, average elevation)
 #
-# --the reach (name, upstream number, upstream elevation, downstream elevation, 
-# length, average slope, inflow rate, outflow rate, average velocity, and 
-# traveltime)
+# --the reach (name, upstream elevation, downstream elevation, length, 
+#              optionally average flow rate and velocity)
 #
 # --the landuse categories to be used by the model and the corresponding areas 
 # within each subbasin 
@@ -89,15 +88,15 @@ slopelen   = 10            # the reach length (km)
 # estimates of the average conditions can be used to develop FTABLES (used by
 # HSPF to specify stage-discharge relationship) or specified directly
 
-flow       = 10            # the inflow (cfs) sorry about the engligh units
-velocity   = 1             # velocity (fps) again sorry about the english units
+flow       = 10            # the inflow (cfs) must use these units
+velocity   = 1             # velocity (fps) again must use these units
 
 # now let's add the reach to the subbasin
 
 subbasin.add_reach(name, maxelev, minelev, slopelen, flow = flow, 
                    velocity = velocity)
 
-# another piece of info we need is the landuse (or however we want to 
+# another piece of info we need is the land use (or however we want to 
 # subdivide the subbasins into land segments, e.g. soils). so here let's
 # just assume 20% is developed with 50% impervious, 40% agriculture, and 40% 
 # forest. The areas are in square km so we get 20 km2 impervious, etc. 
@@ -278,17 +277,18 @@ targets = ['reach_outvolume',  # the volume that exits each reach at each step
            'runoff']           # the surface runoff
 
 # the targets above each correspond to a particular Fortran variable; the idea
-# is to make them more descriptive. the targets above correspond to:
+# is to make them more descriptive and easie to add. the targets above 
+# correspond to:
 #
 # reach_outvolume = ROVOL
 # evaporation     = TAET for PERLNDs, and IMPEV for IMPLNDs
 # reach_volume    = RO
 # runoff          = SURO, IFWO, and AGWO for PERLNDs, SURO for IMPLNDs
 
-# now then, the "build_uci" function can be used to build the UCI input file.
-# it also builds the output WDM file since they work together with 
-# the UCI file. in this example we are just doing hydrology but you can add 
-# (provided you give the data) snow atemp, and sediment.  the other modules 
+# now the "build_uci" function can be used to build the UCI input file.
+# it also builds the output WDM file since it works together with the UCI 
+# file. in this example we are just doing hydrology but you can add 
+# (provided you give the data) atemp, snow, and sediment.  the other modules 
 # need to be developed.
 
 hspfmodel.build_uci(targets, start, end, hydrology = True, verbose = False)
@@ -324,7 +324,8 @@ wdm.open(wdmoutfile, 'r')
 # let's pull up the flow at the outlet and plot it along with the precipitation
 # and evapotranspiration. the attributes that identify the data are "IDCONS"
 # (constituent ID) and "STAID " (station ID). these were assigned by the
-# build_wdminfile and build_UCI routines automatically; modify as needed.
+# build_wdminfile and build_uci routines automatically; modify as needed. 
+# the attributes always have 6 characters so make sure to add trailing spaces.
 
 dsns    =  wdm.get_datasets(wdmoutfile)
 idconss = [wdm.get_attribute(wdmoutfile, n, 'IDCONS') for n in dsns]

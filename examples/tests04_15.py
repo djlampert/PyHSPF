@@ -33,5 +33,3 @@ for i in range(4, 16):
     else:
         print('unable to locate {}, terminating'.format(p))
         raise
-
-

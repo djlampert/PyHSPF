@@ -21,9 +21,17 @@ print('')
 
 import os
 
-os.chdir('data/tests')
+if os.path.isdir('data/tests'):
+
+    os.chdir('data/tests')
+
+else:
+    print('you appear to be missing the data files in the data/tests')
+    print('directory that are needed for this simulation')
+    raise
 
 # this is the path to the message file in PyHSPF (hspfmsg.wdm)
+# the HSPF main routine needs the location of this file and the UCI file
 
 pyhspfdirectory = os.path.dirname(hspf.__file__)
 messagepath = '{}/pyhspf/core/hspfmsg.wdm'.format(pyhspfdirectory)
@@ -42,7 +50,11 @@ wdm.open('test.wdm', 'w')
 # datasets already exist so we need to create them. have a look at the test
 # UCI files if you are curious
 
-attributes = {'TCODE ': 4, 'TSSTEP': 1, 'TSTYPE': 'WTMP', 'TSFORM': 3}
+attributes = {'TCODE ': 4, 
+              'TSSTEP': 1, 
+              'TSTYPE': 'WTMP', 
+              'TSFORM': 3,
+              }
 
 # what these attributes mean:
 #
@@ -147,26 +159,26 @@ fig.suptitle('1976 Iowa River Water Quality Data', size = 14)
 subs[0,0].plot_date(times, dewp1, 'r-')
 subs[0,0].plot_date(times, dewp2, 'g-')
 subs[0,0].plot_date(times, dewp3, 'b-')
-subs[0,0].set_ylabel('Dew point\n(\u00B0F)')
+subs[0,0].set_ylabel('Dew point\n(\u00B0F)', multialignment = 'center')
 
 subs[1,0].plot_date(times, winds, fmt = '-', c = 'purple')
 subs[1,0].set_ylabel('Wind Speed\n(miles/day)')
 
 subs[2,0].plot_date(times, evaps, 'g-')
 subs[2,0].fill_between(times, 0, evaps, color = 'green', alpha = 0.3)
-subs[2,0].set_ylabel('Evaporation\n(in)')
+subs[2,0].set_ylabel('Evaporation\n(in)', multialignment = 'center')
 subs[2,0].set_ylim(0, subs[2,0].get_ylim()[1])
 
 subs[0,1].plot_date(times, flow1, fmt = '-', c = 'r')
 subs[0,1].plot_date(times, flow2, fmt = '-', c = 'g')
 subs[0,1].plot_date(times, flow3, fmt = '-', c = 'b')
-subs[0,1].set_ylabel('Stream flow\n(ft\u00B3/s)')
+subs[0,1].set_ylabel('Stream flow\n(ft\u00B3/s)', multialignment = 'center')
 
 subs[1,1].plot_date(times, wtemps, 'r-')
-subs[1,1].set_ylabel('Water Temp\n(\u00B0C)')
+subs[1,1].set_ylabel('Water Temp\n(\u00B0C)', multialignment = 'center')
 
 subs[2,1].plot_date(times, sedm, fmt = '-', c = 'brown')
-subs[2,1].set_ylabel('Suspended Solids\n(mg/L)')
+subs[2,1].set_ylabel('Suspended Solids\n(mg/L)', multialignment = 'center')
 
 locator   = dates.MonthLocator(interval = 2)
 formatter = dates.DateFormatter('%b')
