@@ -1,12 +1,20 @@
 # compile_libhspf.sh
 #
-# a shell script to compile a shared object library for HSPF
+# This is a shell script to compile an HSPF shared object library "libhspf.so" 
+# for linux or Unix environments
 #
 # David J. Lampert, PhD, PE
 # djlampert@gmail.com
 #
 # Instructions: Copy this file into the HSPF122/lib3.0/src folder, and copy
-# the "djl" directory into the folder also (it contains a few essential files)
+# the "djl" directory into the folder also (it contains a few essential 
+# modifications to the source); the folder is compressed at "HSPF13.zip"
+#
+# The end result of the script is a library that can be linked to other 
+# programs or environments; the routines are consistent with those used in
+# the "core" modules of PyHSPF such as "hspf.hsppy" that takes the UCI file 
+# and messagefile paths as inputs and will run the main HSPF program
+# the routines needed for WDM file manipulation are also accessible
 
 # files from lib3.0/src/util
 
@@ -84,28 +92,19 @@ cp HSPNODSS/HDSSX.FOR hspf13
 
 cd hspf13
 
-# lower the case of the include files (a big screw you to Aquaterra on this one)
+# lower the case of the include files 
+# (the changes from HSPF11 really make this a pain)
 
 for a in *.INC *.inc
 do
-    cp $a "`echo $a | tr "[:upper:]" "[:lower:]"`"
+    mv $a "`echo $a | tr "[:upper:]" "[:lower:]"`"
 done
 
 # make the objects
 
 gcc -ansi -fPIC -c -O3 *.c
-gfortran -c -O3 -fno-automatic -fPIC $UTILF $ADWDM $WDM $HSPF $HSPF12 $DJL HDSSX.FOR
+gfortran -c -O3 -fno-automatic -fno-align-commons -fPIC $UTILF $ADWDM $WDM $HSPF $HSPF12 $DJL HDSSX.FOR
 
 # make the shared library
 
-gfortran -u -shared -O3 -o libhspf.so *.o
-
-sudo cp libhspf.so /usr/local/lib
-sudo ldconfig
-cd ../djl
-
-# make the message file and the f2py module
-
-f2py3 -m -c hspf hspf_f2py_module.f -lhspf
-
-python3 make_messagefile.py
+gfortran -o libhspf.so -shared *.o
