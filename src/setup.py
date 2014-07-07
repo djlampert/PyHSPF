@@ -43,7 +43,7 @@ _s = """Python Extensions for utilizing the Hydrological
 Simulation Program in Fortran (HSPF) Version 12.2"""
 
 _l = """
-PyHSPF, Version 0.1.4
+PyHSPF, Version 0.1.5
 
 Copyright (c) 2014, UChicago Argonne, LLC
 All rights reserved.
@@ -123,7 +123,7 @@ fflags = ['-O3', '-fno-automatic', '-fno-align-commons']
 
 setup(
     name = 'pyhspf',
-    version = '0.1.4',
+    version = '0.1.5',
     description = _s,
     author = 'David Lampert',
     author_email = 'djlampert@gmail.com',

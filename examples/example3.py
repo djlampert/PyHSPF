@@ -50,13 +50,12 @@ planeslope = 0.05  # flow plane slope
 
 # needed to build an instance of the Watershed class but not used directly
 
-area       = 0
 elev       = 0
 centroid   = [0,0]
 
 # add the flow plane info for the subbasin
 
-subbasin.add_flowplane(length, planeslope, area, centroid, elev)
+subbasin.add_flowplane(length, planeslope, centroid, elev)
 
 # subbasin reach info (conistent with hspfexp/data/hunthour/hunting.uci file)
 
@@ -119,13 +118,12 @@ planeslope = 0.05  # flow plane slope
 
 # needed to build an instance of the Watershed class but not used directly
 
-area       = 0
 elev       = 0
 centroid   = [0,0]
 
 # add the flow plane info for the subbasin
 
-subbasin.add_flowplane(length, planeslope, area, centroid, elev)
+subbasin.add_flowplane(length, planeslope, centroid, elev)
 
 # subbasin reach info (conistent with hspfexp/data/hunthour/hunting.uci file)
 
@@ -185,13 +183,12 @@ planeslope = 0.05  # flow plane slope
 
 # needed to build an instance of the Watershed class but not used directly
 
-area       = 0
 elev       = 0
 centroid   = [0,0]
 
 # add the flow plane info for the subbasin
 
-subbasin.add_flowplane(length, planeslope, area, centroid, elev)
+subbasin.add_flowplane(length, planeslope, centroid, elev)
 
 # subbasin reach info (conistent with hspfexp/data/hunthour/hunting.uci file)
 

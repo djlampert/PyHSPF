@@ -30,3 +30,8 @@ Modified the setup.py file to remove the download from source, and make director
 Re-organized and updated climate data extraction tools
 New example climate data download tools
 New tests running existing HSPF UCI files from the main HSPF source code
+
+Version 0.1.5
+Removed frivolous area argument to the add_flowplane method in the Subbasin class
+Updated examples for consistency with change
+NHDPlus data extractor/example

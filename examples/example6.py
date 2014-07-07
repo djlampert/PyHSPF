@@ -43,7 +43,7 @@ areas         = [20, 40, 40]
 
 # add the data for subbasin 100
 
-subbasin.add_flowplane(length, planeslope, area, centroid, elev)
+subbasin.add_flowplane(length, planeslope, centroid, elev)
 subbasin.add_reach(name, maxelev, minelev, slopelen, flow = flow, 
                    velocity = velocity)
 subbasin.add_landuse(2001, landuse_names, areas)
@@ -60,7 +60,7 @@ maxelev  = 100
 minelev  = 90
 flow     = 12
 
-subbasin.add_flowplane(length, planeslope, area, centroid, elev)
+subbasin.add_flowplane(length, planeslope, centroid, elev)
 subbasin.add_reach(name, maxelev, minelev, slopelen, flow = flow, 
                    velocity = velocity)
 subbasin.add_landuse(2001, landuse_names, areas)

@@ -54,13 +54,12 @@ planeslope = 0.38  # flow plane slope
 
 # these are needed to build an instance of the Watershed class but not used
 
-area       = 0
 elev       = 0
 centroid   = [0,0]
 
 # add the flow plane info for the subbasin
 
-subbasin.add_flowplane(length, planeslope, area, centroid, elev)
+subbasin.add_flowplane(length, planeslope, centroid, elev)
 
 # subbasin reach info; as above this isn't all directly needed by HSPF but is 
 # needed to build the watershed

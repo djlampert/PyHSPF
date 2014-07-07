@@ -109,10 +109,10 @@ class Subbasin:
         self.outlets = []
         self.landuse = {}
 
-    def add_flowplane(self, length, slope, centroid, elev):
+    def add_flowplane(self, length, slope, area, centroid, elev):
         """Adds the flowplane info to the subbasin."""
 
-        self.flowplane = FlowPlane(length, slope, centroid, elev)
+        self.flowplane = FlowPlane(length, slope, area, centroid, elev)
 
     def add_reach(self, name, maxelev, minelev, slopelen, flow = None, 
                   velocity = None, traveltime = None, dam = None, 

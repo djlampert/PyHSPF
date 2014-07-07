@@ -56,7 +56,7 @@ subbasin = Subbasin(number)  # created subbasin "100"
 # subbasins are defined by many attributes, which are grouped into categories 
 # including:
 #
-# --the flowplane (length, slope, area, centroid, average elevation)
+# --the flowplane (length, slope, centroid, average elevation)
 #
 # --the reach (name, upstream elevation, downstream elevation, length, 
 #              optionally average flow rate and velocity)
@@ -70,13 +70,12 @@ subbasin = Subbasin(number)  # created subbasin "100"
 
 length     = 100       # m
 planeslope = 0.02      # -
-area       = 100       # km2
 elev       = 100       # m
 centroid   = [-90, 40] # lon, lat
 
 # add the flow plane data for subbasin 100
 
-subbasin.add_flowplane(length, planeslope, area, centroid, elev)
+subbasin.add_flowplane(length, planeslope, centroid, elev)
 
 # now let's provide the info about the reach
 
@@ -122,7 +121,7 @@ subbasin = Subbasin(number)
 
 # let's just use the same flowplane parameters
 
-subbasin.add_flowplane(length, planeslope, area, centroid, elev)
+subbasin.add_flowplane(length, planeslope, centroid, elev)
 
 # slightly change the reach info
 

@@ -18,4 +18,4 @@ test03.py -- adds datasets to "test.wdm" and runs "test03.uci"
 tests04_15.py -- runs test04.uci through test15.uci simulations (no WDM file manipulation)
 tests04_15_parallel.py -- shows how to run HSPF simulations in parallel
 
-PyHSPF has far more capabilities but they need to be developed.
+PyHSPF has more capabilities but they need to be developed. Also note that these examples may not be compatible with older versions of PyHSPF.
