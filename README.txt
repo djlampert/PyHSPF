@@ -1,5 +1,5 @@
-PyHSPF, Version 0.1.4
-last updated: 07/05/2014
+PyHSPF, Version 0.1.5
+last updated: 07/10/2014
 Developed by David J. Lampert and May M. Wu, Argonne National Laboratory
 
 Summary: PyHSPF contains a library of subroutines to run the Hydrological 
@@ -49,7 +49,7 @@ Preprocessing and Calibration Dependencies:
 Geospatial Data Abstract Library (GDAL)
 Python Shapefile Library (PyShp)
 Python Imaging Library (Pillow)
-7-zip (Windows only)
+7-zip
 
 Installation: Extract the source zip files, then open a command prompt,
 navigate to the PyHSPF directory, and run "python setup.py install." 
