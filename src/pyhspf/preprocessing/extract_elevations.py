@@ -2,7 +2,7 @@ import gdal, os
 
 from shapefile import Reader
 
-from pyhspf.preprocessing.raster import get_raster_table
+from .raster import get_raster_table
 
 def extract_elevations(NED, HUC8, flowlines, output, verbose = True):
     """Extracts elevation data as a raster file from the National Elevation

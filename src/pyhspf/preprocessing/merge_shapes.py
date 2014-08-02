@@ -2,13 +2,12 @@
 #
 # David J. Lampert, PhD, PE
 #
-# last updated Nov 20, 2012
+# last updated 08/02/2014
 #
-# scroll to the bottom to use. note requires the python shapefile library (from
-# Joel Lawhead) and numpy.  set up for python 3.2
-#
-# basically just enter the name of the shapefile and the output file and run
-# the script.
+# contains the merge_shapes function that basically takes the name of the 
+# shapefile with the polygons to be merged as an input and then merges the
+# shapes together with the optional output filename as a keyword argument.
+# the method uses a "trace" of the outside of the shapes.
 
 import os, shutil, numpy, time
 
@@ -149,9 +148,13 @@ def combine_shapes(shapes, bboxes, skip = False, verbose = True):
 
     neighbors = [shapes[j] for j in neighbor_indices]
     if len(neighbors) == 0:
-        print('error, no neighbors detected')
+        print('warning, no neighbors detected')
         raise
     neighboring_points = get_all(current, neighbors)
+
+    if len(neighboring_points) == 0:
+        print('warning, no neighbors detected')
+        raise
 
     # trace the current shape until reaching a point common to the neighbors
  
@@ -264,11 +267,14 @@ def merge_shapes(inputfile, outputfile = None, overwrite = False,
                 bboxes.append(shape.bbox)
 
                 try: combined = combine_shapes(shapes, bboxes, 
-                                                  verbose = vverbose)
-                except: combined = combine_shapes(shapes, bboxes, skip = True, 
-                                                  verbose = vverbose)
+                                               verbose = vverbose)
+                except: 
+                    if verbose: print('trying alternate trace method')
+                    combined = combine_shapes(shapes, bboxes, skip = True, 
+                                              verbose = vverbose)
 
     except:
+        if verbose: print('trying alternate trace method')
         shapes  = []
         records = [] 
         bboxes  = []
@@ -284,8 +290,10 @@ def merge_shapes(inputfile, outputfile = None, overwrite = False,
                 bboxes.append(shape.bbox)
 
         try:    combined = combine_shapes(shapes, bboxes, verbose = vverbose)
-        except: combined = combine_shapes(shapes, bboxes, skip = True,
-                                          verbose = vverbose)
+        except: 
+            if verbose: print('trying alternate trace method')
+            combined = combine_shapes(shapes, bboxes, skip = True,
+                                      verbose = vverbose)
 
     # create the new file with the merged shapes
 

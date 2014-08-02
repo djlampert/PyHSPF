@@ -2,8 +2,8 @@ import os, shutil
 
 from shapefile import Reader, Writer
 
-from pyhspf.preprocessing.gisplots import get_boundaries
-from pyhspf.preprocessing.raster   import inside_box
+from .gisplots import get_boundaries
+from .raster   import inside_box
 
 def extract_dams(directory, damfile, HUC8, output, verbose = True):
     """Extracts the NID dam locations for a watershed from the dam 

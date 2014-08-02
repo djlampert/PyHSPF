@@ -2,7 +2,7 @@ import gdal, osr, os, csv
 
 from shapefile import Reader
 
-from pyhspf.preprocessing.raster import get_raster, get_raster_table
+from .raster import get_raster, get_raster_table
 
 def extract_cropland(NASS, shapefile, HUC8, year, output, verbose = True):
     """Extracts cropland data as a raster file from the National Agricultural

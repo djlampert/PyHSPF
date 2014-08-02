@@ -1,5 +1,5 @@
-PyHSPF, Version 0.1.5
-last updated: 07/10/2014
+PyHSPF, Version 0.1.6
+last updated: 08/02/2014
 Developed by David J. Lampert and May M. Wu, Argonne National Laboratory
 
 Summary: PyHSPF contains a library of subroutines to run the Hydrological 
@@ -30,14 +30,12 @@ files. A series of examples is provided to illustrate PyHSPF core module
 usage.
 
 The preprocessing modules contain classes to automate extraction of 
-climate data from various databases including the National Solar 
-Radiation Database (NSRDB), Global Historical Climate Network Daily 
-(GHCND), Global Summary of the Day (GSOD), the NCDC Hourly Precipitation 
-Database (DSI-3240), and the National Water Information System (NWIS). 
-The preprocessing modules can calculate daily or hourly reference 
-evapotranspiration time series using the ASCE Penman-Monteith Equation, 
-a major difference from other databases available for HSPF. The climate 
-data extractors/Penman calculator can be used completely outside HSPF.
+data from various databases including the National Solar Radiation 
+Database (NSRDB), Global Historical Climate Network Daily (GHCND), Global
+Summary of the Day (GSOD), the NCDC Hourly Precipitation Database 
+(DSI-3240), the National Water Information System (NWIS), and the National
+Hydrography Dataset Plus Version 2 (NHDPlus). The data extractors and 
+calculators can be used independently of the HSPF classes.
 
 Core Dependencies: 
 Python Programming Language Version 3

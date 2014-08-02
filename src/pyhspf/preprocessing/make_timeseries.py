@@ -11,12 +11,12 @@ import numpy as np, datetime, os, pickle, math
 
 from shapefile import Reader
 
-from pyhspf.preprocessing.penman           import penman_daily
-from pyhspf.preprocessing.penman           import penman_hourly
-from pyhspf.preprocessing.crop_coefficient import calculate_cropPET
-from pyhspf.preprocessing.climateplots     import plot_dailyET
-from pyhspf.preprocessing.climateplots     import plot_dayofyearET
-from pyhspf.preprocessing.climateplots     import plot_hourlyET
+from .penman           import penman_daily
+from .penman           import penman_hourly
+from .crop_coefficient import calculate_cropPET
+from .climateplots     import plot_dailyET
+from .climateplots     import plot_dayofyearET
+from .climateplots     import plot_hourlyET
 
 def is_integer(s):
     """Tests if string "s" is an integer."""

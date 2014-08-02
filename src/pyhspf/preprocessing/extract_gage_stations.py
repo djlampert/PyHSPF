@@ -2,7 +2,7 @@ import os, shutil
 
 from shapefile import Reader, Writer
 
-from pyhspf.preprocessing.dbf import read_dbf
+from .dbf import read_dbf
 
 def extract_gage_stations(NHDPlus, gagefile, HUC8, output, verbose = True):
     """Extracts the USGS gage stations for a watershed from the gage station 

@@ -11,13 +11,8 @@ import os, shutil, time, pickle
 
 from shapefile import Reader, Writer
 
-from pyhspf.preprocessing.find_flowlines  import find_flowlines
-from pyhspf.preprocessing.dbf             import read_dbf
-
-#from preprocessing.make_subbasin_outlets      import make_subbasin_outlets
-#from preprocessing.make_subbasin_flowlines    import make_subbasin_flowlines
-#from preprocessing.combine_flowlines          import combine_flowlines
-#from preprocessing.combine_subbasin_flowlines import combine_subbasin_flowlines
+from .find_flowlines  import find_flowlines
+from .dbf             import read_dbf
 
 def get_distance(p1, p2):
     """Returns the square of the distance between two points."""

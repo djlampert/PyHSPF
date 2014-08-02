@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 This is the setup file.
 """
@@ -9,6 +8,7 @@ from numpy.distutils.core import Extension, setup
 from distutils            import sysconfig
 from urllib               import request
 
+_version   = '0.1.6'
 _directory = '{}/pyhspf'.format(sysconfig.get_python_lib())
 
 _d = (
@@ -43,7 +43,7 @@ _s = """Python Extensions for utilizing the Hydrological
 Simulation Program in Fortran (HSPF) Version 12.2"""
 
 _l = """
-PyHSPF, Version 0.1.5
+PyHSPF, Version 0.1.6
 
 Copyright (c) 2014, UChicago Argonne, LLC
 All rights reserved.
@@ -123,7 +123,7 @@ fflags = ['-O3', '-fno-automatic', '-fno-align-commons']
 
 setup(
     name = 'pyhspf',
-    version = '0.1.5',
+    version = _version,
     description = _s,
     author = 'David Lampert',
     author_email = 'djlampert@gmail.com',

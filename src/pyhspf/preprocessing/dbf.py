@@ -1,3 +1,9 @@
+# dbf.py
+#
+# David Lampert (djlampert@gmail.com)
+#
+# Reads attribute values for dbf files from the NHDPlus dataset
+
 import struct, datetime
 
 def dbf_format(value, typ, deci):

@@ -13,13 +13,13 @@ import os, pickle, io, shutil
 from urllib    import request
 from shapefile import Reader
 
-from pyhspf.preprocessing.climateutils import find_ghcnd
-from pyhspf.preprocessing.climateutils import find_gsod
-from pyhspf.preprocessing.climateutils import find_precip3240
-from pyhspf.preprocessing.climateutils import find_nsrdb
-from pyhspf.preprocessing.climateutils import download_state_precip3240
-from pyhspf.preprocessing.climateutils import decompress7z
-from pyhspf.preprocessing.climateutils import decompresszcat
+from .climateutils import find_ghcnd
+from .climateutils import find_gsod
+from .climateutils import find_precip3240
+from .climateutils import find_nsrdb
+from .climateutils import download_state_precip3240
+from .climateutils import decompress7z
+from .climateutils import decompresszcat
 
 def is_integer(s):
     """Tests if string "s" is an integer."""

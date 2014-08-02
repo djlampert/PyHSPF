@@ -12,7 +12,7 @@ import os, io, datetime, subprocess
 
 from urllib import request
 
-from pyhspf.preprocessing.ncdcstations import NSRDBStation
+from .ncdcstations import NSRDBStation
 from pyhspf.preprocessing.ncdcstations import GSODStation
 from pyhspf.preprocessing.ncdcstations import GHCNDStation
 from pyhspf.preprocessing.ncdcstations import Precip3240Station

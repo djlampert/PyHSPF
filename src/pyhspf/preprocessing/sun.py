@@ -1,3 +1,9 @@
+# sun.py
+#
+# David J. Lampert (djlampert@gmail.com)
+# 
+# contains utility functions related to sunrise and sunset
+
 import os, csv, pickle, math, datetime
 
 from math import acos, asin, atan, tan, sin, cos, pi, floor, sqrt

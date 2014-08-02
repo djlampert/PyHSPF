@@ -4,25 +4,26 @@
 #
 # by David J. Lampert, PhD, PE (djlampert@gmail.com)
 #
-# Last updated: 4/12/2013
+# Last updated: 07/27/2014
 #
 # Purpose: imports gage files to Python pickled files for easy access to data
 #
 
 import os, csv, pickle, datetime, io
 
-from urllib import request
+from urllib     import request
+from scipy      import stats
+from matplotlib import pyplot, dates
 
 class GageStation:
     """A class to store data from a USGS NWIS gage station."""
 
-    def __init__(self, gageid, comid, state, gnis, day1, dayn, drain, ave, web):
+    def __init__(self, gageid, name, state, day1, dayn, drain, ave, web):
         """Create a gage and provide the basic information about it."""
 
         self.gageid = gageid
-        self.comid  = comid
+        self.name   = name
         self.state  = state
-        self.gnis   = gnis
         self.day1   = day1
         self.dayn   = dayn
         self.drain  = drain
@@ -56,7 +57,7 @@ class GageStation:
         dates (default set in the init method)."""
 
         if verbose: print('attempting to download daily discharge data ' +
-                          'directly from NWIS\n')
+                          'directly from NWIS for {}'.format(self.gageid))
 
         t = start.year, start.month, start.day, end.year, end.month, end.day - 1
 
@@ -95,7 +96,7 @@ class GageStation:
         dates (default set in the init method)."""
 
         if verbose: print('attempting to download water quality data ' +
-                          'directly from NWIS\n')
+                          'directly from NWIS for {}'.format(self.gageid))
 
         l = (self.state, self.gageid)
 
@@ -144,3 +145,60 @@ class GageStation:
             print('warning: unable to download water quality data\n')
             
             self.waterquality = {}
+
+    def plot(self, output, fmin = 0.001, titlesize = 12, axsize = 11):
+        """makes a plot of the flows over time and the flow-duration curve."""
+
+        fig = pyplot.figure(figsize = (8,8))
+        s1 = fig.add_subplot(211)
+        s2 = fig.add_subplot(212)
+
+        start, end = min(self.gagedates), max(self.gagedates)
+
+        s1.plot_date(self.gagedates, self.gageflows, fmt = 'r-')
+        s1.set_title('Hydrograph for {}: {}'.format(self.gageid, self.name), 
+                     size = titlesize)
+        s1.set_xlim(start, end)
+        s1.set_xlabel('Date', size = axsize)
+        s1.set_ylabel('Daily Flow (ft\u00B3/s)', size = axsize)
+
+        locator = dates.AutoDateLocator()
+        s1.xaxis.set_major_locator(locator)
+        s1.xaxis.set_major_formatter(dates.AutoDateFormatter(locator))
+
+        # calculate the cdfs for the flows and transform to z
+
+        norm = stats.norm(0,1)
+
+        # copy the daily flows to a new list
+
+        observed_daily = [f if f > 0 else fmin for f in self.gageflows]
+        observed_daily.sort()
+
+        # get the length and cdf
+
+        L = len(observed_daily)
+        obs_daily_cdf = [norm.ppf(i / L) for i in range(L)]
+        obs_daily_cdf.reverse()
+
+        # make tick marks (had to do this hack style for matplotlib)
+
+        ticks = [0.001, 0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98, 0.999]
+
+        norm_ticks = [norm.ppf(t) for t in ticks]
+
+        # daily flow duration curve
+
+        s2.set_title('Flow Duration Curve', size = titlesize)
+        s2.set_yscale('log')
+        s2.set_ylabel('Daily Flow (ft\u00B3/s)', size = axsize)
+        s2.set_xlabel('Probability of Exceedance', size = axsize)
+        s2.set_xlim([norm.ppf(0.0002), norm.ppf(0.9998)])
+        s2.xaxis.set_ticks(norm_ticks)
+        s2.set_xticklabels(ticks)
+
+        s2.plot(obs_daily_cdf, observed_daily,  '-', color = 'blue',
+                label = 'observed daily')
+
+        pyplot.tight_layout()
+        pyplot.savefig(output)

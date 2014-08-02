@@ -9,8 +9,8 @@
 
 import numpy as np, datetime, os, io, pickle, math
 
-from pyhspf.preprocessing.climateplots import plot_dailyET, plot_dayofyearET
-from pyhspf.preprocessing.climateplots import plot_hourlyET
+from .climateplots import plot_dailyET, plot_dayofyearET
+from .climateplots import plot_hourlyET
 
 def crop_coefficient(Ki, Km, Kl, Li, Lg, Lm, Ll, mo, da, year, tstep):
     """Creates a time series of daily values for the crop coefficient using

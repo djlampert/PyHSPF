@@ -2,9 +2,8 @@ import os, shutil, numpy, time, math
 
 from shapefile import Reader, Writer
 
-from pyhspf.preprocessing.raster       import get_raster, get_raster_on_poly
-from pyhspf.preprocessing.raster       import get_raster_in_poly
-from pyhspf.preprocessing.merge_shapes import format_shape, combine_shapes
+from .raster       import get_raster, get_raster_on_poly, get_raster_in_poly
+from .merge_shapes import format_shape, combine_shapes
 
 def get_distance(p1, p2):
     """Approximates the distance in kilometers between two points on the 

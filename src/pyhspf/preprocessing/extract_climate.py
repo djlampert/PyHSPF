@@ -12,14 +12,14 @@ import os, pickle, datetime, shutil
 
 from shapefile import Reader, Writer
 
-from pyhspf.preprocessing.ncdcstations    import PrecipStation
-from pyhspf.preprocessing.ncdcstations    import TempStation
-from pyhspf.preprocessing.ncdcstations    import SnowStation
-from pyhspf.preprocessing.ncdcstations    import EvapStation
-from pyhspf.preprocessing.ncdcstations    import WindStation
-from pyhspf.preprocessing.ncdcstations    import DewStation
-from pyhspf.preprocessing.ncdcstations    import SolarStation
-from pyhspf.preprocessing.make_timeseries import make_timeseries
+from .ncdcstations    import PrecipStation
+from .ncdcstations    import TempStation
+from .ncdcstations    import SnowStation
+from .ncdcstations    import EvapStation
+from .ncdcstations    import WindStation
+from .ncdcstations    import DewStation
+from .ncdcstations    import SolarStation
+from .make_timeseries import make_timeseries
 
 def extract_precipitation(directory, HUC8, start, end, plot = True, 
                           verbose = True):

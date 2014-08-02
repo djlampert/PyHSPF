@@ -7,7 +7,7 @@ import datetime
 
 from numpy import array, exp, sin, cos, tan, arccos, arcsin, sqrt, pi, log
 
-from pyhspf.preprocessing.sun   import is_daytime
+from .sun   import is_daytime
 
 def atmosphere_pressure(z):
     """Estimates the atmospheric pressure (kPa) from the elevation (m) using a 

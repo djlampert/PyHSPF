@@ -6,8 +6,8 @@ import os, csv, pickle, math
 
 from shapefile import Reader
 
-from pyhspf                        import Watershed, Subbasin
-from pyhspf.preprocessing.gisplots import get_aggregate_map, plot_mass_flow
+from pyhspf    import Watershed, Subbasin
+from .gisplots import get_aggregate_map, plot_mass_flow
 
 def build_watershed(subbasinfile, flowfile, outletfile, damfile, gagefile,
                     landfile, aggregatefile, VAAfile, years, HUC8, output, 

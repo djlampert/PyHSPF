@@ -2,9 +2,9 @@ import shutil, os, time
 
 from shapefile import Reader, Writer
 
-from pyhspf.preprocessing.raster   import inside_box
-from pyhspf.preprocessing.gisplots import get_boundaries
-from pyhspf.preprocessing.dbf      import read_dbf
+from .raster   import inside_box
+from .gisplots import get_boundaries
+from .dbf      import read_dbf
 
 def extract_aquifers(directory, HUC8, aquifers, pad = 0.2, verbose = True):
     """Extracts aquifers from the source datafile to the destination using
