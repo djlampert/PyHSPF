@@ -284,6 +284,7 @@ pyhspf\preprocessing\combine_catchments.py
 pyhspf\preprocessing\combine_subbasins.py
 pyhspf\preprocessing\crop_coefficient.py
 pyhspf\preprocessing\dbf.py
+pyhspf\preprocessing\delineators.py
 pyhspf\preprocessing\download_climate.py
 pyhspf\preprocessing\extract_NHDPlus.py
 pyhspf\preprocessing\extract_aquifers.py
@@ -295,6 +296,7 @@ pyhspf\preprocessing\extract_elevations.py
 pyhspf\preprocessing\extract_gage_stations.py
 pyhspf\preprocessing\extract_gis_data.py
 pyhspf\preprocessing\find_flowlines.py
+pyhspf\preprocessing\flowline.py
 pyhspf\preprocessing\gagestation.py
 pyhspf\preprocessing\gisplots.py
 pyhspf\preprocessing\landuse_stats.py
@@ -303,6 +305,8 @@ pyhspf\preprocessing\make_subbasins.py
 pyhspf\preprocessing\make_timeseries.py
 pyhspf\preprocessing\merge_shapes.py
 pyhspf\preprocessing\ncdcstations.py
+pyhspf\preprocessing\nhdplusextractor.py
+pyhspf\preprocessing\nwisextractor.py
 pyhspf\preprocessing\penman.py
 pyhspf\preprocessing\preprocessor.py
 pyhspf\preprocessing\raster.py

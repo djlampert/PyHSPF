@@ -1,4 +1,4 @@
-# example7.py
+# example6.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #
@@ -82,9 +82,8 @@ watershed.add_outlet('101')
 # names of the files used in the simulation (the HSPF input and output files
 # are generated automatically); can also specify a directory to use elsewhere
 
-filename   = 'example7'
+filename   = 'example6'
 wdmoutfile = filename + '_out.wdm'
-outfile    = 'example7.out' 
 
 # create an instance of the HSPFModel class
 
@@ -92,8 +91,7 @@ hspfmodel = HSPFModel()
 
 # and build the model from the watershed
 
-hspfmodel.build_from_watershed(watershed, filename, print_file = outfile, 
-                               tstep = tstep)
+hspfmodel.build_from_watershed(watershed, filename, tstep = tstep)
 
 # let's now add a special action, thawed ground on the agricultural land
 # in the first subbasin on April 1 at 12 noon.
