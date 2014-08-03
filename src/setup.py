@@ -120,6 +120,7 @@ files = ['hspf13/{}'.format(f)
          for f in os.listdir('hspf13') if f[-1] == 'c' or f[-1] == 'f']
 
 fflags = ['-O3', '-fno-automatic', '-fno-align-commons']
+lflags = ['-static']
 
 setup(
     name = 'pyhspf',
@@ -157,7 +158,10 @@ setup(
                     'pyhspf.core': package_data
                     },
     data_files = [(data_directory, data_files)],
-    ext_modules=[Extension(name = 'hspf', sources = files, 
-                           extra_f77_compile_args = fflags)]
+    ext_modules=[Extension(name = 'hspf', 
+                           sources = files, 
+                           extra_link_args = lflags,
+                           extra_f77_compile_args = fflags
+                           )]
     )
 
