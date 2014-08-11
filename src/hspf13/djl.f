@@ -1,11 +1,11 @@
 C     File: djl.f
 C
 C     Adapted by David J. Lampert
-C     Last updated 5/17/2013
+C     Last updated 08/10/2014
 C
 C     Purpose: this file contains some "substition" subroutines for compiling
 C     HSPF that remove system and compiler dependency and make it easy to
-C     create a file path independent code for shared library (DLL or SO).
+C     create a path independent code for a shared library (DLL or SO).
 C
 C     Created a subroutine to the main program HSPFBAT to allow access to the
 C     routine outside of a standard executable (for my purposes so I could
@@ -13,21 +13,46 @@ C     call it from Python).
 C
 C     HSPFBAT
 C
-C     Re-wrote the time/date modules (below)
+C     Copied the HSPF status routines from HSPF V11 (V12 routines are designed
+C     for interaction with Visual Basic and Windows)
+C
+C     HSPSTA
+C     HDMESC
+C     HDMESI
+C     HDMEST
+C     HDMES2
+C     HDMES3
+C     HDMESN
+C
+C     Re-wrote the time/date modules to make appropriate Gfortran calls
 C
 C     SYDATE
 C     SYTIME
 C
-C     Copied many needed routines from the USGS LIB3.2 source; the reason
+C     Copied many needed routines from the HSPF 12.2 source; the reason
 C     these routines are copied rather than the whole file is because the file
-C     has other routines that open a can of worms.  Copied routines include:
+C     has other routines that add new dependencies.  Copied routines include:
 C
 C     SYDATM  UTIL/DTTMDG.F
+C     SCPRST
+C     ZFMTWR
+C     ZWRSCR
+C     SCPRBF
+C     COLSET
+C     SYDATM
+C     QFDPRS
 C
-C     The rest is expanded "dummy" routines to replace outdated or
-C     frivolous screen I/O
+C     Created "dummy" routines to replace frivolous screen I/O, interactions
+C     with Windows and Visual Basic including:
 C
-C
+C     SCPRBN
+C     CKUSER
+C     UPDWIN
+C     SDELAY
+C     HSPF_INI
+C     EXT_UPDATE
+C     MULT_UPDATE
+C     LOG_MSG
 C
       SUBROUTINE HSPFBAT
      I                  (FILNAM, HMSNAM,
@@ -129,6 +154,80 @@ C
 C
       CLOSE(UNIT=99)
       CLOSE(UNIT=11)
+      RETURN
+      END
+C
+C
+C
+      SUBROUTINE   SYDATE
+     O                   ( YR, MO, DA )
+C
+C     + + + PURPOSE + + +
+C     This subroutine is used to retrieve the system date.
+C     This version of SYDATE calls the DG system routine IDATE.
+C
+C     + + + DUMMY ARGUMENTS + + +
+      INTEGER   YR, MO, DA
+C
+C     + + + ARGUMENT DEFINITIONS + + +
+C     YR     - year
+C     MO     - month
+C     DA     - day
+C
+C     + + + EXTERNALS + + +
+C      EXTERNAL IDATE
+C
+C     + + + LOCAL VARIABLES + + +
+C
+      INTEGER DATE(3)
+C
+C     + + + END SPECIFICATIONS + + +
+C
+      CALL IDATE ( DATE )
+      DA = DATE(1)
+      MO = DATE(2)
+      YR = DATE(3)
+C
+      RETURN
+      END
+C
+C
+C
+      SUBROUTINE   SYTIME
+     O                   ( HR, MN, SC )
+C
+C     + + + PURPOSE + + +
+C     This subroutine is used to retrieve the system time.
+C     This version of SYTIME calls the DG system routine SECNDS.
+C
+C     + + + DUMMY ARGUMENTS + + +
+      INTEGER   HR, MN, SC
+C
+C     + + + ARGUMENT DEFINITIONS + + +
+C     HR     - Number of hours since midnight
+C     MN     - Number of minutes since hour
+C     SC     - Number of seconds since minute
+C
+C     + + + FUNCTIONS + + +
+      REAL      SECNDS
+C
+C     + + + INTRINSICS + + +
+C     INTRINSIC INT
+C
+C     + + + EXTERNALS + + +
+C      EXTERNAL  SECNDS
+C
+C     + + + END SPECIFICATIONS + + +
+C
+C     SECNDS returns the difference, in seconds, between the current
+C     system time and the user supplied time.  Supplying a value of
+C     zero (midnight) causes SECNDS to return the current system time.
+C
+      SC = INT ( SECNDS(0.0) + 0.005 )
+      HR = SC / 3600
+      MN = (SC  -  HR * 3600)  /  60
+      SC = SC  -  HR * 3600  -  MN * 60
+C
       RETURN
       END
 C
@@ -751,80 +850,6 @@ C     get date
 C
 C     get time
       CALL SYTIME ( HR, MN, SC )
-C
-      RETURN
-      END
-C
-C
-C
-      SUBROUTINE   SYDATE
-     O                   ( YR, MO, DA )
-C
-C     + + + PURPOSE + + +
-C     This subroutine is used to retrieve the system date.
-C     This version of SYDATE calls the DG system routine IDATE.
-C
-C     + + + DUMMY ARGUMENTS + + +
-      INTEGER   YR, MO, DA
-C
-C     + + + ARGUMENT DEFINITIONS + + +
-C     YR     - year
-C     MO     - month
-C     DA     - day
-C
-C     + + + EXTERNALS + + +
-C      EXTERNAL IDATE
-C
-C     + + + LOCAL VARIABLES + + +
-C
-      INTEGER DATE(3)
-C
-C     + + + END SPECIFICATIONS + + +
-C
-      CALL IDATE ( DATE )
-      DA = DATE(1)
-      MO = DATE(2)
-      YR = DATE(3)
-C
-      RETURN
-      END
-C
-C
-C
-      SUBROUTINE   SYTIME
-     O                   ( HR, MN, SC )
-C
-C     + + + PURPOSE + + +
-C     This subroutine is used to retrieve the system time.
-C     This version of SYTIME calls the DG system routine SECNDS.
-C
-C     + + + DUMMY ARGUMENTS + + +
-      INTEGER   HR, MN, SC
-C
-C     + + + ARGUMENT DEFINITIONS + + +
-C     HR     - Number of hours since midnight
-C     MN     - Number of minutes since hour
-C     SC     - Number of seconds since minute
-C
-C     + + + FUNCTIONS + + +
-      REAL      SECNDS
-C
-C     + + + INTRINSICS + + +
-C     INTRINSIC INT
-C
-C     + + + EXTERNALS + + +
-C      EXTERNAL  SECNDS
-C
-C     + + + END SPECIFICATIONS + + +
-C
-C     SECNDS returns the difference, in seconds, between the current
-C     system time and the user supplied time.  Supplying a value of
-C     zero (midnight) causes SECNDS to return the current system time.
-C
-      SC = INT ( SECNDS(0.0) + 0.005 )
-      HR = SC / 3600
-      MN = (SC  -  HR * 3600)  /  60
-      SC = SC  -  HR * 3600  -  MN * 60
 C
       RETURN
       END
