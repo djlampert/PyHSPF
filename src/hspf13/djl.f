@@ -14,7 +14,8 @@ C
 C     HSPFBAT
 C
 C     Copied the HSPF status routines from HSPF V11 (V12 routines are designed
-C     for interaction with Visual Basic and Windows)
+C     for interaction with Visual Basic and Windows), changed only to 
+C     introduce dummy IOPT variable for consistency with HSPF calls
 C
 C     HSPSTA
 C     HDMESC
@@ -29,30 +30,27 @@ C
 C     SYDATE
 C     SYTIME
 C
-C     Copied many needed routines from the HSPF 12.2 source; the reason
-C     these routines are copied rather than the whole file is because the file
-C     has other routines that add new dependencies.  Copied routines include:
+C     Copied some needed subroutines from the HSPF 12.2 source files because 
+C     source files introduced new unneeded dependencies
 C
-C     SYDATM  UTIL/DTTMDG.F
-C     SCPRST
-C     ZFMTWR
-C     ZWRSCR
-C     SCPRBF
-C     COLSET
-C     SYDATM
-C     QFDPRS
+C     SYDATM from UTIL/DTTMDG.FOR
+C     SCPRST from UTIL/UTSCXX.FOR
+C     ZFMTWR from UTIL/UTSCXX.FOR
+C     ZWRSCR from UTIL/UTSCXX.FOR
+C     SCPRBF from UTIL/UTSCXX.FOR
+C     COLSET from UTIL/UTSCXX.FOR
+C     QFDPRS from AIDE/QFDPRS.FOR
 C
-C     Created "dummy" routines to replace frivolous screen I/O, interactions
-C     with Windows and Visual Basic including:
+C     Created dummy routines to replace frivolous screen I/O, interactions
+C     with Windows and Visual Basic 6
 C
-C     SCPRBN
-C     CKUSER
-C     UPDWIN
-C     SDELAY
-C     HSPF_INI
-C     EXT_UPDATE
-C     MULT_UPDATE
-C     LOG_MSG
+C     SCPRBN      normally from UTIL/UTSCXX.FOR
+C     CKUSER      new HSPF 12 subroutine in Newaqt12/HSPSTA.FOR
+C     UPDWIN      new HSPF 12 subroutine in Newaqt12/HSPSTA.FOR
+C     SDELAY      new HSPF 12 subroutine in Newaqt12/HSPSTA.FOR
+C     HSPF_INI    new HSPF 12 subroutine in Newaqt12/HSPSTA.FOR
+C     EXT_UPDATE  new HSPF 12 subroutine in Newaqt12/HSPSTA.FOR
+C     LOG_MSG     new HSPF 12 subroutine in Newaqt12/HSPSTA.FOR
 C
       SUBROUTINE HSPFBAT
      I                  (FILNAM, HMSNAM,
@@ -966,18 +964,6 @@ C     FOPKEY - pointer to first operation in osuper file
 C     LOPKEY - pointer to last operation in osuper file
 C     OSUPM  - osuper file
 C
-      RETURN
-      END
-C
-C
-C
-      SUBROUTINE   MULT_UPDATE
-     I                        (ARCFIL,UREC,FOPKEY,LOPKEY,OSUPM,
-     I                         IYEAR,IMON,IDAY,IHR,IMIN)
-C     + + + DUMMY ARGUMENTS + + +
-      INTEGER       ARCFIL,FOPKEY,LOPKEY,OSUPM(11,LOPKEY),
-     1              IYEAR,IMON,IDAY,IHR,IMIN
-      CHARACTER*80  UREC
       RETURN
       END
 C

@@ -42,28 +42,24 @@ class WDMUtil:
         with open('{}/pyhspf/core/attributes'.format(directory), 'rb') as f: 
             self.attributes = pickle.load(f)
 
-        # create a dictionary that maps 6 character strings to their USGS
-        # lib3.0 attribute index
-
-        # FORTRAN subroutines from USGS lib3.0 'WDM' library
+        # FORTRAN subroutines from HSPF library
         #
-        # timcvt: Convert times to account for 24 hour
-        # timdif: Time difference
-        # wdmopn: Open WDM file
-        # wdbsac: Set string attribute
-        # wdbsai: Set integer attribute
-        # wdbsar: Set real attribute
-        # wdbsgc: Get string attribute
-        # wdbsgi: Get integer attribute
-        # wdbsgr: Get real attribute
-        # wdbckt: Check if DSN exists
-        # wdflcl: Close WDM file
-        # wdlbax: Create label for new DSN
-        # wdtget: Get time-series data
-        # wdtput: Write time-series data
-        # wddsrn: Renumber a DSN
-        # wddsdl: Delete a DSN
-        # wddsnx: Finds next DSN
+        # timdifpy: Time difference
+        # wdbopnpy: Open WDM file
+        # wdbsacpy: Set string attribute
+        # wdbsaipy: Set integer attribute
+        # wdbsarpy: Set real attribute
+        # wdbsgcpy: Get string attribute
+        # wdbsgipy: Get integer attribute
+        # wdbsgrpy: Get real attribute
+        # wdckdtpy: Check if DSN exists
+        # wdflclpy: Close WDM file
+        # wdlbaxpy: Create label for new DSN
+        # wdtgetpy: Get time-series data
+        # wdtputpy: Write time-series data
+        # wddsrnpy: Renumber a DSN
+        # wddsdlpy: Delete a DSN
+        # wddsnxpy: Finds next DSN
 
         if self.verbose: print('Initializing WDM environment...\n')
 

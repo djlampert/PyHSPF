@@ -37,10 +37,11 @@ Updated examples for consistency with change
 NHDPlus data extractor/example
 
 Version 0.1.6
+Added source code documentation
 Added classes to preprocessing to replace existing functions including:
-addded NHDPlusExtractor -- Downloads source data from NHDPlus website, extracts HUC8 data
-added NWISExtractor -- Downloads source metadata file and gage data from NWIS
-added NHDPlusDelineator -- Delineates the watershed for a gage with in a HUC8
+NHDPlusExtractor -- Downloads source data from NHDPlus website, extracts HUC8 data
+NWISExtractor -- Downloads source metadata file and gage data from NWIS
+NHDPlusDelineator -- Delineates the watershed for a gage with in a HUC8
 Fixed issue with merge_shapes
 Added examples using NWISExtractor, NHDPlusExtractor, NHDPlusDelineator
 Separated Flowline class into new file
