@@ -1,20 +1,21 @@
-# delineator.py
+# delineators.py
 #                                                                             
 # David J. Lampert (djlampert@gmail.com)
 #                                                                             
-# last updated: 07/27/2014
+# last updated: 08/17/2014
 #                                                                              
 # Purpose: Contains the NHDPlusdelineator class to analyze the NHDPlus data 
 # for a watershed and subdivide it according to the criteria specified.
 
 import os, shutil, time, pickle, numpy
 
-from matplotlib import pyplot, path, patches, colors, ticker
-from shapefile  import Reader, Writer
+from matplotlib              import pyplot, path, patches, colors, ticker
+from shapefile               import Reader, Writer
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from .merge_shapes import merge_shapes
 from .raster       import get_raster, get_raster_on_poly, get_raster_in_poly
+from pyhspf.core   import Watershed, Subbasin
 
 class NHDPlusDelineator:
     """A class to delineate a watershed using the NHDPlus data."""
@@ -36,6 +37,8 @@ class NHDPlusDelineator:
         self.gagefile      = gagefile
         self.damfile       = damfile
         self.landuse       = landuse
+        self.gagecomid     = None
+        self.updown        = None
         
     def distance2(self, p1, p2):
         """Returns the square of the distance between two points."""
@@ -182,7 +185,7 @@ class NHDPlusDelineator:
 
         # find the comid
 
-        return self.find_comid(p)
+        self.gagecomid = self.find_comid(p)
 
     def find_subbasin_comids(self, outletcomid, verbose = True):
         """Finds the comids of all the flowlines upstream of the outletcomid."""
@@ -215,18 +218,16 @@ class NHDPlusDelineator:
 
         # convert the comid list to an updown dictionary
 
-        updown = {}
+        self.updown = {}
         for comid in comids:
 
             if flowlines[hydroseqs[comid]].down in hydroseqs:
 
-                updown[comid] = hydroseqs[flowlines[hydroseqs[comid]].down]
+                self.updown[comid] = hydroseqs[flowlines[hydroseqs[comid]].down]
 
-            else: updown[comid] = 0
+            else: self.updown[comid] = 0
 
-        updown[outletcomid] = 0
-
-        return updown
+        self.updown[outletcomid] = 0
 
     def delineate_gage_watershed(self, 
                                  gageid, 
@@ -262,11 +263,11 @@ class NHDPlusDelineator:
 
             # find the comid of the flowline associated with the gage
 
-            gagecomid = self.find_gagecomid(gageid)
+            self.find_gagecomid(gageid)
 
             # find the upstream comids
 
-            updown = self.find_subbasin_comids(gagecomid)
+            self.find_subbasin_comids(self.gagecomid)
 
         # extract the flowline shapes from the watershed files
 
@@ -294,7 +295,7 @@ class NHDPlusDelineator:
        
             i = 0
             for record in records:
-                if record[comid_index] in updown: indices.append(i)
+                if record[comid_index] in self.updown: indices.append(i)
                 i+=1
 
             if len(indices) == 0:
@@ -354,7 +355,7 @@ class NHDPlusDelineator:
        
             i = 0
             for record in records:
-                if record[feature_index] in comids: indices.append(i)
+                if record[feature_index] in self.updown: indices.append(i)
                 i+=1
 
             if len(indices) == 0:
@@ -391,16 +392,58 @@ class NHDPlusDelineator:
         if not os.path.isfile(pfile):
             self.plot_gage_watershed(gageid, output = pfile)
 
+    def calculate_flowplane(self, flowline, catchment, verbose = True):
+        """Gets the elevation data from the NED raster then estimates the value 
+        of the overland flow plane length and slope.
+        """
+
+        catchpoints = get_raster_on_poly(self.elevfile, catchment.points,
+                                         verbose = verbose)
+        catchpoints = numpy.array([p for p in catchpoints])
+
+        zs = get_raster(self.elevfile, flowline.points)
+
+        flowpoints = numpy.array([[p[0], p[1], z] 
+                                  for p, z in zip(flowline.points, zs)])
+
+        # iterate through the raster values and find the closest flow point
+
+        closest = numpy.empty((len(catchpoints), 3), dtype = 'float')
+
+        for point, j in zip(catchpoints, range(len(catchpoints))):
+            closest[j] = flowpoints[numpy.dot(flowpoints[:, :2], 
+                                              point[:2]).argmin()]
+
+        # estimate the slope and overland flow plane length
+
+        f = self.get_overland_vector(catchpoints, closest)
+
+        if verbose: 
+            print('flowplane length = {:5.0f} m; slope = {:.4f}'.format(*f))
+
+        return f
+
     def add_basin_landuse(self, landuse):
         """Adds basin-wide land use data to the extractor."""
 
         self.landuse = landuse
         
-    def build_watershed(self,
+    def build_gage_watershed(self, 
+                             gageid,
+                             landuse = None,
 #subbasinfile, flowfile, outletfile, damfile, gagefile,
 #                    landfile, aggregatefile, VAAfile, years, HUC8, output, 
 #                    plots = True, overwrite = False, format = 'png'
                         ):
+
+        # set the outlet comid
+
+        self.find_gagecomid(gageid)
+
+        # set the updown dictionary if needed
+
+        if self.updown is None: 
+            self.find_subbasin_comids(self.gagecomid, verbose = False)
 
         # create a dictionary to store subbasin data
 
@@ -410,34 +453,60 @@ class NHDPlusDelineator:
 
         inlets = {}
 
-        # read in the flow plane data into an instance of the FlowPlane class
+        # read the flow plane data into an instance of the FlowPlane class
 
-        sf = Reader(self.catchmentfile, shapeType = 5)
+        # open the catchment shapefile to get the areas
 
-        print(sf.fields)
+        cfile = Reader(self.catchments, shapeType = 5)
+        ffile = Reader(self.flowlines, shapeType = 3)
 
-        exit()
-        comid_index = sf.fields.index(['ComID',      'N',  9, 0]) - 1
-        len_index   = sf.fields.index(['PlaneLenM',  'N',  8, 2]) - 1
-        slope_index = sf.fields.index(['PlaneSlope', 'N',  9, 6]) - 1
-        area_index  = sf.fields.index(['AreaSqKm',   'N', 10, 2]) - 1
-        cx_index    = sf.fields.index(['CenX',       'N', 12, 6]) - 1
-        cy_index    = sf.fields.index(['CenY',       'N', 12, 6]) - 1
-        elev_index  = sf.fields.index(['AvgElevM',   'N',  8, 2]) - 1
+        feature_index = cfile.fields.index(['FEATUREID',  'N',  9, 0]) - 1
+        area_index    = cfile.fields.index(['AreaSqKM',   'N', 19, 6]) - 1
+        comid_index   = ffile.fields.index(['COMID',      'N', 9, 0]) - 1
 
-        for record in sf.records():
-            comid     = '{}'.format(record[comid_index])
-            length    = record[len_index]
-            slope     = record[slope_index]
-            tot_area  = record[area_index]
-            centroid  = [record[cx_index], record[cy_index]]
-            elevation = record[elev_index]
+        fcomids = ['{}'.format(r[comid_index]) for r in ffile.records()]
+
+        for i in range(len(cfile.records())):
+
+            record = cfile.record(i)
+
+            comid = '{}'.format(record[feature_index])
+            area  = record[area_index]
+
+            flowline = ffile.shape(fcomids.index(comid))
+            catchment = cfile.shape(i)
+
+            # calculate the length and slope of the flow plane
+
+            length, slope = self.calculate_flowplane(flowline, catchment)
+
+            # calculate the centroid
+
+            combined = [[float(x), float(y)] for x, y in catchment.points]
+            centroid = self.get_centroid(numpy.array(combined))
+
+            # calculate the average elevation
+
+            elev_matrix, origin = get_raster_in_poly(self.elevfile, combined,
+                                                     verbose = False)
+
+            elev_matrix = elev_matrix.flatten()
+            elev_matrix = elev_matrix[elev_matrix.nonzero()]
+    
+            elevation = round(elev_matrix.mean() / 100., 2)
+
+            #length    = record[len_index]
+            #slope     = record[slope_index]
+            #tot_area  = record[area_index]
+            #centroid  = [record[cx_index], record[cy_index]]
+            #elevation = record[elev_index]
 
             subbasin  = Subbasin(comid)
             subbasin.add_flowplane(length, slope, centroid, elevation)
 
             subbasins[comid] = subbasin
 
+        exit()
         # read in the flowline data to an instance of the Reach class
 
         sf = Reader(self.flowfile)
@@ -1728,7 +1797,7 @@ class NHDPlusDelineator:
         (for computational efficiency).
         """
 
-        deg_rad = math.pi / 180
+        deg_rad = numpy.pi / 180
           
         dphis = catchpoints[:, 1] - closest[:, 1]
         phims = 0.5 * (catchpoints[:, 1] + closest[:, 1])
@@ -1745,27 +1814,27 @@ class NHDPlusDelineator:
     def get_overland(self, p1, p2, tolerance = 0.1, min_slope = 0.00001):
         """Returns the slope of the z-coordinate in the x-y plane between points
         p1 and p2.  Returns the min_slope if the points are too close together
-        as specified by the tolerance (km).  Also return half the average length
+        as specified by the tolerance (m).  Also return half the average length
         from the catchment boundary to the flowline (since the average length 
         across each line is half the total length)."""
 
         L = self.get_distance(p1, p2)
 
         if L > tolerance: return L / 2., (p1[2] - p2[2]) / L / 100000
-        else:             return tolerance, min_slope
+        else:             return tolerance * 1000, min_slope
 
     def get_overland_vector(self, catchpoints, closest, tol = 0.1, 
                             min_slope = 0.00001):
         """Vectorized version of the get_overland function (for computational
         efficiency)."""
 
-        length = get_distance_vector(catchpoints, closest)
+        length = self.get_distance_vector(catchpoints, closest)
         slope  = (catchpoints[:,2] - closest[:,2]) / length / 100000
 
         for l, s in zip(length, slope):
             if l < tol: l, s = tol, min_slope
 
-        return length / 2., slope
+        return (length / 2.).mean() * 1000, slope.mean()
 
     def get_centroid(self, points):
         """Calculates the centroid of a polygon with paired x-y values."""
@@ -1880,7 +1949,7 @@ class NHDPlusDelineator:
                                              verbose = verbose)
             catchpoints = numpy.array([p for p in catchpoints])
 
-            zs = get_raster(elevationfile, flowline.points)
+            zs = get_raster(elevationfile, flowline.points, quiet = True)
 
             flowpoints = numpy.array([[p[0], p[1], z] 
                                       for p, z in zip(flowline.points, zs)])
@@ -1895,7 +1964,7 @@ class NHDPlusDelineator:
 
             # estimate the slope and overland flow plane length
 
-            length, slope = get_overland_vector(catchpoints, closest)
+            length, slope = self.get_overland_vector(catchpoints, closest)
 
             if verbose: 
                 print('avg slope and length =', slope.mean(), length.mean())
