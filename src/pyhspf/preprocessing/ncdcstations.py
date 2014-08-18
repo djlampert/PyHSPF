@@ -8,11 +8,96 @@
 #
 # Purpose: classes to import climate data files to Python
 
-import os, pickle, io, gzip, datetime, tarfile
+import shutil, os, subprocess, pickle, io, gzip, datetime, tarfile
 
 from urllib   import request
 from calendar import monthrange
 
+def is_integer(n):
+    """Tests if n is an integer."""
+
+    try:
+        int(n)
+        return True
+    except: return False
+
+def decompress7z(filename, directory,
+                 path_to_7z = r'C:/Program Files/7-Zip/7z.exe'):
+    """Decompresses a Unix-compressed archive on Windows using 7zip."""
+
+    c = '{0} e {1} -y -o{2}'.format(path_to_7z, filename, directory)
+
+    subprocess.call(c)
+
+def decompresszcat(filename, directory):
+    """Decompresses a Unix-compressed archive on Windows using 7zip."""
+
+    with subprocess.Popen(['zcat', filename], 
+                          stdout = subprocess.PIPE).stdout as s:
+
+        with open(filename[:-2], 'wb') as f: f.write(s.read())
+
+def download_state_precip3240(state, 
+                              directory,
+                              NCDC = 'ftp://ftp.ncdc.noaa.gov/pub/data',
+                              verbose = True):
+    """Downloads the Precip 3240 data for a state."""
+
+    if not os.path.isdir(directory):
+        print('\nerror: directory "{}" does not exist\n'.format(directory))
+        raise
+
+    if verbose:
+ 
+        print('downloading hourly precipitation data for state ' + 
+              '{}\n'.format(state))
+
+    # figure out which files are on the website
+
+    baseurl = '{0}/hourly_precip-3240/{1}'.format(NCDC, state)
+
+    req = request.Request(baseurl)
+
+    # read the state's web page and find all the compressed archives
+
+    try:
+
+        with io.StringIO(request.urlopen(req).read().decode()) as s:
+
+            archives = [a[-17:] for a in s.read().split('.tar.Z')]
+            
+        archives = [a for a in archives if is_integer(a[-4:])]
+
+    except: 
+
+        print('unable to connect to the hourly precipitation database')
+        print('make sure that you are online')
+        raise
+
+    for a in archives:
+
+        url        = '{0}/{1}.tar.Z'.format(baseurl, a)
+        compressed = '{}/{}.tar.Z'.format(directory, a)
+
+        if not os.path.isfile(compressed):
+
+            if verbose: print(url)
+
+            try: 
+
+                req = request.Request(url)
+
+                # write the compressed archive into the directory
+
+                with open(compressed, 'wb') as f: 
+                    
+                    f.write(request.urlopen(req).read())
+
+            except:
+
+                print('error: unable to connect to {}'.format(url))
+                raise   
+    
 class GHCNDStation:
     """A class to store meteorology data from the Daily Global Historical 
     Climatology Network."""
@@ -42,6 +127,11 @@ class GHCNDStation:
                       GHCND = 'ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/daily',
                       plot = True, verbose = True):
         """Downloads the data for the desired time period from the GHCND."""
+
+        if not os.path.isdir(directory):
+
+            print('\nerror: directory "{}" does not exist\n'.format(directory))
+            raise
 
         destination = '{}/{}'.format(directory, self.station)
 
@@ -370,60 +460,89 @@ class Precip3240Station:
 
                 self.events += events
 
-    def import_data(self, directory, start, end, plot = True, verbose = True):
+    def import_data(self, directory, start, end, verbose = True):
         """Downloads the data for the desired time period from the NCDC."""
 
+        if not os.path.isdir(directory):
+            print('\nerror: directory "{}" does not exist\n'.format(directory))
+            raise
+
+        if verbose: 
+            print('attempting to import data for {}\n'.format(self.coop))
+
+        # find and sort all the tarfiles in the directory
+
+        tars = ['{}/{}'.format(directory, f) for f in os.listdir(directory) 
+                if f[-3:] == 'tar' and f[5:7] == '{}'.format(self.code)]
+        tars.sort()
+
+        # parse the tars and read in the data
+
+        for f in tars:
+
+            year1, year2 = int(f[-13:-9]), int(f[-8:-4])
+
+            if year1 <= end.year and start.year <= year2:
+
+                # import the archive
+
+                try: 
+                    self.import_tar(f)
+
+                except: 
+                    print('failed to import data from {}'.format(f))
+                    raise
+
+        # sort all the event data
+
+        self.events.sort()
+
+        # add a zero event to the beginning and end for timeseries handling
+
+        if len(self.events) > 0:
+            if start < self.events[0][0]: 
+                self.events.insert(0, [start, None, ' ', ' ']) 
+
+            if self.events[-1][0] < end: 
+                self.events.append([end, None, ' ', ' ']) 
+                        
+    def download_data(self, directory, start, end, clean = True, plot = True,
+                      path_to_7z = r'C:/Program Files/7-Zip/7z.exe'): 
+        """Downloads and imports all the data for the station."""
+
+        if not os.path.isdir(directory):
+
+            print('\nerror: directory "{}" does not exist\n'.format(directory))
+            raise
+
+        clean = False
+        precip3240 = '{}/precip3240'.format(directory)
+        print(precip3240)
+        if not os.path.isdir(precip3240):
+            os.mkdir(precip3240)
+        elif clean:
+            print('\nerror, working directory exists, cannot clean\n')
+            raise
+
+        download_state_precip3240(self.code, precip3240)
+
+        # decompress the archives
+
+        for a in os.listdir(precip3240):
+            if a[-6:] == '.tar.Z': 
+                p = '{}/{}'.format(precip3240, a)
+                if os.name == 'nt':
+                    decompress7z(p, precip3240, path_to_7z = path_to_7z)
+                else:
+                    decompresszcat(p, precip3240)
+
+        # import the decompressed data
+
+        self.import_data(precip3240, start, end)
+
+        # save the results to this destination
+
         destination = '{}/{}'.format(directory, self.coop)
-
-        if not os.path.isfile(destination):
-
-            if verbose: 
-                print('attempting to import data for {}\n'.format(self.coop))
-
-            # find and sort all the tarfiles in the directory
-
-            tars = ['{}/{}'.format(directory, f) for f in os.listdir(directory) 
-                    if f[-3:] == 'tar' and f[5:7] == '{}'.format(self.code)]
-            tars.sort()
-
-            # parse the tars and read in the data
-
-            for f in tars:
-
-                year1, year2 = int(f[-13:-9]), int(f[-8:-4])
-
-                if year1 <= end.year and start.year <= year2:
-
-                    # import the archive
-
-                    try: self.import_tar(f)
-
-                    except: 
-                        print('failed to import data from {}'.format(f))
-                        raise
-
-            # sort all the event data
-
-            self.events.sort()
-
-            # add a zero event to the beginning and end for timeseries handling
-
-            if len(self.events) > 0:
-                if start < self.events[0][0]: 
-                    self.events.insert(0, [start, None, ' ', ' ']) 
-
-                if self.events[-1][0] < end: 
-                    self.events.append([end, None, ' ', ' ']) 
-            
-            # save the object
-
-            with open(destination, 'wb') as f: pickle.dump(self, f)
-            
-        else:
-
-            with open(destination, 'rb') as f: s = pickle.load(f)
-            self.events = s.events
-         
         if plot and not os.path.isfile(destination + '.png'):
 
             from pyhspf.preprocessing.climateplots import plot_3240precip
@@ -432,6 +551,14 @@ class Precip3240Station:
                 plot_3240precip(self, start = start, end = end,
                                 output = destination)
             except: print('warning: unable to plot precipitation data')
+
+        # save the import
+
+        with open(destination, 'wb') as f: pickle.dump(self, f)
+
+        # remove the intermediate files if desired
+
+        if clean: shutil.rmtree('{}/precip3240'.format(directory))
 
     def pct_missing(self, start = None, end = None):
         """Determines the percentage of missing data across the specified

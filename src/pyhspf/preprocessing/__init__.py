@@ -4,6 +4,7 @@ __all__ = [
     'build_watershed',
     'calculate_landuse',
     'climateplots',
+    'climateutils',
     'combine_catchments',
     'combine_subbasins',
     'crop_coefficient',

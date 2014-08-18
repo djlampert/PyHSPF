@@ -8,14 +8,14 @@
 #
 # Purpose: imports climate data files to Python classes
 
-import os, io, datetime, subprocess
+import os, io, datetime
 
 from urllib import request
 
 from .ncdcstations import NSRDBStation
-from pyhspf.preprocessing.ncdcstations import GSODStation
-from pyhspf.preprocessing.ncdcstations import GHCNDStation
-from pyhspf.preprocessing.ncdcstations import Precip3240Station
+from .ncdcstations import GSODStation
+from .ncdcstations import GHCNDStation
+from .ncdcstations import Precip3240Station
 
 def is_number(s):
     """Tests if string "s" is a number."""
@@ -43,22 +43,6 @@ def inside_box(p1, p2, p3, space = 0):
             return True
 
         else: return False
-
-def decompress7z(filename, directory,
-                 path_to_7z = r'C:/Program Files/7-Zip/7z.exe'):
-    """Decompresses a Unix-compressed archive on Windows using 7zip."""
-
-    c = '{0} e {1} -y -o{2}'.format(path_to_7z, filename, directory)
-
-    subprocess.call(c)
-
-def decompresszcat(filename, directory):
-    """Decompresses a Unix-compressed archive on Windows using 7zip."""
-
-    with subprocess.Popen(['zcat', filename], 
-                          stdout = subprocess.PIPE).stdout as s:
-
-        with open(filename[:-2], 'wb') as f: f.write(s.read())
 
 def find_ghcnd(bbox, 
                GHCND = 'http://www1.ncdc.noaa.gov/pub/data/ghcn/daily', 
@@ -304,62 +288,6 @@ def find_gsod(bbox,
 
     return stations
 
-def download_state_precip3240(state, directory,
-                              NCDC = 'ftp://ftp.ncdc.noaa.gov/pub/data',
-                              verbose = True):
-    """Downloads the Precip 3240 data for a state."""
-
-    if verbose:
- 
-        print('downloading hourly precipitation data for state ' + 
-              '{}\n'.format(state))
-
-    # figure out which files are on the website
-
-    baseurl = '{0}/hourly_precip-3240/{1}'.format(NCDC, state)
-
-    req = request.Request(baseurl)
-
-    # read the state's web page and find all the compressed archives
-
-    try:
-
-        with io.StringIO(request.urlopen(req).read().decode()) as s:
-
-            archives = [a[-17:] for a in s.read().split('.tar.Z')]
-            
-        archives = [a for a in archives if is_integer(a[-4:])]
-
-    except: 
-
-        print('unable to connect to the hourly precipitation database')
-        print('make sure that you are online')
-        raise
-
-    for a in archives:
-
-        url        = '{0}/{1}.tar.Z'.format(baseurl, a)
-        compressed = '{}/{}.tar.Z'.format(directory, a)
-
-        if not os.path.isfile(compressed):
-
-            if verbose: print(url)
-
-            try: 
-
-                req = request.Request(url)
-
-                # write the compressed archive into the directory
-
-                with open(compressed, 'wb') as f: 
-                    
-                    f.write(request.urlopen(req).read())
-
-            except:
-
-                print('error: unable to connect to {}'.format(url))
-                raise   
-    
 def find_precip3240(bbox, 
                     NCDC = 'http://www.ncdc.noaa.gov/', 
                     metafile = 'homr/file/coop-stations.txt',

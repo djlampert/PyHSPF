@@ -2,9 +2,9 @@
 #                                                                             
 # David J. Lampert (djlampert@gmail.com)
 #                                                                             
-# last updated: 08/17/2014
+# last updated: 08/18/2014
 #                                                                              
-# Purpose: Contains the NHDPlusdelineator class to analyze the NHDPlus data 
+# Purpose: Contains the NHDPlusDelineator class to analyze the NHDPlus data 
 # for a watershed and subdivide it according to the criteria specified.
 
 import os, shutil, time, pickle, numpy
@@ -221,9 +221,10 @@ class NHDPlusDelineator:
         self.updown = {}
         for comid in comids:
 
-            if flowlines[hydroseqs[comid]].down in hydroseqs:
+            if flowlines[hydroseqs[comid]].down in flowlines:
 
-                self.updown[comid] = hydroseqs[flowlines[hydroseqs[comid]].down]
+                down = flowlines[flowlines[hydroseqs[comid]].down].comid
+                self.updown[comid] = down
 
             else: self.updown[comid] = 0
 
@@ -295,7 +296,8 @@ class NHDPlusDelineator:
        
             i = 0
             for record in records:
-                if record[comid_index] in self.updown: indices.append(i)
+                if record[comid_index] in self.updown: 
+                    indices.append(i)
                 i+=1
 
             if len(indices) == 0:
@@ -355,7 +357,8 @@ class NHDPlusDelineator:
        
             i = 0
             for record in records:
-                if record[feature_index] in self.updown: indices.append(i)
+                if record[feature_index] in self.updown: 
+                    indices.append(i)
                 i+=1
 
             if len(indices) == 0:
@@ -392,7 +395,7 @@ class NHDPlusDelineator:
         if not os.path.isfile(pfile):
             self.plot_gage_watershed(gageid, output = pfile)
 
-    def calculate_flowplane(self, flowline, catchment, verbose = True):
+    def calculate_flowplane(self, flowline, catchment, verbose = False):
         """Gets the elevation data from the NED raster then estimates the value 
         of the overland flow plane length and slope.
         """
@@ -423,18 +426,19 @@ class NHDPlusDelineator:
 
         return f
 
-    def add_basin_landuse(self, landuse):
+    def add_basin_landuse(self, year, landuse):
         """Adds basin-wide land use data to the extractor."""
 
-        self.landuse = landuse
-        
+        self.landuseyear = year
+        self.landuse     = landuse
+
     def build_gage_watershed(self, 
                              gageid,
+                             output,
                              landuse = None,
-#subbasinfile, flowfile, outletfile, damfile, gagefile,
-#                    landfile, aggregatefile, VAAfile, years, HUC8, output, 
-#                    plots = True, overwrite = False, format = 'png'
-                        ):
+                             landuseyear = 1988,
+                             masslinkplot = None,
+                             ):
 
         # set the outlet comid
 
@@ -453,27 +457,56 @@ class NHDPlusDelineator:
 
         inlets = {}
 
-        # read the flow plane data into an instance of the FlowPlane class
-
-        # open the catchment shapefile to get the areas
+        # open the catchment and flowline shapefiles
 
         cfile = Reader(self.catchments, shapeType = 5)
         ffile = Reader(self.flowlines, shapeType = 3)
 
-        feature_index = cfile.fields.index(['FEATUREID',  'N',  9, 0]) - 1
-        area_index    = cfile.fields.index(['AreaSqKM',   'N', 19, 6]) - 1
-        comid_index   = ffile.fields.index(['COMID',      'N', 9, 0]) - 1
+        feature_index = cfile.fields.index(['FEATUREID', 'N',  9,  0]) - 1
+        area_index    = cfile.fields.index(['AreaSqKM',  'N', 19,  6]) - 1
+        comid_index   = ffile.fields.index(['COMID',     'N', 9,   0]) - 1
+        gnis_index    = ffile.fields.index(['GNIS_NAME', 'C', 65,  0]) - 1
+        len_index     = ffile.fields.index(['LENGTHKM',  'N', 19, 11]) - 1
 
         fcomids = ['{}'.format(r[comid_index]) for r in ffile.records()]
 
+        # open the flowline attrbitue file
+
+        with open(self.attributefile, 'rb') as f: flowlineVAAs = pickle.load(f)
+
+        # re-organize by comid
+
+        flowlineVAAs = {'{}'.format(flowlineVAAs[f].comid):flowlineVAAs[f] 
+                        for f in flowlineVAAs}
+
+        # iterate through the catchments and make subbasins
+
         for i in range(len(cfile.records())):
 
-            record = cfile.record(i)
+            # get the catchment record
 
-            comid = '{}'.format(record[feature_index])
-            area  = record[area_index]
+            crecord = cfile.record(i)
 
-            flowline = ffile.shape(fcomids.index(comid))
+            # get the comid and catchment area
+
+            comid = '{}'.format(crecord[feature_index])
+            area  = crecord[area_index]
+
+            # find the corresponding flowline
+
+            j = fcomids.index(comid)
+
+            # get the flowline record
+
+            frecord = ffile.record(j)
+
+            # get the VAAs
+
+            VAAs = flowlineVAAs[comid]
+
+            # get the flowline and catchment shapes
+
+            flowline  = ffile.shape(j)
             catchment = cfile.shape(i)
 
             # calculate the length and slope of the flow plane
@@ -495,160 +528,255 @@ class NHDPlusDelineator:
     
             elevation = round(elev_matrix.mean() / 100., 2)
 
-            #length    = record[len_index]
-            #slope     = record[slope_index]
-            #tot_area  = record[area_index]
-            #centroid  = [record[cx_index], record[cy_index]]
-            #elevation = record[elev_index]
-
             subbasin  = Subbasin(comid)
+
+            # read the flow plane data
+
             subbasin.add_flowplane(length, slope, centroid, elevation)
 
-            subbasins[comid] = subbasin
+            # get the GNIS name and length from the flowline shapefile
 
-        exit()
-        # read in the flowline data to an instance of the Reach class
-
-        sf = Reader(self.flowfile)
-
-        outcomid_index   = sf.fields.index(['OutComID',   'N',  9, 0]) - 1
-        gnis_index       = sf.fields.index(['GNIS_NAME',  'C', 65, 0]) - 1
-        reach_index      = sf.fields.index(['REACHCODE',  'C',  8, 0]) - 1
-        incomid_index    = sf.fields.index(['InletComID', 'N',  9, 0]) - 1
-        maxelev_index    = sf.fields.index(['MaxElev',    'N',  9, 2]) - 1
-        minelev_index    = sf.fields.index(['MinElev',    'N',  9, 2]) - 1
-        slopelen_index   = sf.fields.index(['SlopeLenKM', 'N',  6, 2]) - 1
-        slope_index      = sf.fields.index(['Slope',      'N',  8, 5]) - 1
-        inflow_index     = sf.fields.index(['InFlowCFS',  'N',  8, 3]) - 1
-        outflow_index    = sf.fields.index(['OutFlowCFS', 'N',  8, 3]) - 1
-        velocity_index   = sf.fields.index(['VelFPS',     'N',  7, 4]) - 1
-        traveltime_index = sf.fields.index(['TravTimeHR', 'N',  8, 2]) - 1
-
-        for record in sf.records():
-
-            outcomid   = '{}'.format(record[outcomid_index])
-            gnis       = record[gnis_index]
-            reach      = record[reach_index]
-            incomid    = '{}'.format(record[incomid_index])
-            maxelev    = record[maxelev_index] / 100
-            minelev    = record[minelev_index] / 100
-            slopelen   = record[slopelen_index]
-            slope      = record[slope_index]
-            inflow     = record[inflow_index]
-            outflow    = record[outflow_index]
-            velocity   = record[velocity_index]
-            traveltime = record[traveltime_index]
+            gnis = frecord[gnis_index]
 
             if isinstance(gnis, bytes): gnis = ''
 
-            subbasin = subbasins[outcomid]
+            lenkm = frecord[len_index]
 
-            flow = (inflow + outflow) / 2
-            subbasin.add_reach(gnis, maxelev, minelev, slopelen, flow = flow, 
-                               velocity = velocity, traveltime = traveltime)
-            inlets[outcomid] = incomid
+            # get the max and min elevation, average flow and velocity from
+            # the attribute file
 
-        # open up the outlet file and see if the subbasin has a gage or dam
+            maxelev = VAAs.maxelev / 100 # convert to m
+            minelev = VAAs.minelev / 100 # convert to m
 
-        sf = Reader(outletfile)
+            subbasin.add_reach(gnis, maxelev, minelev, lenkm, flow = VAAs.flow,
+                               velocity = VAAs.velocity, 
+                               traveltime = VAAs.traveltime)
 
-        records = sf.records()
+            # add the landuse
 
-        comid_index = sf.fields.index(['COMID',   'N',  9, 0]) - 1
-        nid_index   = sf.fields.index(['NIDID',   'C',  7, 0]) - 1
-        nwis_index  = sf.fields.index(['SITE_NO', 'C', 15, 0]) - 1
+            if landuse is None:
 
-        nids = {'{}'.format(r[comid_index]):r[nid_index] for r in records 
-                if isinstance(r[nid_index], str)}
+                # if None provided use the basin-wide data if available
 
-        nwiss = {'{}'.format(r[comid_index]):r[nwis_index] for r in records 
-                 if r[nwis_index] is not None}
+                if self.landuse is None:
+                
+                    print('error no landuse data provided\n')
+                    raise
 
-        # open up the aggregate file to get the landuse group map
+                else:
 
-        m, landtypes, groups = get_aggregate_map(aggregatefile)
+                    landtypes, areas = zip(*self.landuse.items())
 
-        # convert to a list of landuse names
+                    landtypes = list(landtypes)
+                    data = [round(area * a / sum(areas), 3) for a in areas]
 
-        names = [landtypes[group] for group in groups]
+                    subbasin.add_landuse(self.landuseyear, landtypes, data)
 
-        # read the land use data for each year into the subbasins
+            else:
 
-        with open(landfile, 'rb') as f: landyears, landuse = pickle.load(f)
+                landtypes, data = landuse[comid]
 
-        for comid in subbasins:
+                subbasin.add_landuse(landuseyear, landtypes, data)
 
-            subbasin      = subbasins[comid]
-            subbasin_data = landuse[comid]
+            # store the subbasin info in the dictionary
 
-            for year, data in zip(landyears, zip(*subbasin_data)):
-
-                subbasin.add_landuse(year, names, data)
+            subbasins[comid] = subbasin
 
         # create an instance of the watershed class
 
-        watershed = Watershed(HUC8, subbasins)
+        watershed = Watershed(gageid, subbasins)
 
-        # open up the flowline VAA file to use to establish mass linkages
+        # establish the mass linkages between the subbasins (convert to strings)
 
-        with open(VAAfile, 'rb') as f: flowlines = pickle.load(f)
-            
-        # create a dictionary to connect the comids to hydroseqs
-
-        hydroseqs = {'{}'.format(flowlines[f].comid): 
-                     flowlines[f].hydroseq for f in flowlines}
-
-        # establish the mass linkages using a dictionary "updown" and a list of 
-        # head water subbasins
-
-        updown = {}
-    
-        for comid, subbasin in watershed.subbasins.items():
-
-            # get the flowline instance for the outlet comid
-
-            flowline = flowlines[hydroseqs[comid]]
-
-            # check if the subbasin is a watershed inlet or a headwater source
-
-            inlet = hydroseqs[inlets[comid]]
-
-            if flowlines[inlet].up in flowlines:
-                i = '{}'.format(flowlines[flowlines[inlet].up].comid)
-                subbasin.add_inlet(i)
-            elif flowlines[inlet].up != 0:
-                watershed.add_inlet(comid)
-            else: 
-                watershed.add_headwater(comid)
-
-            # check if the subbasin is a watershed outlet, and if it is not, 
-            # then find the downstream reach
-
-            if flowline.down in flowlines:
-                flowline = flowlines[flowline.down]
-                while '{}'.format(flowline.comid) not in subbasins:
-                    flowline = flowlines[flowline.down]
-                updown[comid] = '{}'.format(flowline.comid)
-            else: 
-                updown[comid] = 0
-                watershed.add_outlet('{}'.format(comid))
-
-        # open 
-
+        updown = {'{}'.format(k): '{}'.format(v) for k,v in self.updown.items()}
         watershed.add_mass_linkage(updown)
 
-        if output is None: 
-            filename = os.getcwd() + '/watershed'
-            plotname = os.getcwd() + '/masslink.%s' % format
-        else:              
-            filename = output + '/%s/watershed' % HUC8
-            plotname = output + '/%s/images/%smasslink.%s'%(HUC8, HUC8, format)
+        # add the gage location as an outlet
 
-        if not os.path.isfile(filename) or overwrite:
-            with open(filename, 'wb') as f: pickle.dump(watershed, f)
+        watershed.add_outlet('{}'.format(self.gagecomid))
 
-        if not os.path.isfile(plotname) and plots or overwrite and plots: 
-            plot_mass_flow(watershed, plotname)
+        if masslinkplot is not None: 
+
+            self.plot_mass_flow(watershed, masslinkplot)
+
+        # dump the watershed to the output file
+
+        with open(output, 'wb') as f: pickle.dump(watershed, f)
+
+    def plot_mass_flow(self, 
+                       watershed, 
+                       output, 
+                       title = 'Mass Flow Diagram',
+                       fontsize = 6, 
+                       theight = 0.2, 
+                       l = 8.5, 
+                       w = 11, 
+                       verbose = False, 
+                       overwrite = False,
+                       ):
+        """Makes a schematic of the mass linkages between the various subbasins
+        in a watershed.
+        """
+
+        if os.path.exists(output) and not overwrite:
+            if verbose: print('file %s exists' % output)
+            return
+        elif verbose: print('generating a mass linkage plot\n')
+
+        fontheight = fontsize / 72.
+        rheight = 3 * fontheight
+        rwidth  = 12 * fontheight
+        xgap = fontheight
+        ygap = rheight
+        awidth = rheight / 4
+        aheight = rheight / 3
+
+        # set up a sheet to write the image
+
+        fig = pyplot.figure(figsize = (w, l))
+
+        ax  = fig.add_subplot(111, aspect = 'equal')
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        t = ax.set_title(title)
+
+        # divide the subbasins into rows and put them on the chart
+        # start at the bottom to organize the linkages better
+
+        rows = [watershed.outlets, ['outlet']]
+
+        top = False
+        while not top:
+            row = []
+            for next in rows[0]:
+                for subbasin in watershed.updown:
+                    if watershed.updown[subbasin] == next: row.append(subbasin)
+            if len(row) > 0: rows.insert(0, row)
+            else: top = True
+
+        # add an inlet box in the row above each inlet
+
+        for inlet in watershed.inlets: 
+            i = 0
+            while i < len(rows) - 1:
+                for subbasin in rows[i]:
+                    if subbasin == inlet:
+                    
+                        # find the position of the subbasin in the chart
+
+                        j = rows[i].index(inlet)
+
+                        if i > 0:
+
+                            # figure out where the subbasins point
+                        
+                            updowns = [watershed.updown[s] for s in rows[i-1]]
+                            
+                            # if first or last, add it there in the row above
+
+                            if   j == 0:                
+                                rows[i-1].insert(0, 'inlet')
+                            elif j == len(rows[i]) - 1: 
+                                rows[i-1].append('inlet')
+                            else:
+
+                                # find the place to add in the preceeding row 
+
+                                n = updowns.index(rows[i][j-1]) + 1
+                                rows[i-1].insert(n, 'inlet')
+                i += 1
+
+        # write the subbasin boxes to the chart
+
+        middle = numpy.ceil(w // (rwidth + xgap)) // 2
+        last = 0
+
+        # keep track of the bounding box of the plot
+
+        xmin, ymin, xmax, ymax = middle, 0, middle, 0
+
+        for i in range(len(rows)):
+
+            row = rows[i]
+        
+            y = (ygap + rheight) * i + theight
+
+            # figure out which cell to put in the main column
+
+            if i == 0:
+                main = row[(len(row) - 1) // 2]
+            elif i < len(rows) - 1:
+                main = watershed.updown[rows[i-1][last]]
+            else: main = 'outlet'
+
+            start = middle - row.index(main)
+
+            if i < len(rows) - 1: next_row = rows[i + 1]
+
+            for subbasin in row:
+                x = (rwidth + xgap) * (start + row.index(subbasin))
+                r = patches.Rectangle((x, y), rwidth, rheight, fill = False)
+
+                # adjust the bounding box
+
+                if x           < xmin: xmin = x
+                if x + rwidth  > xmax: xmax = x + rwidth
+                if y           < ymin: ymin = y
+                if y + rheight > ymax: ymax = y + rheight
+
+                if subbasin != 'outlet': ax.add_patch(r)
+
+                b = ax.text(x + rwidth / 2, y + rheight / 2, subbasin,
+                            horizontalalignment = 'center',
+                            verticalalignment   = 'center')
+
+                # draw the arrow
+
+                if i < len(rows) - 1:
+
+                    x1 = x + rwidth / 2
+
+                    if i < len(rows) - 2 and subbasin != 'inlet':
+                        next = watershed.updown[subbasin]
+                        m    = watershed.updown[main]
+                        next_start = middle - next_row.index(m)
+                        x2 = ((rwidth + xgap) * 
+                              (next_start + next_row.index(next))
+                              + rwidth / 2)
+                    elif subbasin == 'inlet':
+                        next = watershed.inlets[0]
+                        m = watershed.updown[main]
+                        next_start = middle - next_row.index(m)
+                        x2 = ((rwidth + xgap) * 
+                              (next_start + next_row.index(next))
+                              + rwidth / 2)
+                    else:
+                        next_start = middle
+                        x2 = ((rwidth + xgap) * (middle) + rwidth / 2)
+
+                    a = pyplot.arrow(x1, y + rheight, x2 - x1, ygap, 
+                                     head_width = awidth, head_length = aheight,
+                                     fc = 'k', ec = 'k', 
+                                     length_includes_head = True)
+                    ax.add_patch(a)
+
+            last = row.index(main)
+            i += 1
+        
+        pad = 0.02
+
+        xmin = xmin - (xmax - xmin) * pad
+        xmax = xmax + (xmax - xmin) * pad
+        ymin = ymin - (ymax - ymin) * pad
+        ymax = ymax + (ymax - ymin) * pad
+
+        ax.set_xlim(xmin, xmax)
+        ax.set_ylim(ymax, ymin)
+        pyplot.axis('off')
+
+        pyplot.savefig(output, dpi = 200)
+        pyplot.close()
+
 
     def get_distance(self, p1, p2):
         """Approximates the distance in kilometers between two points on the 

@@ -17,9 +17,9 @@ from .climateutils import find_ghcnd
 from .climateutils import find_gsod
 from .climateutils import find_precip3240
 from .climateutils import find_nsrdb
-from .climateutils import download_state_precip3240
-from .climateutils import decompress7z
-from .climateutils import decompresszcat
+from .ncdcstations import download_state_precip3240
+from .ncdcstations import decompress7z
+from .ncdcstations import decompresszcat
 
 def is_integer(s):
     """Tests if string "s" is an integer."""
