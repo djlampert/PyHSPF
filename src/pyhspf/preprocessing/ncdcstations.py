@@ -13,6 +13,8 @@ import shutil, os, subprocess, pickle, io, gzip, datetime, tarfile
 from urllib   import request
 from calendar import monthrange
 
+from .climateplots import plot_3240precip
+
 def is_integer(n):
     """Tests if n is an integer."""
 
@@ -515,9 +517,7 @@ class Precip3240Station:
             print('\nerror: directory "{}" does not exist\n'.format(directory))
             raise
 
-        clean = False
         precip3240 = '{}/precip3240'.format(directory)
-        print(precip3240)
         if not os.path.isdir(precip3240):
             os.mkdir(precip3240)
         elif clean:
@@ -544,8 +544,6 @@ class Precip3240Station:
 
         destination = '{}/{}'.format(directory, self.coop)
         if plot and not os.path.isfile(destination + '.png'):
-
-            from pyhspf.preprocessing.climateplots import plot_3240precip
 
             try: 
                 plot_3240precip(self, start = start, end = end,

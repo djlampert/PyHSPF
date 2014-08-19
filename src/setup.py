@@ -8,7 +8,7 @@ from numpy.distutils.core import Extension, setup
 from distutils            import sysconfig
 from urllib               import request
 
-_version   = '0.1.6'
+_version   = '0.1.7'
 _directory = '{}/pyhspf'.format(sysconfig.get_python_lib())
 
 _d = (
@@ -43,7 +43,7 @@ _s = """Python Extensions for utilizing the Hydrological
 Simulation Program in Fortran (HSPF) Version 12.2"""
 
 _l = """
-PyHSPF, Version 0.1.6
+PyHSPF, Version {}
 
 Copyright (c) 2014, UChicago Argonne, LLC
 All rights reserved.
@@ -82,7 +82,7 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
 POSSIBILITY OF SUCH DAMAGE.
-"""
+""".format(_version)
 
 # minor issue with some windows
 

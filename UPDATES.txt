@@ -41,9 +41,14 @@ Added source code documentation
 Added classes to preprocessing to replace existing functions including:
 NHDPlusExtractor -- Downloads source data from NHDPlus website, extracts HUC8 data
 NWISExtractor -- Downloads source metadata file and gage data from NWIS
-NHDPlusDelineator -- Delineates the watershed for a gage with in a HUC8
+NHDPlusDelineator -- Delineates the watershed for a gage in a HUC8 and builds Watershed
 Fixed issue with merge_shapes
 Added examples using NWISExtractor, NHDPlusExtractor, NHDPlusDelineator
 Separated Flowline class into new file
 Some changes to GageStation class for compatibility with NWISExtractor
 Some changes to the __init__ files to improve importing
+
+Version 0.1.7
+Re-organized preprocessing climateutils routines
+Minor import changes
+Added hunting.py example--comprehensive build of HSPF model including all source data
