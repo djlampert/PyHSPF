@@ -202,3 +202,54 @@ class GageStation:
 
         pyplot.tight_layout()
         pyplot.savefig(output)
+
+    def make_timeseries(self, start = None, end = None):
+        """returns a time series of daily flows."""
+
+        if start is None: start = self.gagedates[0]
+        if end is None: end = self.gagedates[-1]
+
+        tstep = datetime.timedelta(days = 1)
+
+        series = []
+
+        t = start
+
+        if start in self.gagedates:
+            i = self.gagedates.index(start)
+
+        else:
+            
+            print('warning, requested dates exceed available data' +
+                  ', filling with Nones\n')
+            while t < self.gagedates[0]:
+                series.append(None)
+                t += tstep
+
+            i = 0
+
+        if end <= self.gagedates[-1]:
+
+            while t < end:
+
+                series.append(self.gageflows[i])
+                t += tstep
+                i += 1
+
+        else:
+
+            print('warning, requested dates exceed available data' +
+                  ', filling with Nones\n')
+
+            while t < self.gagedates[-1]:
+
+                series.append(self.gageflows[i])
+                t += tstep
+                i += 1
+
+            while t < end:
+
+                series.append(None)
+                t += tstep
+
+        return series

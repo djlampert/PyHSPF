@@ -858,7 +858,7 @@ class NSRDBStation:
 class PrecipStation:
     """A class to store data from an NCDC hourly precipitation gage station."""
 
-    def add_prec3240(self, station):
+    def add_precip3240(self, station):
         """Get some basic info about the station."""
 
         self.station   = station.coop
@@ -866,7 +866,16 @@ class PrecipStation:
         self.elevation = station.elevation
         self.latitude  = station.latitude
         self.longitude = station.longitude
-        self.precip    = station.data
+
+        precip = station.make_timeseries(tstep = 'hourly')
+
+        start = station.events[0][0]
+        end   = station.events[-1][0]
+
+        times = [start + i * datetime.timedelta(hours = 1) 
+                 for i in range((end - start).days * 24)]
+
+        self.precip = [v for v in zip(times, precip)]
         
     def add_location(self, station):
         """Get some basic info about the station."""

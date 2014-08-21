@@ -588,7 +588,9 @@ class NHDPlusDelineator:
 
         # establish the mass linkages between the subbasins (convert to strings)
 
-        updown = {'{}'.format(k): '{}'.format(v) for k,v in self.updown.items()}
+        updown = {'{}'.format(up):(0 if down == 0 else '{}'.format(down))
+                  for up, down in self.updown.items()}
+
         watershed.add_mass_linkage(updown)
 
         # add the gage location as an outlet

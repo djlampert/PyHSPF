@@ -51,4 +51,5 @@ Some changes to the __init__ files to improve importing
 Version 0.1.7
 Re-organized preprocessing climateutils routines
 Minor import changes
-Added hunting.py example--comprehensive build of HSPF model including all source data
+Added AutoCalibrator
+Added hunting.py example--comprehensive build of HSPF model including all source data and autocalibration

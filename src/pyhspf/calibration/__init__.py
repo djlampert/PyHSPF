@@ -5,12 +5,18 @@ This is the __init__ file
 
 version = '0.1'
 
-__all__ = ['hydrologycalibrator', 'sedimentcalibrator', 'calibrate', 'validate']
+__all__ = ['hydrologycalibrator', 
+           'sedimentcalibrator', 
+           'calibrate', 
+           'validate',
+           'autocalibrator',
+           ]
 
-from pyhspf.calibration.hydrologycalibrator import HydrologyCalibrator
-from pyhspf.calibration.hydrologycalibrator import HydrologyParameters
-from pyhspf.calibration.hydrologycalibrator import HydrologyErrors
-from pyhspf.calibration.sedimentcalibrator  import SedimentCalibrator
-from pyhspf.calibration.calibrate           import hydrology
-from pyhspf.calibration.calibrate           import sediment
-from pyhspf.calibration.validate            import validate
+from .hydrologycalibrator import HydrologyCalibrator
+from .hydrologycalibrator import HydrologyParameters
+from .hydrologycalibrator import HydrologyErrors
+from .sedimentcalibrator  import SedimentCalibrator
+from .calibrate           import hydrology
+from .calibrate           import sediment
+from .validate            import validate
+from .autocalibrator      import AutoCalibrator
