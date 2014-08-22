@@ -90,6 +90,7 @@ class AutoCalibrator:
                        ],
             start = None,
             end = None,
+            warmup = 30,
             verbose = False,
             ):
         """Creates a copy of the base model, adjusts a parameter value, runs
@@ -102,8 +103,8 @@ class AutoCalibrator:
 
         # build the input files and run
 
-        
         model.build_wdminfile()
+        model.warmup(start, days = warmup, hydrology = True)
         model.build_uci(targets, start, end, hydrology = True)
         model.run(verbose = verbose)
 
@@ -142,10 +143,11 @@ class AutoCalibrator:
             self.adjust(model, variable, adjustment)
 
         # run and pass back the result
-                                 
+                  
+        print('running', name, 'perturbation')
         return self.run(model)
 
-    def perturb(self, parallel):
+    def perturb(self, parallel, timeout = 60):
         """Performs the perturbation analysis."""
 
         print('perturbing the model\n')
@@ -168,21 +170,28 @@ class AutoCalibrator:
 
         if parallel:
 
-            # create a pool of workers equal to one less than the total CPUs
+            try: 
 
-            n = 4 * cpu_count()
-            with Pool(cpu_count(), maxtasksperchild = n) as pool:
+                # create a pool of workers and try parallel
 
-                # run the simulations to get the optimization parameter values
+                with Pool(cpu_count(), maxtasksperchild = 4 * cpu_count()) as p:
+                    results = p.map_async(self.simulate, simulations)
+                    optimizations = results.get(timeout = timeout)
 
-                results = pool.map_async(self.simulate, simulations)
-                optimizations = results.get(timeout = 100)
+            except:
+
+                print('error: parallel calibration failed\n')
+                print('last values of calibration variables:\n')
+                for i in zip(self.variables, self.values): print(*i)
+                raise RuntimeError
 
         else:
 
             # run the simulations to get the optimization parameter values
 
             optimizations = [self.simulate(s) for s in simulations]
+
+        print('')
 
         # calculate the sensitivities for the perturbations
 
@@ -195,24 +204,44 @@ class AutoCalibrator:
         return sensitivities
 
     def get_default(self, variable):
-        """Gets the default value of the perturbation for the variable."""
+        """Gets the default value of the perturbation for the variable.
+        The defaults are based on experience with parameter sensitivity."""
 
         if   variable == 'LZSN':   return 0.05
         elif variable == 'UZSN':   return 0.05
         elif variable == 'LZETP':  return 0.02
-        elif variable == 'INFILT': return 0.05
+        elif variable == 'INFILT': return 0.04
         elif variable == 'INTFW':  return 0.01
-        elif variable == 'IRC':    return 0.05
+        elif variable == 'IRC':    return 0.02
         elif variable == 'AGWRC':  return 0.005
         else:
             print('error: unknown variable specified\n')
             raise
 
+    def check_variables(self):
+        """User-defined check on the values of the variables to ensure 
+        the calibrated values stay within the limits."""
+
+        for i in range(len(self.variables)):
+
+            variable = self.variables[i]
+            value    = self.values[i]
+            
+            if variable == 'IRC' and value < 0.5:
+                print('warning: current {} is below minimum'.format(variable))
+                self.values[i] = 0.5
+            if variable == 'LZETP' and value > 1.4:
+                print('warning: current {} is above maximum'.format(variable))
+                self.values[i] = 1.4
+            if value < 0.2: 
+                print('warning: current {} is below minimum'.format(variable))
+                self.values[i] = 0.2
+
     def optimize(self, parallel):
         """Optimizes the objective function for the parameters."""
 
         current = self.value - 1
-        t = 'increasing {:6s} {:5.1%} increases {} {:6.3f}'
+        t = 'increasing {:6s} {:>5.1%} increases {} {:6.3f}'
         while current < self.value:
 
             # update the current value
@@ -230,15 +259,18 @@ class AutoCalibrator:
 
             for i in range(len(self.values)):
 
-                if sensitivities[i] > 0: self.values[i] += self.perturbations[i]
-           
+                if sensitivities[i] > 0: 
+
+                    self.values[i] = round(self.values[i] + 
+                                           self.perturbations[i], 3)
+
                 its = (self.variables[i], self.perturbations[i], 
                        self.optimization, sensitivities[i])
                 print(t.format(*its))
 
-            # perturb the values negatively
+            print('')
 
-            print('\ncurrent optimization value: {:4.3f}\n'.format(self.value))
+            # perturb the values negatively
 
             self.perturbations = [-p for p in self.perturbations]
             sensitivities = self.perturb(parallel)
@@ -251,26 +283,32 @@ class AutoCalibrator:
                 if sensitivities[i] > 0:
 
                     self.values[i] = round(self.values[i] + 
-                                           self.perturbations[i], 4)
+                                           self.perturbations[i], 3)
            
                 its = (self.variables[i], self.perturbations[i], 
                        self.optimization, sensitivities[i])
                 print(t.format(*its))
 
+            # reset the perturbations
+
             self.perturbations = [-p for p in self.perturbations]
+
+            # make sure variables are within bounds
+
+            self.check_variables()
 
     def autocalibrate(self, 
                       output,
-                      variables = ['LZSN',
-                                   'UZSN',
-                                   'LZETP',
-                                   'INFILT',
-                                   'INTFW',
-                                   'IRC',
-                                   'AGWRC',
-                                   ],
+                      variables = {'LZSN':   1.,
+                                   'UZSN':   1.,
+                                   'LZETP':  1.,
+                                   'INFILT': 1.,
+                                   'INTFW':  1.,
+                                   'IRC':    1.,
+                                   'AGWRC':  1.,
+                                   },
                       optimization = 'Nash-Sutcliffe Efficiency',
-                      perturbations = [4, 2, 1, 0.5],
+                      perturbations = [2, 1, 0.5],
                       parallel = True,
                       ):
         """Autocalibrates the hydrology for the hspfmodel by modifying the 
@@ -279,8 +317,8 @@ class AutoCalibrator:
         # set up the current values of the variables, the amount to perturb
         # them by in each iteration, and the optimization parameter
 
-        self.variables    = variables
-        self.values       = [1. for v in variables]
+        self.variables    = [v for v in variables]
+        self.values       = [variables[v] for v in variables]
         self.optimization = optimization
 
         # current value of the optimization parameter
@@ -289,18 +327,24 @@ class AutoCalibrator:
 
         # perturb until reaching a maximum (start with large perturbations)
 
+        print('\nattempting to calibrate {}'.format(self.hspfmodel.filename))
         for p in perturbations:
 
             self.perturbations = [p * self.get_default(v) for v in variables]
             self.optimize(parallel)
 
-        print('optimization complete, saving model\n')
+        print('\noptimization complete, saving model\n')
 
         model = self.copymodel('calibrated')
         model.add_hydrology()
+
+        # run the model to save the warmed up input parameters
+
+        self.run(model)
                                  
         # adjust the values of the parameters
 
+        print('calibration values relative to default:\n')
         for variable, adjustment in zip(self.variables, self.values):
             self.adjust(model, variable, adjustment)
 

@@ -129,7 +129,6 @@ class HSPFModel:
     def build_from_existing(self, hspfmodel, filename, directory = None,
                              print_file = None, binary_file = None, tstep = 60, 
                              outlev = 4, spout = 2, units = 2, print_level = 5, 
-                             ifraction = 0.5, evap_multiplier = 0.7, 
                              landuseyear = None, verbose = False):
         """
         Builds a model from another instance of the HSPFModel class (for 
@@ -179,8 +178,8 @@ class HSPFModel:
 
         # set up the parameters for the perlnds
 
-        self.evap_multiplier = evap_multiplier
-        self.ifraction       = ifraction
+        self.evap_multiplier = hspfmodel.evap_multiplier
+        self.ifraction       = hspfmodel.ifraction
 
         # attach the "updown" dictionary for mass linkages to the model
 
@@ -901,14 +900,21 @@ class HSPFModel:
             print('successfully completed simulation in %.1f' %
                   (time.time() - start), 'seconds\n')
 
-    def warmup(self, start, days = 365, iterations = 2, temp = False, 
-               snow = False, hydrology = False, sediment = False,
-               verbose = False):
+    def warmup(self, 
+               start, 
+               days = 365, 
+               iterations = 1, 
+               temp = False, 
+               snow = False, 
+               hydrology = False, 
+               sediment = False,
+               verbose = False
+               ):
         """warms up the values of the state variables by running the several
         iterations of the specified number of days (default runs the first year
         twice). Requires the Postprocessor class."""
 
-        from pyhspf.core.postprocessor import Postprocessor
+        from .postprocessor import Postprocessor
 
         warmup = []
 

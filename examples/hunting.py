@@ -26,9 +26,9 @@ from pyhspf.calibration   import AutoCalibrator
 
 # working directories to use for file extraction and processing
 
-NWIS      = 'NWIS'                             # NWIS metadata files
-NHDPlus   = 'NHDPlus'                          # NHDPlus source files
-output    = 'HSPF_data'                        # output for the HUC8
+NWIS      = 'NWIS'                        # NWIS metadata files
+NHDPlus   = 'NHDPlus'                     # NHDPlus source files
+output    = 'HSPF_data'                   # output for the HUC8
 
 # NHDPlus info for the Mid-Atlantic Region and the Patuxent River Basin
 
@@ -77,6 +77,20 @@ model      = '{}/hunting'.format(hspf)      # HSPF input and output files
 start      = datetime.datetime(1988, 10, 1) # simulation start
 end        = datetime.datetime(1990, 10, 1) # simulation end
 calibrated = '{}/hspfmodel'.format(hspf)    # file path for the calibrated model
+
+# HSPF calibration methodology
+    
+variables     = {'LZSN':   0.60,  # starting value relative to PyHSPF default
+                 'UZSN':   6.80,  # starting value relative to PyHSPF default
+                 'LZETP':  0.4,   # starting value relative to PyHSPF default
+                 'INFILT': 0.90,  # starting value relative to PyHSPF default
+                 'INTFW':  0.20,  # starting value relative to PyHSPF default
+                 'AGWRC':  1.02,  # starting value relative to PyHSPF default
+                 'IRC':     0.5,  # starting value relative to PyHSPF default
+                 }
+optimization  = 'Nash-Sutcliffe Product'  # optimization parameter
+perturbations = [2, 1, 0.5]                  # degree of perturbation
+parallel      = True                         # parallel flag
 
 # land use data for the watershed (type and area in acres)
 
@@ -148,7 +162,8 @@ def extract():
     delineator.build_gage_watershed(gage, watershed, masslinkplot = masslink)
 
 def climate():
-
+    """Optionally downloads climate data for the simulation."""
+    
     # find the GHCND evaporation stations and their metadata in the bounding box
 
     stations = climateutils.find_ghcnd(bbox, var = 'EVAP', types = 'GSN',
@@ -156,11 +171,11 @@ def climate():
 
     # identify the Beltsville station from the list using the station name
  
-    beltsville = stations[[s.station for s in stations].index(evapstation)]
+    station = stations[[s.station for s in stations].index(evapstation)]
 
     # download the GHCND data to the gage directory
 
-    beltsville.download_data(gagepath, start = estart, end = eend, plot = True)
+    station.download_data(gagepath, start = estart, end = eend, plot = True)
 
     # find the hourly precipitation metadata for the the bounding box
 
@@ -169,11 +184,11 @@ def climate():
 
     # find the BWI Airport, MD station using the coop number
 
-    bwi = stations[[s.coop for s in stations].index(precstation)]
+    station = stations[[s.coop for s in stations].index(precstation)]
 
     # download hourly precipitation data for BWI
 
-    bwi.download_data(gagepath, estart, eend)
+    station.download_data(gagepath, estart, eend)
 
     # open the hourly precipitation station data for BWI Airport
 
@@ -195,7 +210,8 @@ def climate():
 
     # make the timeseries and convert from in to mm
 
-    precip = [p * 25.4 for p in station.make_timeseries(estart, eend)]
+    precip = [0 if p is None else p * 25.4 
+              for p in station.make_timeseries(estart, eend)]
 
     # open the Beltsville GHCND station
 
@@ -318,15 +334,18 @@ def calibrate():
 
     calibrator = AutoCalibrator(hunting, start, end, hspf)
 
-    calibrator.autocalibrate(calibrated)
+    calibrator.autocalibrate(calibrated,
+                             variables = variables, 
+                             optimization = optimization,
+                             perturbations = perturbations,
+                             parallel = parallel
+                             )
 
     for variable, value in zip(calibrator.variables, calibrator.values):
 
-        print(variable, value)
+        print('{:6s} {:5.3f}'.format(variable, value))
 
-    p = calibrator.hspfmodel.perlnds[0]
-
-    print(p.LZSN, p.INTFW, p.UZSN, p.LZETP)
+    print('')
 
 def postprocess():
     """Postprocess the results and save."""
@@ -337,14 +356,14 @@ def postprocess():
 
     with open(calibrated, 'rb') as f: hunting = pickle.load(f)
 
-    p = hunting.perlnds[0]
-
-    print(p.LZSN, p.INTFW, p.UZSN, p.LZETP)
-
     # external targets for calibration
 
-    targets = ['reach_outvolume', 'evaporation', 'groundwater', 'runoff', 
-               'water_state']
+    targets = ['reach_outvolume', 
+               'evaporation', 
+               'groundwater', 
+               'runoff', 
+               'water_state'
+               ]
 
     # build the HSPF input files
 
@@ -389,12 +408,12 @@ if __name__ == '__main__':
 
     st = time.time()
 
-    #extract()
-    #climate()
+    extract()
+    climate()
     calibrate()
     postprocess()
 
     tot = time.time() - st
 
     print('finished extracting and calibrating the model for ' +
-          '{} in {:f.1} seconds'.format(gage, tot))
+          '{} in {:.1f} seconds'.format(gage, tot))

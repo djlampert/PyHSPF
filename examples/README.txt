@@ -13,10 +13,10 @@ The examples provided illustrate how to use PyHSPF and how to think in HSPF. Her
 11. Utilizing PyHSPF's built-in delineator for the watershed of a gage within a HUC8
 
 I have put together another example "hunting.py" that illustrates the full functionality
-of PyHSPF; downloading source data from NHDPLus, extracting data for a HUC8, extracting
+of PyHSPF; downloading source data from NHDPlus, extracting data for a HUC8, extracting
 the watershed for a gage in the HUC8, downloading all needed timeseries data, building
-an instance of the Watershed class, building the HSPFModel, and calibrating the 
-hydrology process parameters.
+an instance of the Watershed class, building the HSPFModel, and using the autocalibration
+routines to calibrate the hydrology process parameters including the initial values.
 
 I have also put together some simulations using the test simulations distributed with HSPF. 
 These files will use the data in the "data/tests" directory, and will make output files there. The files are as follows:
