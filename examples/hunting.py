@@ -94,10 +94,10 @@ parallel      = True                         # parallel flag
 
 # land use data for the watershed (type and area in acres)
 
-landuse = {'Developed':      239,
-           'Forest':        8857,
-           'Pasture/grass': 1554,
-           'Agriculture':   1284
+landuse = {'Developed':      119,
+           'Forest':        4428,
+           'Pasture/grass':  777,
+           'Agriculture':    642
            }
 
 def extract():

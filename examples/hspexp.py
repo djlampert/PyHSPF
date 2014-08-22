@@ -86,7 +86,11 @@ if __name__ == '__main__':
 
     ft3m3 = 35.314
 
-    sflow = [r * 43560 / 3600 / ft3m3 for r in rovol]
+    # conversion from uci ext targets
+
+    c = 0.0020107
+
+    sflow = [r * 43560 / 3600 / ft3m3 / c for r in rovol]
     oflow /= ft3m3
 
     # aggregate the hourly to daily flows
@@ -265,7 +269,7 @@ if __name__ == '__main__':
 
     # calculate the depth of runoff (mm/yr)
 
-    totrunoff = rovol.sum() / area * 12 * 25.4 * 365 / (end - start).days
+    totrunoff = rovol.sum() / area * 12 * 25.4 * 365 / (end - start).days / c
     totprecip = precip.sum() * 25.4 * 365 / (end - start).days
     totevap   = evap.sum() * 25.4 * 365 / (end - start).days
     totpet    = pet.sum() * 25.4 * 365 / (end - start).days
