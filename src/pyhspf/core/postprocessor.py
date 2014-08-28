@@ -3045,8 +3045,9 @@ class Postprocessor:
                     other_storms = other_storms, summer_storms = summer_storms,
                     units = self.hspfmodel.units, output = output, show = show)
 
-    def plot_storms(self, comid = None, upcomids = [], season = 'all', 
-                    tstep = 'daily', output = None, show = True):
+    def plot_storms(self, stormdates = None, comid = None, upcomids = [], 
+                    season = 'all', tstep = 'daily', 
+                    output = None, show = True):
         """Makes plots of all the storms."""
 
         from pyhspf.core.hspfplots import plot_storm
@@ -3057,7 +3058,12 @@ class Postprocessor:
             print('Warning: unknown season specified.\n')
             return None
 
-        if season == 'all':
+        if stormdates is not None:
+
+            storms = [self.get_stormflows(dates, tstep, comid)
+                      for dates in stormdates]
+
+        elif season == 'all':
             
             # get all the storms
 

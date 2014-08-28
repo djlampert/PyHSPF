@@ -16,6 +16,9 @@ import os, pickle, datetime, time
 from pyhspf.preprocessing import NWISExtractor
 from pyhspf.preprocessing import NHDPlusExtractor
 from pyhspf.preprocessing import NHDPlusDelineator
+from pyhspf.preprocessing import climateutils
+from pyhspf.preprocessing import PrecipStation
+from pyhspf.preprocessing import EvapStation
 from pyhspf.core          import WDMUtil
 from pyhspf.core          import HSPFModel
 from pyhspf.core          import Postprocessor
@@ -32,7 +35,9 @@ output    = 'HSPF_data'                   # output for the HUC8
 drainid   = 'MA'                          # NHDPlus Drainage Area ID
 VPU       = '02'                          # NHDPlus Vector Processing Unit
 HUC8      = '02060006'                    # 8-digit HUC
-gageid    = '01594670'                    # USGS Gage Site ID number
+gage      = '01594670'                    # USGS Gage Site ID number
+estart    = datetime.datetime(1988, 1, 1) # timeseries extraction start
+eend      = datetime.datetime(2000, 1, 1) # timeseries extraction end
 
 # names for extracted files for the watershed for HUC 02060006 (Patuxent River)
 
@@ -47,12 +52,23 @@ gagefiles = '{}/gagedata'.format(output)       # HUC8 NWIS flow data
 
 # names for extracted files for the gage watershed (Hunting Creek)
 
-gagepath  = '{}/{}'.format(output, gageid)     # gage watershed files directory
-gagedata  = '{}/{}'.format(gagepath, gageid)   # gage daily flow data file
+gagepath  = '{}/{}'.format(output, gage)       # gage watershed files directory
+gagedata  = '{}/{}'.format(gagepath, gage)     # gage daily flow data file
 cfile     = '{}/catchments'.format(gagepath)   # gage catchment file
 ffile     = '{}/flowlines'.format(gagepath)    # gage flowline file
 masslink  = '{}/masslink.png'.format(gagepath) # gage mass linkage plot
 watershed = '{}/watershed'.format(gagepath)    # gage Watershed file
+
+# information for climate time series data extraction
+
+bbox        = -77, 38.3, -76.4, 39.2  # bounding box to search for stations
+evapstation = 'USC00180700'           # GHCND station for Beltsville, MD
+precstation = '180465'                # Coop station number for BWI Airport, MD
+
+# climate timeseries output file paths
+
+beltsville = '{}/{}'.format(gagepath, evapstation)  # Beltsville GHCND data
+bwi        = '{}/{}'.format(gagepath, precstation)  # BWI precipitation data
 
 # working directory for HSPF files
 
@@ -64,19 +80,19 @@ calibrated = '{}/hspfmodel'.format(hspf)    # file path for the calibrated model
 
 # HSPF calibration methodology
     
-variables     = {'LZSN':   0.70,  # starting value relative to PyHSPF default
-                 'UZSN':   6.1,   # starting value relative to PyHSPF default
+variables     = {'LZSN':   0.60,  # starting value relative to PyHSPF default
+                 'UZSN':   6.80,  # starting value relative to PyHSPF default
                  'LZETP':  0.4,   # starting value relative to PyHSPF default
                  'INFILT': 0.90,  # starting value relative to PyHSPF default
                  'INTFW':  0.20,  # starting value relative to PyHSPF default
-                 'AGWRC':  1.01,  # starting value relative to PyHSPF default
+                 'AGWRC':  1.02,  # starting value relative to PyHSPF default
                  'IRC':     0.5,  # starting value relative to PyHSPF default
                  }
 optimization  = 'Nash-Sutcliffe Product'  # optimization parameter
-perturbations = [2, 1, 0.5]               # degree of perturbation
-parallel      = True                      # parallel flag
+perturbations = [2, 1, 0.5]                  # degree of perturbation
+parallel      = True                         # parallel flag
 
-# land use data for the watershed (type & area, only correct fractions needed)
+# land use data for the watershed (type and area in acres)
 
 landuse = {'Developed':      239,
            'Forest':        8857,
@@ -84,7 +100,9 @@ landuse = {'Developed':      239,
            'Agriculture':   1284
            }
 
-def main():
+def extract():
+    """Create an extract function to call from at runtime and to turn off
+    the extraction steps when they are done."""
 
     # create an instance of the NWIS extractor
 
@@ -121,7 +139,19 @@ def main():
 
     # delineate the watershed (extract the flowlines, catchments and other data)
 
-    delineator.delineate_gage_watershed(gageid, output = gagepath)
+    delineator.delineate_gage_watershed(gage, output = gagepath)
+
+    # download the daily flow and water quality data for the gage
+
+    nwisextractor.download_gagedata(gage, estart, eend, output = gagedata)
+
+    # open the NWIS flow data for the Hunting Creek gage station
+
+    with open(gagedata, 'rb') as f: station = pickle.load(f)
+
+    # get the time series of daily flow values for the gage
+
+    flow = station.make_timeseries(estart, eend)
 
     # add land use data from 1988 to the delineator
 
@@ -129,9 +159,91 @@ def main():
 
     # build the watershed
 
-    delineator.build_gage_watershed(gageid, watershed, masslinkplot = masslink)
+    delineator.build_gage_watershed(gage, watershed, masslinkplot = masslink)
 
-    # make the working directory for HSPF simulation files
+def climate():
+    """Optionally downloads climate data for the simulation."""
+    
+    # find the GHCND evaporation stations and their metadata in the bounding box
+
+    stations = climateutils.find_ghcnd(bbox, var = 'EVAP', types = 'GSN',
+                                   dates = (estart, eend), verbose = True)
+
+    # identify the Beltsville station from the list using the station name
+ 
+    station = stations[[s.station for s in stations].index(evapstation)]
+
+    # download the GHCND data to the gage directory
+
+    station.download_data(gagepath, start = estart, end = eend, plot = True)
+
+    # find the hourly precipitation metadata for the the bounding box
+
+    stations = climateutils.find_precip3240(bbox, dates = (estart, eend), 
+                                        verbose = True)
+
+    # find the BWI Airport, MD station using the coop number
+
+    station = stations[[s.coop for s in stations].index(precstation)]
+
+    # download hourly precipitation data for BWI
+
+    station.download_data(gagepath, estart, eend)
+
+    # open the hourly precipitation station data for BWI Airport
+
+    with open(bwi, 'rb') as f: precip3240 = pickle.load(f)
+
+    # create a PyHSPF PrecipStation class instance to use to make a timeseries
+
+    station = PrecipStation()
+
+    # worth noting the PrecipStation is differentiated from the 
+    # Precip3240Station to deal with things like missing data and to enable 
+    # development of future tools to work with other datasets; this is true 
+    # for other stations this is also helpful when parsing data for quality 
+    # (not an issue here though)
+
+    # add the precipitation data to the PyHSPF PrecipStation instance
+
+    station.add_precip3240(precip3240)
+
+    # make the timeseries and convert from in to mm
+
+    precip = [0 if p is None else p * 25.4 
+              for p in station.make_timeseries(estart, eend)]
+
+    # open the Beltsville GHCND station
+
+    with open(beltsville, 'rb') as f: ghcnd = pickle.load(f) 
+
+    # create a PyHSPF EvapStation class instance to use to make a timeseries
+
+    station = EvapStation()
+
+    # add the Beltsville data to the EvapStation instance
+
+    station.add_ghcnd_data(ghcnd)
+
+    # the evaporation data aren't collected in winter so just assume a fill 
+    # value that is equal to the minimum observed
+
+    fill = min([e for e in station.make_timeseries(estart, eend) 
+                if e is not None])
+
+    # make the daily time series
+
+    evap = [fill if e is None else e 
+            for e in station.make_timeseries(estart, eend)]
+
+    # need hourly evaporation; disaggregate assuming constant throughout day
+
+    evap = [e / 24 for e in evap for i in range(24)]
+
+def calibrate():
+    """Builds and calibrates the model."""
+
+    # make the working directory for HSPF
 
     if not os.path.isdir(hspf): os.mkdir(hspf)
 
@@ -184,7 +296,7 @@ def main():
 
     # use the data to build an HSPFModel
 
-    hunting.build_from_watershed(w, model, ifraction = 1., verbose = True)
+    hunting.build_from_watershed(w, model, verbose = True)
 
     # turn on the hydrology modules to the HSPF model
 
@@ -200,6 +312,7 @@ def main():
 
     # add flow timeseries with label Hunting, start date, tstep (days)
 
+    #hunting.add_timeseries('flowgage', 'Hunting', start, flow, tstep = 1440)
     hunting.add_timeseries('flowgage', 'Hunting', s, flow, tstep = 60)
 
     # assign the evaporation and precipiation timeseries to the whole watershed
@@ -232,9 +345,12 @@ def main():
 
         print('{:6s} {:5.3f}'.format(variable, value))
 
-    print('\nsaving the calibration results\n')
+    print('')
 
 def postprocess():
+    """Postprocess the results and save."""
+
+    print('saving the calibration results\n')
 
     # open the calibrated model
 
@@ -286,36 +402,18 @@ def postprocess():
     calibration_graph = '{}/calibration'.format(hspf)
     postprocessor.plot_calibration(output = calibration_graph, show = False)
 
-    # storm events from HSPExp file (for plotting)
-
-    storms = [[datetime.datetime(1989, 2, 20), datetime.datetime(1989, 2, 26)],
-              [datetime.datetime(1989, 5,  1), datetime.datetime(1989, 5,  5)],
-              [datetime.datetime(1989, 6,  6), datetime.datetime(1989, 6, 11)],
-              [datetime.datetime(1989, 9, 25), datetime.datetime(1989, 9, 29)],
-              [datetime.datetime(1989,10,  1), datetime.datetime(1989,10,  5)],
-              [datetime.datetime(1989,12, 31), datetime.datetime(1990, 1,  5)],
-              [datetime.datetime(1990, 1, 25), datetime.datetime(1990, 1, 30)],
-              [datetime.datetime(1990, 5,  4), datetime.datetime(1990, 5,  8)],
-              [datetime.datetime(1990, 5, 28), datetime.datetime(1990, 6,  1)],
-              [datetime.datetime(1990, 6, 15), datetime.datetime(1990, 6, 18)],
-              ]
-
-    # plot the storm events
-
-    storm_plots = '{}/storms'.format(hspf)
-    postprocessor.plot_storms(stormdates = storms, output = storm_plots, 
-                              tstep = 'hourly', show = False)
-
 # need to use the call to the main routine because this uses parallel cores
 
 if __name__ == '__main__': 
 
     st = time.time()
 
-    main()
+    extract()
+    climate()
+    calibrate()
     postprocess()
-    
+
     tot = time.time() - st
 
     print('finished extracting and calibrating the model for ' +
-          '{} in {:.1f} seconds'.format(gageid, tot))
+          '{} in {:.1f} seconds'.format(gage, tot))

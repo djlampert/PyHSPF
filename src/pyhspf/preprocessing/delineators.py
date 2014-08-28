@@ -25,6 +25,7 @@ class NHDPlusDelineator:
                  flowlinefile, 
                  catchmentfile, 
                  elevfile,
+                 gageid = None,
                  gagefile = None, 
                  damfile = None,
                  landuse = None,
@@ -34,6 +35,7 @@ class NHDPlusDelineator:
         self.flowlinefile  = flowlinefile
         self.catchmentfile = catchmentfile
         self.elevfile      = elevfile
+        self.gageid        = gageid
         self.gagefile      = gagefile
         self.damfile       = damfile
         self.landuse       = landuse
@@ -159,7 +161,23 @@ class NHDPlusDelineator:
     def find_gagecomid(self, gageid):
         """Finds the comid of the gage."""
         
-        if self.gagefile is None:
+        if self.gageid is not None:
+
+            # open the attribute file and try to find the gage site id
+
+            with open(self.attributefile, 'rb') as f: flowlines = pickle.load(f)
+
+            for f in flowlines:
+
+                if flowlines[f].gageid == self.gageid:
+
+                    print(flowlines[f].comid, flowlines[f].gageid)
+                    return flowlines[f].comid
+
+            print('error: unable to locate gage {}\n'.format(self.gageid))
+            raise
+            
+        elif self.gagefile is None:
             print('error: no gage file specified\n')
             raise
 

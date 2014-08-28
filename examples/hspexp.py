@@ -9,7 +9,7 @@
 # model is built with PyHSPF.
 #
 
-import os, datetime, numpy
+import os, datetime, calendar, numpy
 
 from scipy      import stats
 from matplotlib import pyplot, ticker, dates
@@ -22,6 +22,49 @@ directory = '{}/data/calibrated'.format(os.getcwd()) # HSPF file location
 ucifile   = 'hunting_calibrated.uci'                 # calibrated HSPEXP UCI
 wdmfile   = 'hunting.wdm'                            # unmodified WDM file
 plotfile  = 'calibration.png'                        # matplotlib plot file
+
+def aggregate_daily_monthly(dates, daily, option = 'average'):
+
+    months, monthly = [dates[0]], [daily[0]]
+
+    # iterate through the data
+
+    for t, v in zip(dates[1:], daily[1:]):
+        
+        # check if it's a new month
+
+        if months[-1].month != t.month:
+
+            # start a new month
+
+            months.append(t)
+            monthly.append(v)
+
+        # otherwise add the value to the monthly total
+
+        elif v is not None and monthly[-1] is not None: monthly[-1] += v
+
+        else: monthly[-1] = None
+
+    # change from total to average 
+
+    if option == 'average': 
+            
+        for i in range(len(months)):
+
+            # get the number of days in the last month
+
+            day, ndays = calendar.monthrange(months[i].year, 
+                                             months[i].month)
+
+            # and divide to get the average
+
+            if monthly[i] is not None:
+                monthly[i] = monthly[i] / ndays
+            else: 
+                monthly[i] = None
+
+    return months, monthly
 
 # run the script using the main call; some issues in the past with Fortran
 
@@ -98,6 +141,58 @@ if __name__ == '__main__':
 
     times = [start + i * datetime.timedelta(days = 1) 
              for i in range((end - start).days)]
+
+    # aggregate the daily to monthly
+
+    ms, msflows = aggregate_daily_monthly(times, dsflows)
+    ms, moflows = aggregate_daily_monthly(times, doflows)
+
+    # daily r2
+
+    slope, intercept, daily_r, p, std_err = stats.linregress(doflows, dsflows)
+
+    # daily log r2
+
+    log_o = [numpy.log(f) for f in doflows]
+    log_s = [numpy.log(f) for f in dsflows]
+
+    slope, intercept, daily_logr, p, std_err = stats.linregress(log_o, log_s)
+
+    # Daily Nash Sutcliffe Efficiency
+
+    dailyNS = (1 - sum((numpy.array(dsflows) - numpy.array(doflows))**2) /
+               sum((numpy.array(doflows) - numpy.mean(doflows))**2))
+
+    # Daily log Nash Sutcliffe Efficiency
+
+    daily_logNS = (1 - sum((numpy.array(log_s) - numpy.array(log_o))**2) /
+                   sum((numpy.array(log_o) - numpy.mean(log_o))**2))
+
+    # monthly r2
+
+    slope, intercept, monthly_r, p, std_err = stats.linregress(moflows, msflows)
+
+    # monthly log r2
+
+    log_o = [numpy.log(f) for f in moflows]
+    log_s = [numpy.log(f) for f in msflows]
+
+    slope, intercept, monthly_logr, p, std_err = stats.linregress(log_o, log_s)
+
+    # Monthly Nash Sutcliffe Efficiency
+
+    monthlyNS = (1 - sum((numpy.array(msflows) - numpy.array(moflows))**2) /
+                 sum((numpy.array(moflows) - numpy.mean(moflows))**2))
+
+    # Monthly log Nash Sutcliffe Efficiency
+
+    monthly_logNS = (1 - sum((numpy.array(log_s) - numpy.array(log_o))**2) /
+                     sum((numpy.array(log_o) - numpy.mean(log_o))**2))
+
+    print('daily stats:')
+    print(daily_r**2, daily_logr**2, dailyNS, daily_logNS)
+    print('monthly stats:')
+    print(monthly_r**2, monthly_logr**2, monthlyNS, monthly_logNS)
 
     # calculate the mean flow rate
 
