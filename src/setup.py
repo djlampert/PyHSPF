@@ -103,6 +103,9 @@ if os.name == 'nt':
         print('adding a configuration file to the Python library...\n')
         with open(distfile, 'w') as f:
             f.write('[build]\ncompiler=mingw32')
+    lflags = ['-static']
+
+else: lflags = []
 
 # any additional files that are needed (blank for now)
 
@@ -120,7 +123,6 @@ files = ['hspf13/{}'.format(f)
          for f in os.listdir('hspf13') if f[-1] == 'c' or f[-1] == 'f']
 
 fflags = ['-O3', '-fno-automatic', '-fno-align-commons']
-lflags = ['-static']
 
 setup(
     name = 'pyhspf',
