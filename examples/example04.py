@@ -4,34 +4,34 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# Last updated: 06/08/2014
+# Last updated: 09/20/2014
 #
 # Purpose: Demonstrates how to use the Postprocessor class to analyze the 
 # results of an HSPF simulation. The example comes from the HSPF "Expert" 
 # system (hspexp) for the Hunting Creek Watershed. Assumes the reader has 
-# some familiarity with Python, hydrology, and has done examples 1-3.
+# some familiarity with Python, hydrology, and has done examples 01-03.
 
-import time
-import datetime, pickle
+import os, time, datetime, pickle
 
 from pyhspf import HSPFModel, WDMUtil
 
-with open('example3', 'rb') as f: hspfmodel = pickle.load(f)
+model = 'example03'
+if not os.path.isfile(model):
+    print('missing model file; re-run example03.py')
+    raise
 
-# let's change the name to example 4
+with open(model, 'rb') as f: hspfmodel = pickle.load(f)
 
-hspfmodel.filename = 'example4'
+# change the name to example04
 
-# and sort of hack way to rename the optional HSPF output report file
+hspfmodel.filename = 'example04'
 
-hspfmodel.print_file = 'example4.out'
-
-# HSPF traditional utilized pan evaporation data, which are usually multiplied
-# by a pan coefficient on the order of 0.7 to adjust the pan evaporation to
-# potential evapotranspriation. PyHSPF has a built-in method to do a site-wide
-# adjustment to evapotranspiration timeseries if it is needed.  I would suggest
-# developing "final" input timeseries, but to be consistent with the Hunting
-# example we will adjust it to 0.76 here.
+# HSPF traditionally utilized pan evaporation data, which are usually multiplied
+# by a pan coefficient of approximately 0.7 to adjust the pan evaporation to
+# potential evapotranspiration. HSPFModel has an "evap_multiplier" attribute
+# for this purpose, although it may be easier to develop "final" input 
+# timeseries and just leave the pan coefficient at 1. to be consistent with the 
+# Hunting evap_multiplier is adjusted to 0.76 here.
 
 hspfmodel.evap_multiplier = 0.76
 
@@ -70,8 +70,8 @@ hspfmodel.build_uci(targets, run_dates[0], run_dates[1], hydrology = True)
 
 hspfmodel.run(verbose = True)
 
-# i've developed a Postprocessor class to analyze results.  let's use it to do 
-# some analysis and make some cool graphs.
+# the Postprocessor class can be used to analyze results. the following lines
+# show how to use it to do some analysis and make some cool graphs.
 
 from pyhspf import Postprocessor
 
@@ -83,10 +83,8 @@ from pyhspf import Postprocessor
 
 process_dates = run_dates   # postprocessing dates
 gagecomid     = '30'        # the subbasin identifier for the gage
-upcomids      = []          # list any upstream comids to "cut" the model
 
-p = Postprocessor(hspfmodel, process_dates, comid = gagecomid, 
-                  upcomids = upcomids)
+p = Postprocessor(hspfmodel, process_dates, comid = gagecomid)
 
 # here are some examples of things that can be done with the postprocessor.
 # many of these require certain external targets to be specified when building

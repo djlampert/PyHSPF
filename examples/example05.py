@@ -4,25 +4,27 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# Last updated: 06/08/2014
+# Last updated: 09/20/2014
 #
-# Purpose: Demonstrates how to build an instance of the HSPFModel class 
-# that can be used to generate UCI files for an HSPF simulation. Example
-# comes from the HSPF "Expert" system (hspexp) for the Hunting Creek Watershed.
-# This example shows how to calibrate the HSPF model.  Assumes the reader has 
-# some familiarity with Python, hydrology, and has done examples 1-4.
+# This example shows (one way) to calibrate an HSPF model. Assumes the user
+# has some familiarity with Python, hydrology, and has done examples 01-04.
 
-import datetime, pickle
+import os, datetime, pickle
 
 from pyhspf import HSPFModel, WDMUtil, Postprocessor
 
 # open up the pickled HSPFModel 
 
-with open('example3', 'rb') as f: hspfmodel = pickle.load(f)
+model = 'example03'
+if not os.path.isfile(model):
+    print('the hspfmodel file does not exist, run example03.py')
+    raise
 
-# let's change the name to example 5
+with open(model, 'rb') as f: hspfmodel = pickle.load(f)
 
-hspfmodel.filename = 'example5'
+# let's change the name to example05
+
+hspfmodel.filename = 'example05'
 
 # other info about the simulation
 
@@ -128,9 +130,9 @@ AGWRC             = 0.95  # groundwater recession rate (site-wide)
 
 # need to re-open the basevalues again
 
-with open('example3', 'rb') as f: hspfmodel = pickle.load(f)
+with open(model, 'rb') as f: hspfmodel = pickle.load(f)
 
-hspfmodel.filename = 'example5'
+hspfmodel.filename = 'example05'
 
 # and now adjust all the parameters (including the new INTFW_multiplier)
 
@@ -160,7 +162,7 @@ p.calculate_errors()
 
 # lather, rinse, repeat by changing the multipliers until the calibration is 
 # satisfactory. this first run should have gone from a NS for flow * NS for 
-# log flow of 0.268 to 0.288, meaning for the next run we would want to start
+# log flow of 0.264 to 0.283, meaning for the next run we would want to start
 # with INTFW = 0.9 rather than 1; the optimized values are commented out below.
 # i got a daily NS of 0.77 and daily NS for log flow of 0.68 after about an 
 # hour of adjusting just these parameters. use the commented out values in 

@@ -5,11 +5,11 @@ This is the __init__ file
 
 version = '0.1'
 
-__all__ = ['core']
+__all__ = ['core', 'preprocessing', 'calibration', 'forecasting']
 
 import hspf
 
-from pyhspf.core.hspfmodel     import HSPFModel
-from pyhspf.core.wdmutil       import WDMUtil
-from pyhspf.core.postprocessor import Postprocessor
-from pyhspf.core.watershed     import Watershed, Subbasin, FlowPlane, Dam, Reach
+from .core.hspfmodel     import HSPFModel
+from .core.wdmutil       import WDMUtil
+from .core.postprocessor import Postprocessor
+from .core.watershed     import Watershed, Subbasin, Dam

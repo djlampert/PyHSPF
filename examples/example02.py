@@ -1,18 +1,14 @@
-#!/usr/bin/env python3
-#
-# example2.py
+# example02.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# Last updated: 06/08/2014
+# Last updated: 09/20/2014
 #
-# Purpose: Demonstrates how to build an instance of the HSPFModel class 
-# that can be used to generate UCI files for an HSPF simulation. Example
-# comes from the HSPF "Expert" system (hspexp) for the Hunting Creek Watershed.
-# This is a "real" example of how to create an HSPF model in Python using 
-# pyhspf. Python can be used to script the data in as needed. Assumes the 
-# reader has some familiarity with Python, hydrology, and has done example 1.
-# Details throughout.
+# Purpose: This example mimicks the example from the HSPF "Expert" system 
+# (hspexp) for the Hunting Creek Watershed in the Patuxent River Basin. 
+# This is a more "real" example of how to create an HSPF model using pyhspf. 
+# Assumes the user has some familiarity with Python, hydrologic modeling, 
+# and has done the first example.
 
 # description of simulation
 
@@ -51,11 +47,8 @@ subbasin = Subbasin(sname)
 
 length     = 300   # ft
 planeslope = 0.38  # flow plane slope
-
-# these are needed to build an instance of the Watershed class but not used
-
-elev       = 0
-centroid   = [0,0]
+elev       = 0     # not used for hydrology
+centroid   = [0,0] # not sued for hydrology
 
 # add the flow plane info for the subbasin
 
@@ -69,8 +62,8 @@ maxelev  = 125        # inflow elevation, ft
 minelev  = 100        # outflow elevlation, to give delth of 25 feet
 slopelen = 2.6        # reach length, miles
 
-# here we are going to provide the ftable directly to be consistent with 
-# the example UCI file for HSPExp instead of using the PyHSPF function
+# here the ftable is provided directly to be consistent with the example UCI 
+# file for HSPExp
 
 ftable = [[  0.0,    0.0,   0.0,      0.0],
           [ 0.22,  0.765,   0.09,    0.09],
@@ -109,13 +102,13 @@ ifraction = 1.
 
 subbasin.add_landuse(1988, landuse_names, areas)
 
-# create a dictionary of subbasins (this one is trivial since there's only 1)
+# create a dictionary of the subbasins
 
 subbasins = {sname: subbasin}
 
-# create an updown dictionary for the reach network (again trivial with only 1)
+# create an updown dictionary for the reach network (trivial with only 1)
 
-updown = {sname:0}
+updown = {}
 
 # create an instance of the watershed class to store the data to build the model
 
@@ -152,12 +145,12 @@ f = 'hunting.wdm'
 
 wdm.import_exp(huntday, f)
 
-# now let's copy the data to the hspfmodel using WDMUtil. in general climate 
+# copy the data to the hspfmodel using WDMUtil. in general climate 
 # data would need to come from some other place  (not a wdm file); 
-# e.g., an NCDC file.  the preprocessing modules can automate this
+# e.g., an NCDC file. the preprocessing modules can automate this
 # for the hspexp example, only one timeseries for precip and evap 
-# are provided. we'll also get the observed flow at the outlet. 
-# i've set this up to find the dsns, time steps etc, though if they were 
+# are provided. the file also contains the observed flow at the outlet. 
+# this is set up to find the dsns, time steps etc, though if they were 
 # known they could be provided directly.
 
 # open the wdm for read access
@@ -200,10 +193,10 @@ wdm.close('hunting.wdm')
 delta = datetime.timedelta(days = 1)
 times = [start + i * delta for i in range(len(precip))]
 
-# build the model (file will all be called example2)
+# build the model (file will all be called example02)
 
-hspfmodel.build_from_watershed(watershed, 'example2', ifraction = ifraction,
-                               print_file = 'example2.out', tstep = tstep)
+hspfmodel.build_from_watershed(watershed, 'example02', ifraction = ifraction,
+                               tstep = tstep)
 
 # now add the time series to the model
 
@@ -217,32 +210,32 @@ hspfmodel.add_timeseries('evaporation', 'hunting_evap', start, evap,
 hspfmodel.assign_watershed_timeseries('precipitation', 'hunting_prec')
 hspfmodel.assign_watershed_timeseries('evaporation',   'hunting_evap')
 
-# this simulation used the hydrology modules (and no others); need to set the
-# operations for the watershed and default values for the hydrology parameters
+# this simulation used the hydrology modules (and no others); need to create the
+# operations for the model and the default values for the hydrology parameters
 
 hspfmodel.add_hydrology()
 
-# now we can build the input wdm file
+# build the input wdm file
 
 hspfmodel.build_wdminfile()
 
-# let's have HSPF keep track of the outflow volume from the reach, which
+# tell HSPF to keep track of the outflow volume from the reach, which
 # has a Fortran name "ROVOL" and a PyHSPF name "reach_outvolume"
 
 targets = ['reach_outvolume']
 
-# now we can create the UCI for the simulation period to provide the targets
+# create the UCI for the simulation period to provide the targets
 
 hspfmodel.build_uci(targets, start, end, hydrology = True)
 
-# and run it
+# run it
 
 hspfmodel.run(verbose = True)
 
-# now let's look at the results; this output wdmfile is created automatically
+# pull up the results; this output wdmfile is created automatically
 # and has the same name as the "filename" plus "_out.wdm"
 
-wdmoutfile = 'example2_out.wdm'
+wdmoutfile = 'example02_out.wdm'
 
 wdm.open(wdmoutfile, 'r')
 
@@ -266,10 +259,8 @@ rovol = wdm.get_data(wdmoutfile, rovol_dsn)
 
 sflow = rovol * 43560 / 86400
 
-# let's plot it up. because of the long time step the flow peaks are severely
-# damped. in the next example we'll go through the hourly flow and calibration.
-# also, when i ran this it was unstable (oscillates). this is due to the daily 
-# time being larger than the travel time
+# plot it up. because of the long time step the flow peaks are severely
+# damped. in the next example uses hourly flows
 
 from matplotlib import pyplot
 

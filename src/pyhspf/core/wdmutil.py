@@ -546,109 +546,107 @@ class DSN:
 
 if __name__ == '__main__':
 
-    test = 0
+    # basic test that it works ok
 
-    if test == 1: 
-
-        # basic test that it works ok
-
-        filename    = 'test.wdm'
-        number      = 1003
-        start       = datetime.datetime(2000,1,1)
+    filename    = 'test.wdm'
+    number      = 1003
+    start       = datetime.datetime(2000,1,1)
     
-        attributes = {
-            'TSTYPE': 'EXAM',
-            'TCODE ': 4,
-            'TSSTEP': 1,
-            'STAID ': '',
-            'IDSCEN': 'OBSERVED',
-            'IDLOCN': 'EXAMPLE',
-            'STANAM': '',
-            'IDCONS': '',
-            'TSFILL': 0
-            }
+    attributes = {
+        'TSTYPE': 'EXAM',
+        'TCODE ': 4,
+        'TSSTEP': 1,
+        'STAID ': '',
+        'IDSCEN': 'OBSERVED',
+        'IDLOCN': 'EXAMPLE',
+        'STANAM': '',
+        'IDCONS': '',
+        'TSFILL': 0
+        }
     
-        data = [34.2, 35.0, 36.9, 38.2, 40.2 , 20.1, 18.4, 23.6]
+    data = [34.2, 35.0, 36.9, 38.2, 40.2 , 20.1, 18.4, 23.6]
     
-        print('\noriginal list to input to file %s = ' % filename, data, '\n')
+    print('\noriginal list to input to file %s = ' % filename, data, '\n')
 
-        # make the wdm file
+    # make the wdm file
 
-        wdm = WDMUtil(verbose = True)
-        wdm.open(filename, 'w')
-        wdm.create_dataset(filename, number, attributes)
-        wdm.add_data(filename, number, data, start)
-        wdm.close(filename)
+    wdm = WDMUtil(verbose = True)
+    wdm.open(filename, 'w')
+    wdm.create_dataset(filename, number, attributes)
+    wdm.add_data(filename, number, data, start)
+    wdm.close(filename)
 
-        # open the file and read it
+    # open the file and read it
 
-        wdm.open(filename, 'r')
+    wdm.open(filename, 'r')
 
-        # get the data
+    # get the data
 
-        data = wdm.get_data(filename, number)
+    data = wdm.get_data(filename, number)
 
-        # get the dates for the time series
+    # get the dates for the time series
 
-        dates = wdm.get_dates(filename, number)
+    dates = wdm.get_dates(filename, number)
 
-        # make the times for the dataset
+    # make the times for the dataset
 
-        times = [dates[0] + (dates[1] - dates[0]) / len(data) * i
-                 for i in range(len(data))]
+    times = [dates[0] + (dates[1] - dates[0]) / len(data) * i
+             for i in range(len(data))]
 
-        # get the attributes
+    # get the attributes
 
-        values = {}
-        for attribute in attributes: 
-            values[attribute] = wdm.get_attribute(filename, number, attribute)
+    values = {}
+    for attribute in attributes: 
+        values[attribute] = wdm.get_attribute(filename, number, attribute)
 
-        # print it out
+    # print it out
 
-        print('')
-        print('Datasets in file {}: {}\n'.format(
-                filename, wdm.get_datasets(filename)))
-        print('Attributes of dataset number {}\n'.format(number))              
-        for value in values.items(): print(*value)
-        print('')
-        print('Time series returned from dataset {} in file {}:\n'.format( 
-                number, filename))
-        for t, d in zip(times, data):
-            print(t, d)
+    print('')
+    print('Datasets in file {}: {}\n'.format(
+            filename, wdm.get_datasets(filename)))
+    print('Attributes of dataset number {}\n'.format(number))              
+    for value in values.items(): print(*value)
+    print('')
+    print('Time series returned from dataset {} in file {}:\n'.format( 
+            number, filename))
+    for t, d in zip(times, data):
+        print(t, d)
 
-        print('')
-        wdm.close(filename)
+    print('')
+    wdm.close(filename)
 
-        # remove the file
+    # remove the file
 
-        os.remove(filename)
-    
-    if test == 2:
+    os.remove(filename)
  
-        directory = os.path.abspath(os.path.dirname(__file__))
+    directory = os.path.abspath(os.path.dirname(__file__))
 
-        # tests the exp import function (file from hspexp2.4/data/huntday)
+    # tests the exp import function (file from hspexp2.4/data/huntday)
         
-        source = '{}/../examples/data/huntday/huntobs.exp'.format(directory)
-        destination = 'testexp.wdm'
+    source = '{}/../examples/data/huntday/huntobs.exp'.format(directory)
+    destination = 'testexp.wdm'
     
-        # initialize the WDM environment
+    # initialize the WDM environment
     
-        wdm = WDMUtil(verbose = True)
-        wdm.import_exp(source, destination)
-    
-        # test it out
-    
-        wdm.open(destination, 'r')
-        data = wdm.get_data(destination, 106)
-    
-        print('')
-        print('total precipitation (in):', data.sum())
-        print('number of values in time series', len(data))
-        print('maximum daily precipitation (in):', data.max())
+    if not os.path.isfile(source):
+        print('warning, unable to import file')
+        exit()
 
-        wdm.close(destination)
+    wdm = WDMUtil(verbose = True)
+    wdm.import_exp(source, destination)
+    
+    # test it out
+    
+    wdm.open(destination, 'r')
+    data = wdm.get_data(destination, 106)
+    
+    print('')
+    print('total precipitation (in):', data.sum())
+    print('number of values in time series', len(data))
+    print('maximum daily precipitation (in):', data.max())
 
-        # remove the file
+    wdm.close(destination)
 
-        os.remove(destination)
+    # remove the file
+
+    os.remove(destination)

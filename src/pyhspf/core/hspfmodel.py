@@ -7,11 +7,11 @@
 #
 # last updated: 08/27/2013
 
-from pyhspf.core.wdmutil        import WDMUtil
-from pyhspf.core.perlnd         import Perlnd
-from pyhspf.core.implnd         import Implnd
-from pyhspf.core.rchres         import Rchres
-from pyhspf.core.specialactions import SpecialAction
+from .wdmutil        import WDMUtil
+from .perlnd         import Perlnd
+from .implnd         import Implnd
+from .rchres         import Rchres
+from .specialactions import SpecialAction
 
 import os, sys, datetime, time, math, hspf
 
@@ -3394,7 +3394,7 @@ class HSPFModel:
 
             # check to see if it is an outlet
 
-            if self.updown[comid] != 0:
+            if comid not in self.outlets:
 
                 # find the upstream and downstream reach operation numbers
 

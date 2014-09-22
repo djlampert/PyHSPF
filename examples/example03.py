@@ -4,14 +4,11 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# Last updated: 06/08/2014
+# Last updated: 09/20/2014
 #
-# Purpose: Demonstrates how to build an instance of the HSPFModel class 
-# that can be used to generate UCI files for an HSPF simulation. Example
-# comes from the HSPF "Expert" system (hspexp) for the Hunting Creek Watershed.
-# This example shows how to build the HSPFModel and saves it up for later
-# (calibration).  Assumes the reader has some familiarity with Python, 
-# hydrology, and has done examples 1 and 2.
+# Purpose: This example shows how to build the HSPFModel and saves it up for 
+# later (calibration).  Assumes the reader has some familiarity with Python, 
+# hydrology, and has done example01 and example02.
 
 import os, datetime, pickle
 
@@ -25,12 +22,11 @@ end         = datetime.datetime(1990, 10, 1)
 tstep       = 60
 units       = 'English'
 
-# 3 subbasins/reaches; the right and left branch feed the main channel; let's
+# 3 subbasins/reaches; the right and left branch feed the main channel; 
 # call the left and right branches 31 and 32, and main branch 30
 
 updown = {'32':'30', 
           '31':'30', 
-          '30':0
           }
 
 # keep track of the subbasins
@@ -47,9 +43,6 @@ subbasin = Subbasin('30')
 
 length     = 700   # ft
 planeslope = 0.05  # flow plane slope
-
-# needed to build an instance of the Watershed class but not used directly
-
 elev       = 0
 centroid   = [0,0]
 
@@ -64,8 +57,7 @@ maxelev  = 125        # inflow elevation, ft (only the difference needed)
 minelev  = 100        # outflow elevlation, to give delth of 25 feet
 slopelen = 0.5        # reach length, miles
 
-# the ftable is supplied in the example; so we will add it here. if not supplied
-# it is estimated from the average conditions 
+# the ftable is supplied in the UCI file and replicated here
 
 ftable = [[0.0, 0.0, 0.0, 0.0],
           [0.22, 0.294, 0.04, 0.11],
@@ -111,17 +103,12 @@ subbasins['30'] = subbasin
 
 subbasin = Subbasin('31')
 
-# overland flow plane info -- these need to be modified to agree with example
+# overland flow plane
 
 length     = 700   # ft
 planeslope = 0.05  # flow plane slope
-
-# needed to build an instance of the Watershed class but not used directly
-
 elev       = 0
 centroid   = [0,0]
-
-# add the flow plane info for the subbasin
 
 subbasin.add_flowplane(length, planeslope, centroid, elev)
 
@@ -158,8 +145,8 @@ ftable = [[  0.0,    0.0,   0.0,      0.0],
 
 subbasin.add_reach(name, maxelev, minelev, slopelen, ftable = ftable)
 
-# subbasin land use info (to create perlnds and implnds) -- names provide 
-# hydrology default values
+# subbasin land use info (to create perlnds and implnds) -- these names are 
+# used to set hydrology parameter default values
 
 landuse_names = ['Forest', 'Agriculture', 'Pasture/grass', 'Developed']
 areas         = [1318, 193, 231, 84]
@@ -172,7 +159,7 @@ subbasin.add_landuse(1988, landuse_names, areas)
 
 subbasins['31'] = subbasin
 
-# Subbasin for reach 32
+# subbasin for reach 32
 
 subbasin = Subbasin('32')
 
@@ -180,13 +167,8 @@ subbasin = Subbasin('32')
 
 length     = 700   # ft
 planeslope = 0.05  # flow plane slope
-
-# needed to build an instance of the Watershed class but not used directly
-
 elev       = 0
 centroid   = [0,0]
-
-# add the flow plane info for the subbasin
 
 subbasin.add_flowplane(length, planeslope, centroid, elev)
 
@@ -197,8 +179,7 @@ maxelev  = 125        # inflow elevation, ft (only the difference needed)
 minelev  = 100        # outflow elevlation, to give delth of 25 feet
 slopelen = 3.8        # reach length, miles
 
-# the ftable is supplied in the example; so we will add it here. if not supplied
-# it is estimated from the average conditions 
+# the ftable is supplied in the example
 
 ftable = [[0.0, 0.0, 0.0, 0.0],
           [0.22, 2.236, 0.26, 0.07],
@@ -254,7 +235,7 @@ wdm = WDMUtil()
 
 # path to hspexp2.4 data files (modify as needed)
 
-directory = os.path.abspath(os.path.dirname(__file__)) + '/data'
+directory = '{}/data'.format(os.path.abspath(os.path.dirname(__file__)))
 
 # the data from the export file (*.exp) provided with hspexp need to be 
 # imported into a wdm file. WDMUtil has a method for this.
@@ -287,12 +268,12 @@ wdm.close('hunting.wdm')
 
 # the evaporation data is daily so it needs to be disaggregated to hourly for
 # an hourly simulation (see how easy this is with Python)
-# for some reason the WDM file was short a time step--so had to add one extra 
+# the time series in the WDM file starts at 1 am so had to add one extra 
 # value to the end of the time series to get them to run
 
-evap   = [e / 24 for e in evap for i in range(24)] + [0]
-precip = [p for p in precip] + [0]
-oflow  = [o for o in oflow] + [0]
+evap   = [0] + [e / 24 for e in evap for i in range(24)]
+precip = [0] + [p for p in precip]
+oflow  = [0] + [o for o in oflow]
 
 # list of times
 
@@ -302,10 +283,10 @@ times = [start + (end-start) / len(precip) * i for i in range(len(precip))]
 
 hspfmodel = HSPFModel(units = units)
 
-# build the model (file will all be called example2)
+# build the model (file will all be called example03)
 
-hspfmodel.build_from_watershed(watershed, 'example3', ifraction = ifraction,
-                               print_file = 'example3.out', tstep = tstep)
+hspfmodel.build_from_watershed(watershed, 'example03', ifraction = ifraction,
+                               tstep = tstep)
 
 # now add the time series to the model
 
@@ -334,5 +315,5 @@ hspfmodel.add_hydrology()
 # model will be run many times it just makes sense to save the work so far
 # before moving on.
 
-with open('example3', 'wb') as f: pickle.dump(hspfmodel, f)
+with open('example03', 'wb') as f: pickle.dump(hspfmodel, f)
 

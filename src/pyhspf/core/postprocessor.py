@@ -5,13 +5,13 @@
 # Purpose: This file contains many functions to extract data for postprocessing
 # from an HSPF simulation.
 #
-# Last updated: 10/06/2013
+# Last updated: 09/20/2014
 
 import os, pickle, numpy, datetime, calendar, csv
 
 from scipy import stats
 
-from pyhspf.core.wdmutil import WDMUtil
+from .wdmutil import WDMUtil
 
 class Postprocessor:
     """A class for post processing HSPF simulation data."""
@@ -1665,7 +1665,7 @@ class Postprocessor:
 
         values = [self.staids, self.descriptions, self.idconss, data]
 
-        for comid in self.hspfmodel.updown:
+        for comid in self.hspfmodel.subbasins:
 
             # re-package using the state values in the subbasin and make a
             # dictionary to store the value for each perlnd
@@ -1767,7 +1767,7 @@ class Postprocessor:
 
         # get the simulated data
 
-        ts, flows = self.get_sim_flow(comid, tstep = 'daily', dates=dates)
+        ts, flows = self.get_sim_flow(comid, tstep = 'daily', dates = dates)
 
         # compute the cutoffs
 

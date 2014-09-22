@@ -53,3 +53,8 @@ Re-organized preprocessing climateutils routines
 Minor import changes
 Added AutoCalibrator
 Added hunting.py example--comprehensive build of HSPF model including all source data and autocalibration
+
+Version 0.1.8
+Added storm plot features to postprocessor
+Removed redundant specification of outlets in the Watershed masslink dictionary
+Updated examples (consistency with changes based on redundancy)

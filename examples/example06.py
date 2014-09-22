@@ -1,10 +1,12 @@
-# example6.py
+# example06.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# Last updated: 06/09/2014
+# Last updated: 09/20/2014
 #
-# This is a repeat of example1.py, but illustrating how to add special actions.
+# This is essentially a repeat of example01.py, but illustrates how to add 
+# special actions. the src/core/specialactions.py file contains the built-in
+# special actions (should be easy to append this to meet other needs).
 
 # start and end dates (year 2001)
 
@@ -72,7 +74,7 @@ watershed = Watershed('Dave', subbasins)
 
 # flow network dictionary
 
-updown = {'100':'101', '101':0}
+updown = {'100':'101'}
 
 # add the info to the watershed and outlet
 
@@ -82,7 +84,7 @@ watershed.add_outlet('101')
 # names of the files used in the simulation (the HSPF input and output files
 # are generated automatically); can also specify a directory to use elsewhere
 
-filename   = 'example6'
+filename   = 'example06'
 wdmoutfile = filename + '_out.wdm'
 
 # create an instance of the HSPFModel class
@@ -93,14 +95,14 @@ hspfmodel = HSPFModel()
 
 hspfmodel.build_from_watershed(watershed, filename, tstep = tstep)
 
-# let's now add a special action, thawed ground on the agricultural land
+# add a special action, thawed ground on the agricultural land
 # in the first subbasin on April 1 at 12 noon.
 
 thawdate = datetime.datetime(2001, 4, 1, 12)
 
 hspfmodel.add_special_action('thaw', '100', 'Agriculture', thawdate)
 
-# let's add another special action, frozen ground on the agricultural land
+# add another special action, frozen ground on the agricultural land
 # in the first subbasin on December 1 at midnight.
 
 freezedate = datetime.datetime(2001, 12, 1)
@@ -139,7 +141,7 @@ hspfmodel.add_timeseries(tstype, identifier, start, evaporation, tstep = tstep)
 
 hspfmodel.assign_watershed_timeseries(tstype, identifier)
 
-# now let's add some random rainfall
+# add some random rainfall
 
 rainfall = [random.randint(0,20) if random.random() > 0.95 else 0. 
             for i in range(nsteps)]
@@ -151,15 +153,15 @@ identifier = 'example_prec'
 
 hspfmodel.add_timeseries(tstype, identifier, start, rainfall, tstep = tstep)
 
-# again we need to connect the time series to the whole watershed
+# connect the time series to the whole watershed
 
 hspfmodel.assign_watershed_timeseries(tstype, identifier)
 
-# now we need to tell HSPF to run hydrology and assign default parameters
+# tell HSPF to run hydrology and assign default parameters
 
 hspfmodel.add_hydrology()
 
-# and now we can build the wdm input file using the timeseries
+# build the wdm input file using the timeseries
 
 hspfmodel.build_wdminfile()
 
@@ -180,25 +182,21 @@ wdm = WDMUtil()
 
 wdm.open(wdmoutfile, 'r')
 
-# let's pull up the flow at the outlet and plot it along with the precipitation
-# and evapotranspiration. the attributes that identify the data are "IDCONS"
-# (constituent ID) and "STAID " (station ID). these were assigned by the
-# build_wdminfile and build_UCI routines automatically; modify as needed.
+# pull up the flow at the outlet and plot it along with the precipitation
+# and evapotranspiration
 
 dsns    =  wdm.get_datasets(wdmoutfile)
 idconss = [wdm.get_attribute(wdmoutfile, n, 'IDCONS') for n in dsns]
 staids  = [wdm.get_attribute(wdmoutfile, n, 'STAID ') for n in dsns]
 
-# one HSPF parameter we saved is ROVOL (the postprocessor can be used to 
-# simplify this, but for now let's just use WDMUtil). The following
-# finds the right dsn. see if you can follow the syntax.
+# find the dsn
 
 n = [dsn for dsn, idcons, staid in zip(dsns, idconss, staids)
      if idcons == 'ROVOL' and staid == '101'][0]
 
 rovol = wdm.get_data(wdmoutfile, n)
 
-# it's always a good idea to close up the fortran files.
+# close up the fortran files.
 
 wdm.close(wdmoutfile)
 
@@ -208,7 +206,7 @@ flows = [r * 10**6 / 3600 / 4 for r in rovol]
 
 from matplotlib import pyplot
 
-# we need a list of the dates/times for the plot
+# need a list of the dates/times for the plot
 
 times = [start + i * datetime.timedelta(hours = 4)
          for i in range(int((end - start).total_seconds() / 3600 / 4))]
@@ -232,4 +230,3 @@ fig.autofmt_xdate(rotation = 25)
 # show it
 
 pyplot.show()
-
