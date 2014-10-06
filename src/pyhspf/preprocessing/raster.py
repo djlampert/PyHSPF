@@ -169,7 +169,7 @@ def get_raster(filename, points, quiet = False):
 
     return values
 
-def get_raster_table(filename, extent, dtype, locations = False):
+def get_raster_table(filename, extent, dtype, locations = False, quiet = False):
     """Gets the values of a DEM raster over a rectangular plot with corners 
     located at longmin, latmin, longmin, and latmax as specified by extents.
     Returns a matrix of values and the corresponding latitude and longitude.
@@ -178,6 +178,8 @@ def get_raster_table(filename, extent, dtype, locations = False):
     start = time.time()
 
     longmin, latmin, longmax, latmax = extent
+
+    if quiet: gdal.PushErrorHandler('CPLQuietErrorHandler') 
 
     # register all of the drivers
 
@@ -263,7 +265,7 @@ def get_raster_table(filename, extent, dtype, locations = False):
                 values[height - row - 1] = \
                     band.ReadAsArray(pxmin, pymin + row, width, 1) 
         except: 
-            print('unable to read data')
+            if not quiet: print('unable to read data\n')
             values = None
 
         return values, [origin[0] - rx, origin[1] - ry]

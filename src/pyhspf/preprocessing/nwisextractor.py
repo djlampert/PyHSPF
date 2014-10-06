@@ -32,6 +32,16 @@ class NWISExtractor:
         self.url         = url
         self.destination = destination
 
+        if not os.path.isdir(destination):
+
+            print('destination directory does not exist\n')
+            
+            try: os.mkdir(destination)
+            except:
+                print('warning, unable to create directory ' +
+                      '{}'.format(destination))
+                raise
+
     def report(self, 
                n, 
                block, 
@@ -56,6 +66,7 @@ class NWISExtractor:
 
             if verbose:
  
+                print(self.destination)
                 print('The NWIS metadata are not present in the destination\n')
                 os.mkdir(self.destination)
 
@@ -81,6 +92,7 @@ class NWISExtractor:
 
             zf = zipfile.ZipFile(zfile)
             zf.extractall(self.destination)
+            print('')
 
         elif verbose: print('gage metadata shapefile is present\n')
 
@@ -90,6 +102,12 @@ class NWISExtractor:
         station shapefile into a shapefile for the 8-digit hydrologic unit 
         code of interest. 
         """
+
+        # make sure the metadata exist locally
+
+        self.download_metadata()
+
+        # make sure the output destination exists
 
         if not os.path.isdir(output): os.mkdir(output)
 
@@ -140,6 +158,8 @@ class NWISExtractor:
         elif verbose: 
 
             print('gage station shapefile for {} exists\n'.format(HUC8))
+
+        self.set_metadata(sfile)
 
     def set_metadata(self, gagefile):
         """Opens the gage file for the station metadata and saves it."""

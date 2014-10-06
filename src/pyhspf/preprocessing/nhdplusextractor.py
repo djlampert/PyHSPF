@@ -15,14 +15,17 @@ import shutil, os, io, time, pickle, subprocess, gdal, numpy
 
 from gdalconst               import GA_ReadOnly
 from shapefile               import Reader, Writer
+from matplotlib              import pyplot, path, ticker
+from matplotlib              import patches, colors 
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+# local imports
+
 from .dbf                    import read_dbf
 from .raster                 import get_raster_table
 from .raster                 import get_degree_transform
 from .raster                 import get_raster
 from .merge_shapes           import merge_shapes
-from matplotlib              import pyplot, path, ticker
-from matplotlib              import patches, colors 
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from .flowline import Flowline
 
@@ -30,15 +33,203 @@ class NHDPlusExtractor:
     """A class to download and extract data from the NHDPlus V2 database."""
         
     def __init__(self, 
-                 abbreviation,
                  VPU,
                  destination,
                  url ='ftp://www.horizon-systems.com/NHDPlus/NHDPlusV21/Data',
                  ):
 
+        # NHDPlus vector processing units (VPUs) in each drainage area
+
+        self.da_to_vpu = {'CA': ['18'],
+                          'CO': ['14', '15'],
+                          'GB': ['16'],
+                          'GL': ['04'],
+                          'MA': ['02'],
+                          'MS': ['05', '06', '07', '08', '10L', '10U', '11'],
+                          'NE': ['01'],
+                          'PN': ['17'],
+                          'RG': ['13'],
+                          'SA': ['03N', '03S', '03W'],
+                          'SR': ['09'],
+                          'TX': ['12'],
+                          }
+
+        # NHDPlus raster processing units (RPUs) in each drainage area
+
+        self.da_to_rpu = {'CA': ['18a', '18b', '18c'],
+                          'CO': ['14a', '14b', '15a', '15b'],
+                          'GB': ['16a', '16b'],
+                          'GL': ['04a', '04b', '04c', '04d'],
+                          'MA': ['02a', '02b'],
+                          'MS': ['05a', '05b', '05c', '05d', 
+                                 '06a', 
+                                 '07a', '07b', '07c', 
+                                 '08a', '08b', '08g',
+                                 '10a', '10b', '10c', '10d', 
+                                 '10e', '10f', '10g', '10h', '10i',  
+                                 '11a', '11b', '11c', '11d'],
+                          'NE': ['01a'],
+                          'PN': ['17a', '17b', '17c', '17d'],
+                          'RG': ['13a', '13b', '13c', '13d'],
+                          'SA': ['03a', '03b', '03c', '03d', '03e', '03f'], 
+                          'SR': ['09a'],
+                          'TX': ['12a', '12b', '12c', '12d'],
+                          }
+
+        # NHDPlus raster processing units (RPUs) in each vector processing unit
+
+        self.vpu_to_rpu = {'18':  ['18a', '18b', '18c'],
+                           '14':  ['14a', '14b', '15a', '15b'],
+                           '16':  ['16a', '16b'],
+                           '04':  ['04a', '04b', '04c', '04d'],
+                           '02':  ['02a', '02b'],
+                           '05':  ['05a', '05b', '05c', '05d'],
+                           '06':  ['06a'],
+                           '07':  ['07a', '07b', '07c'], 
+                           '08':  ['08a', '08b', '08g'],
+                           '10L': ['10a', '10b', '10c', '10d'], 
+                           '10U': ['10e', '10f', '10g', '10h', '10i'],  
+                           '11':  ['11a', '11b', '11c', '11d'],
+                           '01':  ['01a'],
+                           '17':  ['17a', '17b', '17c', '17d'],
+                           '13':  ['13a', '13b', '13c', '13d'],
+                           '03N': ['03a', '03b'], 
+                           '03S': ['03c', '03d'], 
+                           '03W': ['03e', '03f'], 
+                           '09': ['09a'],
+                           '12': ['12a', '12b', '12c', '12d'],
+                           }
+
+        # NHDPlus catchment data content numbers for each VPU (why???)
+
+        self.catchments = {'01':  '01',
+                           '02':  '01',
+                           '03N': '01',
+                           '03S': '01', 
+                           '03W': '01',
+                           '04':  '05',
+                           '05':  '01',
+                           '06':  '05',
+                           '07':  '01',
+                           '08':  '01',
+                           '09':  '01',
+                           '10L': '01',
+                           '10U': '02',
+                           '11':  '01',
+                           '12':  '01',
+                           '13':  '02',
+                           '14':  '01',
+                           '15':  '01',
+                           '16':  '01',
+                           '17':  '02',
+                           '18':  '01',
+                           }
+
+        # NHDPlus NHD snapshot data content numbers for each VPU (why???)
+
+        self.snapshots = {'01':  '03',
+                          '02':  '03',
+                          '03N': '03',
+                          '03S': '03', 
+                          '03W': '03',
+                          '04':  '07',
+                          '05':  '05',
+                          '06':  '06',
+                          '07':  '04',
+                          '08':  '03',
+                          '09':  '04',
+                          '10L': '05',
+                          '10U': '06',
+                          '11':  '04',
+                          '12':  '04',
+                          '13':  '04',
+                          '14':  '04',
+                          '15':  '03',
+                          '16':  '05',
+                          '17':  '04',
+                          '18':  '04',
+                          }
+
+        # NHDPlus NHD attribute data content numbers for each VPU (why???)
+
+        self.attributes = {'01':  '03',
+                           '02':  '03',
+                           '03N': '02',
+                           '03S': '02', 
+                           '03W': '02',
+                           '04':  '08',
+                           '05':  '04',
+                           '06':  '06',
+                           '07':  '06',
+                           '08':  '03',
+                           '09':  '03',
+                           '10L': '08',
+                           '10U': '06',
+                           '11':  '03',
+                           '12':  '04',
+                           '13':  '02',
+                           '14':  '05',
+                           '15':  '04',
+                           '16':  '02',
+                           '17':  '04',
+                           '18':  '03',
+                           }
+
+        # NHDPlus EROM data content numbers for each VPU (why???)
+
+        self.EROMs = {'01':  '03',
+                      '02':  '03',
+                      '03N': '02',
+                      '03S': '02', 
+                      '03W': '02',
+                      '04':  '07',
+                      '05':  '04',
+                      '06':  '05',
+                      '07':  '04',
+                      '08':  '02',
+                      '09':  '03',
+                      '10L': '05',
+                      '10U': '05',
+                      '11':  '02',
+                      '12':  '03',
+                      '13':  '02',
+                      '14':  '02',
+                      '15':  '04',
+                      '16':  '02',
+                      '17':  '05',
+                      '18':  '04',
+                      }
+
+        # NHDPlus NED data content numbers for each VPU (why???)
+
+        self.NEDs = {'01':  '03',
+                     '02':  '03',
+                     '03N': '02',
+                     '03S': '02', 
+                     '03W': '02',
+                     '04':  '07',
+                     '05':  '04',
+                     '06':  '05',
+                     '07':  '04',
+                     '08':  '02',
+                     '09':  '03',
+                     '10L': '05',
+                     '10U': '05',
+                     '11':  '02',
+                     '12':  '03',
+                     '13':  '02',
+                     '14':  '02',
+                     '15':  '04',
+                     '16':  '02',
+                     '17':  '05',
+                     '18':  '04',
+                     }
+
+        self.VPUdict = {i:k for k,v in self.da_to_vpu.items() for i in v}
+
         self.url          = url
         self.destination  = destination
-        self.abbreviation = abbreviation
+        self.DA           = self.VPUdict[VPU]
         self.VPU          = VPU
 
     def report(self, 
@@ -50,160 +241,6 @@ class NHDPlusExtractor:
         if n % 100 == 0:
             it = block * n / 10**6, size / 10**6
             print('{:.1f} MB of {:.1f} MB transferred'.format(*it))
-
-    def download_data(self,
-                      catchment_n = '01',
-                      database_n = '03',
-                      ned_n = '01',
-                      verbose = True,
-                      ):
-        """Downloads the source data files."""
-
-        if not os.path.isdir(self.destination): 
-
-            if verbose: print('No NHDPlus data present in destination\n')
-            os.mkdir(self.destination)
-
-        else: print('NHDPlus destination directory exists\n')
-
-        destination = '{}/NHDPlus{}'.format(self.destination, self.abbreviation)
-        if not os.path.isdir(destination):
-
-            if verbose: 
-                print('NHDPlus data for ' +
-                      '{} not present'.format(self.abbreviation))
-            os.mkdir('{}'.format(destination))
-
-        elif verbose: print('Data for {} exist\n'.format(self.abbreviation))
-        
-        # decompressed NHDPlus directory
-
-        self.NHDPlus = '{}/NHDPlus{}'.format(destination, self.VPU)
-
-        # catchment shapefile
-
-        its = self.abbreviation, self.VPU, catchment_n
-        webfile = 'NHDPlusV21_{}_{}_NHDPlusCatchment_{}.7z'.format(*its)
-        its = self.destination, self.abbreviation, webfile
-        catchmentfile = '{}/NHDPlus{}/{}'.format(*its)
-        its = self.NHDPlus, 'Catchment', 'Catchment'
-        self.catchmentfile = '{}/NHDPlus{}/{}'.format(*its)
-
-        if not os.path.isfile(catchmentfile):
-
-            its = self.url, self.abbreviation, webfile
-            url = '{}/NHDPlus{}/{}'.format(*its)
-            if verbose: 
-                print('downloading catchment shapefile from {}\n'.format(url))
-            request.urlretrieve(url, catchmentfile, self.report)
-
-        elif verbose: print('catchment source shapefile exists\n')
-
-        if not os.path.isfile(catchmentfile[:-3] + '.txt'): 
-            self.decompress(catchmentfile)
-
-        # flowline shapefile
-
-        its = self.abbreviation, self.VPU, database_n
-        webfile = 'NHDPlusV21_{}_{}_NHDSnapshot_{}.7z'.format(*its)
-        its = self.destination, self.abbreviation, webfile
-        flowlinefile = '{}/NHDPlus{}/{}'.format(*its)
-        its = self.NHDPlus, 'NHDSnapshot', 'Hydrography', 'NHDFlowline'
-        self.flowlinefile = '{}/{}/{}/{}'.format(*its)
-        self.projection   = '{}/{}/{}/{}.prj'.format(*its)
-
-        if not os.path.isfile(flowlinefile):
-
-            its = self.url, self.abbreviation, webfile
-            url = '{}/NHDPlus{}/{}'.format(*its)
-            if verbose: 
-                print('downloading flowline shapefile from {}\n'.format(url))
-            request.urlretrieve(url, flowlinefile, self.report)
-
-        elif verbose: print('flowline source shapefile exists\n')
-
-        if not os.path.isfile(flowlinefile[:-3] + '.txt'): 
-            self.decompress(flowlinefile)
-
-        # attribute databases
-
-        its = self.abbreviation, self.VPU, database_n
-        webfile = 'NHDPlusV21_{}_{}_NHDPlusAttributes_{}.7z'.format(*its)
-        its = self.destination, self.abbreviation, webfile
-        attributefile = '{}/NHDPlus{}/{}'.format(*its)
-        its = self.NHDPlus, 'NHDPlusAttributes'
-        self.elevslopefile       = '{}/{}/elevslope.dbf'.format(*its)
-        self.PlusFlowlineVAAfile = '{}/{}/PlusFlowlineVAA.dbf'.format(*its)
-
-        if not os.path.isfile(attributefile):
-
-            its = self.url, self.abbreviation, webfile
-            url = '{}/NHDPlus{}/{}'.format(*its)
-            if verbose: 
-                print('downloading attribute databases from {}\n'.format(url))
-            request.urlretrieve(url, attributefile, self.report)
-
-        elif verbose: print('attribute source databases exist\n')
-
-        if not os.path.isfile(attributefile[:-3] + '.txt'): 
-            self.decompress(attributefile)
-
-        # EROM databases
-
-        its = self.abbreviation, self.VPU, database_n
-        webfile = 'NHDPlusV21_{}_{}_EROMExtension_{}.7z'.format(*its)
-        its = self.destination, self.abbreviation, webfile
-        eromfile = '{}/NHDPlus{}/{}'.format(*its)
-        self.eromfile = '{}/EROMExtension/EROM_MA0001.DBF'.format(self.NHDPlus)
-
-        if not os.path.isfile(eromfile):
-
-            its = self.url, self.abbreviation, webfile
-            url = '{}/NHDPlus{}/{}'.format(*its)
-            if verbose: 
-                print('downloading attribute databases from {}\n'.format(url))
-            request.urlretrieve(url, eromfile, self.report)
-
-        elif verbose: print('EROM source database exists\n')
-
-        if not os.path.isfile(eromfile[:-3] + '.txt'): 
-            self.decompress(eromfile)
-
-        # NED rasters -- these are in different files with a letter so iterate
-
-        letters       = 'abcd'
-        self.nedfiles = []
-
-        for l in letters:
-
-            its = self.abbreviation, self.VPU, self.VPU, l, ned_n
-            webfile = 'NHDPlusV21_{}_{}_{}{}_NEDSnapshot_{}.7z'.format(*its)
-            its = self.destination, self.abbreviation, webfile
-            temp = '{}/NHDPlus{}/{}'.format(*its)
-
-            if not os.path.isfile(temp):
-
-                its = self.url, self.abbreviation, webfile
-                url = '{}/NHDPlus{}/{}'.format(*its)
-
-                try:
-                    request.urlopen(url)
-                    if verbose: 
-                        print('downloading raster from {}\n'.format(url))
-                    request.urlretrieve(url, temp, self.report)
-
-                except: pass
-
-            elif verbose: print('NED source raster {} exists\n'.format(temp))
-
-            if os.path.isfile(temp): 
-
-                its = self.NHDPlus, self.VPU, l
-                nedfile = '{}/NEDSnapshot/Ned{}{}/elev_cm'.format(*its)
-                self.nedfiles.append(nedfile)
-
-            if not os.path.isfile(temp[:-3] +'.txt') and os.path.isfile(temp):
-                self.decompress(temp)
 
     def decompress(self, filename):
         """points to the right method for the operating system."""
@@ -236,6 +273,146 @@ class NHDPlusExtractor:
         with subprocess.Popen(args, stdout = subprocess.PIPE).stdout as s:
 
             print(s.read().decode())
+
+    def download_compressed(self, webfile, name, verbose = True):
+        """Private method to download a compressed file."""
+
+        # compressed file name on local machine
+
+        compressed = '{}/{}'.format(self.destination, webfile)
+
+        # location of the file on the NHDPlus ftp server (the NHDPlus file
+        # structure is not consistent so this if statement is needed)
+
+        its = self.url, self.DA, self.VPU, webfile
+        if len(self.da_to_vpu[self.DA]) == 1:
+            url = '{0}/NHDPlus{1}/{3}'.format(*its)
+        else:
+            url = '{0}/NHDPlus{1}/NHDPlus{2}/{3}'.format(*its)
+
+        if not os.path.isfile(compressed):
+
+            if verbose: 
+                print('downloading {} file {}\n'.format(name, url))
+                request.urlretrieve(url, compressed, self.report)        
+
+        elif verbose: print('source {} file exists\n'.format(name))
+
+    def download_data(self,
+                      ned_n = '01',
+                      verbose = True,
+                      ):
+        """Downloads the compressed source data files from NHDPlus."""
+
+        if not os.path.isdir(self.destination): 
+
+            if verbose: print('No NHDPlus data present in destination\n')
+            os.mkdir(self.destination)
+
+        else: print('NHDPlus destination directory exists\n')
+
+        destination = '{}/NHDPlus{}'.format(self.destination, self.DA)
+        if not os.path.isdir(destination):
+
+            if verbose: 
+                print('NHDPlus data for {} not present'.format(self.DA))
+            os.mkdir('{}'.format(destination))
+        
+        # decompressed NHDPlus data directory
+
+        self.NHDPlus = '{}/NHDPlus{}'.format(destination, self.VPU)
+
+        # download all the compressed files from the NHDPlus ftp server
+
+        # catchment shapefile
+
+        its = self.DA, self.VPU, self.catchments[self.VPU]
+        catchmentfile = 'NHDPlusV21_{}_{}_NHDPlusCatchment_{}.7z'.format(*its)
+        self.download_compressed(catchmentfile, 'catchment')
+
+        # flowline shapefile
+
+        its = self.DA, self.VPU, self.snapshots[self.VPU]
+        flowlinefile = 'NHDPlusV21_{}_{}_NHDSnapshot_{}.7z'.format(*its)
+        self.download_compressed(flowlinefile, 'flowline')
+
+        # NHDPlus attributes database
+
+        its = self.DA, self.VPU, self.attributes[self.VPU]
+        attributefile = 'NHDPlusV21_{}_{}_NHDPlusAttributes_{}.7z'.format(*its)
+        self.download_compressed(attributefile, 'attribute database')
+
+        # EROM database
+
+        its = self.DA, self.VPU, self.EROMs[self.VPU]
+        eromfile = 'NHDPlusV21_{}_{}_EROMExtension_{}.7z'.format(*its)
+        self.download_compressed(eromfile, 'EROM database')
+
+        # NED rasters -- these are in different files with a letter so iterate
+
+        nedfiles = []
+        for rpu in self.vpu_to_rpu[self.VPU]:
+            its = self.DA, self.VPU, rpu, ned_n
+            nedfile = 'NHDPlusV21_{}_{}_{}_NEDSnapshot_{}.7z'.format(*its)
+            self.download_compressed(nedfile, 'NED raster')
+            nedfiles.append(nedfile)
+
+        # decompress the downloaded files
+
+        # decompressed catchment shapefile name on local machine
+
+        its = self.NHDPlus, 'Catchment'
+        self.catchmentfile = '{0}/NHDPlus{1}/{1}'.format(*its)
+
+        # decompress if not done already
+
+        if not os.path.isfile(self.catchmentfile + '.shp'):
+            print('decompressing the catchment file\n')
+            self.decompress('{}/{}'.format(self.destination, catchmentfile))
+
+        # decompressed flowline shapefile name on local machine
+
+        its = self.NHDPlus, 'NHDSnapshot', 'Hydrography', 'NHDFlowline'
+        self.flowlinefile = '{}/{}/{}/{}'.format(*its)
+        self.projection   = '{}/{}/{}/{}.prj'.format(*its)
+
+        # decompress if not done already
+
+        if not os.path.isfile(self.flowlinefile + '.shp'): 
+            print('decompressing the flowline file\n')
+            self.decompress('{}/{}'.format(self.destination, flowlinefile))
+
+        # NHDPlus attribute databases
+
+        its = self.NHDPlus, 'NHDPlusAttributes'
+        self.elevslopefile       = '{}/{}/elevslope.dbf'.format(*its)
+        self.PlusFlowlineVAAfile = '{}/{}/PlusFlowlineVAA.dbf'.format(*its)
+
+        # decompress if not done already
+        
+        if not os.path.isfile(self.elevslopefile):
+            print('decompressing the database files\n')
+            self.decompress('{}/{}'.format(self.destination, attributefile))
+
+        # EROM database
+
+        self.eromfile = '{}/EROMExtension/EROM_MA0001.DBF'.format(self.NHDPlus)
+
+        # decompress if not done already
+
+        if not os.path.isfile(self.eromfile): 
+            print('decompressing the EROM files\n')
+            self.decompress('{}/{}'.format(self.destination, eromfile))
+
+        # NED rasters -- there is more than one per VPU
+
+        self.nedfiles = ['{}/NEDSnapshot/Ned{}/elev_cm'.format(self.NHDPlus,RPU)
+                         for RPU in self.vpu_to_rpu[self.VPU]]
+
+        for compressed, decompressed in zip(nedfiles, self.nedfiles):
+            if not os.path.isfile(decompressed + '.aux'):
+                print('decompressing the elevation raster\n'.format(compressed))
+                self.decompress('{}/{}'.format(self.destination, compressed))
 
     def get_comids(self, flowlinefile):
         """Finds the comids from the flowline file."""
@@ -385,7 +562,8 @@ class NHDPlusExtractor:
         f = None
         for nedfile in self.nedfiles:
 
-            t,v = get_raster_table(nedfile, shapefile.bbox, 'int32')
+            t,v = get_raster_table(nedfile, shapefile.bbox, 'int32', 
+                                   quiet = True)
 
             if t is not None: 
                 f = nedfile
@@ -468,12 +646,13 @@ class NHDPlusExtractor:
 
     def extract_HUC8(self, 
                      HUC8,                             # HUC8
-                     output,                           # output directory
+                     directory,                        # output directory
                      flowlinefile  = 'flowlines',      # flowline shapefile
                      catchmentfile = 'catchments',     # catchment shapefile
                      boundaryfile  = 'boundary',       # merged catchment file
                      VAAfile       = 'flowlineVAAs',   # VAA file
                      elevfile      = 'elevations.tif', # NED raster file
+                     plotfile      = 'watershed',      # plot of the results
                      verbose       = True,             # print verbosity
                      vverbose      = False,            # print verbosity
                      ):
@@ -486,6 +665,11 @@ class NHDPlusExtractor:
 
         # if the destination folder does not exist, make it
 
+        if not os.path.isdir(directory): os.mkdir(directory)
+
+        # if the destination folder for the HUC8 does not exist, make it
+
+        output = '{}/{}'.format(directory, HUC8)
         if not os.path.isdir(output): os.mkdir(output)
 
         # start by copying the projection files
@@ -598,6 +782,22 @@ class NHDPlusExtractor:
 
             cfile = '{}/{}'.format(output, catchmentfile)
             merge_shapes(cfile, outputfile = bfile)
+
+        # plot the results
+
+        if plotfile is not None:
+
+            flowfile = '{}/{}'.format(output, flowlinefile)
+            cfile    = '{}/{}'.format(output, catchmentfile)
+            bfile    = '{}/{}.shp'.format(output, boundaryfile)
+            VAAfile  = '{}/{}'.format(output, VAAfile)
+            elevfile = '{}/{}'.format(output, elevfile)
+            pfile    = '{}/{}'.format(output, plotfile)
+
+            if not os.path.isfile(pfile + '.png'):
+
+                self.plot_HUC8(flowfile, cfile, bfile, VAAfile, elevfile,
+                               output = pfile)
 
     def get_distance(self, p1, p2):
         """Approximates the distance in kilometers between two points on the 
@@ -742,7 +942,7 @@ class NHDPlusExtractor:
 
         boundary = b.shape(0)
         points = numpy.array(boundary.points)
-        subplot.add_patch(self.make_patch(points, facecolor, width = 0.3))
+        subplot.add_patch(self.make_patch(points, facecolor, width = 0.5))
 
         # open up and show the catchments
 
@@ -851,36 +1051,3 @@ class NHDPlusExtractor:
 
         pyplot.close()
         pyplot.clf()
-
-if __name__ == '__main__': 
-
-    NHDPlus   = '{}/NHDPlus'.format(os.getcwd())      # directory for NHDPlus
-    drainid   = 'MA'                                  # NHDPlus drainage area id
-    VPU       = '02'                                  # NHDPlus VPU
-    directory = 'HSPF_data'                           # HUC8 directory
-    HUC8      = '02060006'                            # 8-digit HUC
-    flowfile  = '{}/flowlines'.format(directory)      # flowline shapefile
-    cfile     = '{}/catchments'.format(directory)     # catchment shapefile
-    bfile     = '{}/boundary'.format(directory)       # boundary shapefile
-    VAAfile   = '{}/flowlineVAAs'.format(directory)   # VAA file
-    elevfile  = '{}/elevations.tif'.format(directory) # NED raster file
-    waterplot = '{}/NHDPlus.png'.format(directory)    # plot of the data
-
-    # create an instance of the NHDPlus extractor
-
-    extractor = NHDPlusExtractor(drainid, VPU, NHDPlus)
-
-    # download and decompress the source data
-
-    extractor.download_data()
-
-    # extract the HUC8 data for the Patuxent watershed
-
-    extractor.extract_HUC8(HUC8, directory)
-
-    # make a plot using the extracted files
-   
-    if not os.path.isfile(waterplot):
-
-        extractor.plot_HUC8(flowfile, cfile, bfile, VAAfile, elevfile,
-                            output = waterplot)

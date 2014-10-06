@@ -28,6 +28,7 @@ __all__ = [
     'merge_shapes',
     'ncdcstations',
     'penman',
+    'preprocess',
     'preprocessor',
     'raster',
     'subdivide_watershed',
@@ -48,6 +49,7 @@ __all__ = [
     ]
 
 from .preprocessor      import preprocessor
+from .preprocess        import preprocess
 from .climateplots      import *
 from .gisplots          import *
 from .nwisextractor     import NWISExtractor

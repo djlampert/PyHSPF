@@ -45,18 +45,9 @@ end   = datetime.datetime(2010, 1, 1)      # end date for timeseries
 
 nwisextractor = NWISExtractor(NWIS)
 
-# download and decompress the source metadata files (this will be skipped if it
-# already exists)
-
-nwisextractor.download_metadata()
-
 # extract the gage stations into a new shapefile for the HUC8
 
 nwisextractor.extract_HUC8(HUC8, output)
-
-# open the metadata for the HUC8 gages
-
-nwisextractor.set_metadata(gagefile)
 
 # download all the daily flow and water quality data from the gage shapefile
 

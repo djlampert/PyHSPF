@@ -1099,7 +1099,7 @@ class NHDPlusDelineator:
 
         if self.damfile is not None:
 
-            dam_comids = find_flowlines(self.damfile, self.flowlinefile)
+            dam_comids = find_flowlines(self.damfile)
 
             for comid in dam_comids:
                 
@@ -1121,8 +1121,6 @@ class NHDPlusDelineator:
 
         if self.gagefile is not None:
 
-            gage_comids = find_flowlines(self.gagefile, self.flowlinefile)
-
             # check the gages and see if they meet the criteria for outlets
 
             gagereader  = Reader(self.gagefile, shapeType = 1)
@@ -1141,6 +1139,10 @@ class NHDPlusDelineator:
             gage_outlets = []
             last_HUC     = []
             next_HUC     = None
+
+            gage_comids = self.find_flowlines([s.points[0] 
+                                               for s in gagereader.shapes()])
+
             for record, comid in zip(gagerecords, gage_comids):
 
                 # make sure there are data

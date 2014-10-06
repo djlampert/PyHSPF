@@ -8,7 +8,7 @@ from numpy.distutils.core import Extension, setup
 from distutils            import sysconfig
 from urllib               import request
 
-_version   = '0.1.7'
+_version   = '0.1.8'
 _directory = '{}/pyhspf'.format(sysconfig.get_python_lib())
 
 _d = (

@@ -1,4 +1,4 @@
-# example9.py
+# example07.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #
@@ -22,7 +22,6 @@ output = 'HSPF_data'
 
 # HUC8 NHDPlus info (get from Horizon Systems website)
 
-drainid = 'MA'        # NHDPlus Drainage Area ID
 VPU     = '02'        # NHDPlus Vector Processing Unit
 HUC8    = '02060006'  # 8-digit HUC
 
@@ -33,7 +32,7 @@ cfile     = '{}/catchments'.format(output)     # HUC8 catchment shapefile
 bfile     = '{}/boundary'.format(output)       # HUC8 boundary shapefile
 VAAfile   = '{}/flowlineVAAs'.format(output)   # NHDPlus value added attributes
 elevfile  = '{}/elevations.tif'.format(output) # NED raster file
-waterplot = '{}/NHDPlus.png'.format(output)    # plot of the data
+waterplot = '{}/watershed.png'.format(output)  # plot of the data
 
 # title for the plot
 
@@ -42,7 +41,7 @@ title  = ('Cataloging Unit {}\n'.format(HUC8) +
 
 # create an instance of the NHDPlus extractor
 
-nhdplusextractor = NHDPlusExtractor(drainid, VPU, NHDPlus)
+nhdplusextractor = NHDPlusExtractor(VPU, NHDPlus)
 
 # download and decompress the source data
 
@@ -51,8 +50,3 @@ nhdplusextractor.download_data()
 # extract the HUC8 data for the Patuxent watershed
 
 nhdplusextractor.extract_HUC8(HUC8, output)
-
-# make a plot using the extracted files
-
-nhdplusextractor.plot_HUC8(flowfile, cfile, bfile, VAAfile, elevfile,
-                           title = title, output = waterplot)
