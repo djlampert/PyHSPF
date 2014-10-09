@@ -2,20 +2,23 @@
 #                                                                             
 # David J. Lampert (djlampert@gmail.com)
 #                                                                             
-# last updated: 08/18/2014
+# last updated: 10/08/2014
 #                                                                              
 # Purpose: Contains the NHDPlusDelineator class to analyze the NHDPlus data 
 # for a watershed and subdivide it according to the criteria specified.
 
 import os, shutil, time, pickle, numpy
 
+from multiprocessing         import Process
 from matplotlib              import pyplot, path, patches, colors, ticker
 from shapefile               import Reader, Writer
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from pyhspf.core             import Watershed, Subbasin
 
-from .merge_shapes import merge_shapes
+from .merge_shapes import format_shape, combine_shapes, merge_shapes
 from .raster       import get_raster, get_raster_on_poly, get_raster_in_poly
-from pyhspf.core   import Watershed, Subbasin
+from .gisplots     import plot_watershed
+from .gisplots     import plot_subbasin
 
 class NHDPlusDelineator:
     """A class to delineate a watershed using the NHDPlus data."""
@@ -102,7 +105,7 @@ class NHDPlusDelineator:
 
                 distance = max(bbox[2] - bbox[0], bbox[3] - bbox[1])
                 for p in points:
-                    distance = min(distance, get_distance(p, [x, y]))
+                    distance = min(distance, self.get_distance(p, [x, y]))
                 distances.append(distance)
 
             matches = [matches[distances.index(min(distances))]]
@@ -111,6 +114,113 @@ class NHDPlusDelineator:
             if warning: print('warning: unable to determine closest flowline')
             return None
         else: return matches[0]
+
+    def get_distance(self, p1, p2):
+        """Approximates the distance in kilometers between two points on the 
+        Earth's surface designated in decimal degrees using an ellipsoidal 
+        projection. per CFR 73.208 it is applicable for up to 475 kilometers.
+        p1 and p2 are listed as (longitude, latitude).
+        """
+
+        deg_rad = numpy.pi / 180
+
+        dphi = p1[1] - p2[1]
+        phim = 0.5 * (p1[1] + p2[1])
+        dlam = p1[0] - p2[0]
+
+        k1 = (111.13209 - 0.56605 * numpy.cos(2 * phim * deg_rad) + 0.00120 * 
+              numpy.cos(4 * phim * deg_rad))
+        k2 = (111.41513 * numpy.cos(phim * deg_rad) - 0.09455 * 
+              numpy.cos(3 * phim * deg_rad) + 0.0012 * 
+              numpy.cos(5 * phim * deg_rad))
+
+        return numpy.sqrt(k1**2 * dphi**2 + k2**2 * dlam**2)
+
+    def get_boundaries(self, shapes, space = 0.1):
+        """Gets the boundaries for the plot."""
+
+        boundaries = shapes[0].bbox
+        for shape in shapes[0:]:
+            b = shape.bbox
+            if b[0] < boundaries[0]: boundaries[0] = b[0]
+            if b[1] < boundaries[1]: boundaries[1] = b[1]
+            if b[2] > boundaries[2]: boundaries[2] = b[2]
+            if b[3] > boundaries[3]: boundaries[3] = b[3]
+
+        xmin = boundaries[0] - (boundaries[2] - boundaries[0]) * space
+        ymin = boundaries[1] - (boundaries[3] - boundaries[1]) * space
+        xmax = boundaries[2] + (boundaries[2] - boundaries[0]) * space
+        ymax = boundaries[3] + (boundaries[3] - boundaries[1]) * space
+
+        return xmin, ymin, xmax, ymax
+
+    def add_raster(self, 
+                   fig, 
+                   filename, 
+                   resolution, 
+                   extent, 
+                   colormap, 
+                   scale,
+                   ):
+        """adds a rectangular raster image with corners located at the extents
+        to a plot.
+        """
+
+        # flatten the arrays and set up an array for the raster
+
+        xmin, ymin, xmax, ymax = extent
+
+        xs = numpy.array([xmin + (xmax - xmin) / resolution * i 
+                          for i in range(resolution + 1)])
+        ys = numpy.array([ymax  - (ymax  - ymin)  / resolution * i 
+                          for i in range(resolution + 1)])
+
+        zs = numpy.zeros((resolution + 1, resolution + 1))
+
+        # iterate through the grid and fill the array
+
+        for i in range(len(ys)):
+            zs[i, :] = get_raster(filename, zip(xs, [ys[i]] * (resolution + 1)),
+                                  quiet = True)
+
+        # scale the values
+
+        zs = zs / scale
+        space = 0.1
+        mi, ma = zs.min(), zs.max()
+        mi, ma = mi - space * (ma - mi), ma + space * (ma - mi)
+        norm = colors.Normalize(vmin = mi, vmax = ma)
+
+        # plot the grid
+
+        return fig.imshow(zs, extent = [xmin, xmax, ymin, ymax], norm = norm, 
+                          cmap = colormap)
+
+    def make_patch(self,
+                   points, 
+                   facecolor, 
+                   edgecolor = 'Black', 
+                   width = 1, 
+                   alpha = None,
+                   hatch = None, 
+                   label = None,
+                   ):
+        """Uses a list or array of points to generate a matplotlib patch."""
+
+        vertices = [(point[0], point[1]) for point in points]
+        vertices.append((points[0][0], points[0][1]))
+
+        codes     = [path.Path.LINETO for i in range(len(points) + 1)]
+        codes[0]  = path.Path.MOVETO
+
+        patch = patches.PathPatch(path.Path(vertices, codes), 
+                                  facecolor = facecolor,
+                                  edgecolor = edgecolor, 
+                                  lw = width, 
+                                  hatch = hatch,
+                                  alpha = alpha, 
+                                  label = label)
+        return patch
 
     def find_flowlines(self, points):
         """Determines the comids of the flowlines in the flowline shapefile 
@@ -469,7 +579,7 @@ class NHDPlusDelineator:
 
         # create a dictionary to store subbasin data
 
-        subbasins = {}
+        self.subbasins = {}
 
         # create a dictionary to keep track of subbasin inlets
 
@@ -598,11 +708,11 @@ class NHDPlusDelineator:
 
             # store the subbasin info in the dictionary
 
-            subbasins[comid] = subbasin
+            self.subbasins[comid] = subbasin
 
         # create an instance of the watershed class
 
-        watershed = Watershed(gageid, subbasins)
+        watershed = Watershed(gageid, self.subbasins)
 
         # establish the mass linkages between the subbasins (convert to strings)
 
@@ -797,114 +907,6 @@ class NHDPlusDelineator:
         pyplot.savefig(output, dpi = 200)
         pyplot.close()
 
-
-    def get_distance(self, p1, p2):
-        """Approximates the distance in kilometers between two points on the 
-        Earth's surface designated in decimal degrees using an ellipsoidal 
-        projection. per CFR 73.208 it is applicable for up to 475 kilometers.
-        p1 and p2 are listed as (longitude, latitude).
-        """
-
-        deg_rad = numpy.pi / 180
-
-        dphi = p1[1] - p2[1]
-        phim = 0.5 * (p1[1] + p2[1])
-        dlam = p1[0] - p2[0]
-
-        k1 = (111.13209 - 0.56605 * numpy.cos(2 * phim * deg_rad) + 0.00120 * 
-              numpy.cos(4 * phim * deg_rad))
-        k2 = (111.41513 * numpy.cos(phim * deg_rad) - 0.09455 * 
-              numpy.cos(3 * phim * deg_rad) + 0.0012 * 
-              numpy.cos(5 * phim * deg_rad))
-
-        return numpy.sqrt(k1**2 * dphi**2 + k2**2 * dlam**2)
-
-    def get_boundaries(self, shapes, space = 0.1):
-        """Gets the boundaries for the plot."""
-
-        boundaries = shapes[0].bbox
-        for shape in shapes[0:]:
-            b = shape.bbox
-            if b[0] < boundaries[0]: boundaries[0] = b[0]
-            if b[1] < boundaries[1]: boundaries[1] = b[1]
-            if b[2] > boundaries[2]: boundaries[2] = b[2]
-            if b[3] > boundaries[3]: boundaries[3] = b[3]
-
-        xmin = boundaries[0] - (boundaries[2] - boundaries[0]) * space
-        ymin = boundaries[1] - (boundaries[3] - boundaries[1]) * space
-        xmax = boundaries[2] + (boundaries[2] - boundaries[0]) * space
-        ymax = boundaries[3] + (boundaries[3] - boundaries[1]) * space
-
-        return xmin, ymin, xmax, ymax
-
-    def add_raster(self, 
-                   fig, 
-                   filename, 
-                   resolution, 
-                   extent, 
-                   colormap, 
-                   scale,
-                   ):
-        """adds a rectangular raster image with corners located at the extents
-        to a plot.
-        """
-
-        # flatten the arrays and set up an array for the raster
-
-        xmin, ymin, xmax, ymax = extent
-
-        xs = numpy.array([xmin + (xmax - xmin) / resolution * i 
-                          for i in range(resolution + 1)])
-        ys = numpy.array([ymax  - (ymax  - ymin)  / resolution * i 
-                          for i in range(resolution + 1)])
-
-        zs = numpy.zeros((resolution + 1, resolution + 1))
-
-        # iterate through the grid and fill the array
-
-        for i in range(len(ys)):
-            zs[i, :] = get_raster(filename, zip(xs, [ys[i]] * (resolution + 1)),
-                                  quiet = True)
-
-        # scale the values
-
-        zs = zs / scale
-        space = 0.1
-        mi, ma = zs.min(), zs.max()
-        mi, ma = mi - space * (ma - mi), ma + space * (ma - mi)
-        norm = colors.Normalize(vmin = mi, vmax = ma)
-
-        # plot the grid
-
-        return fig.imshow(zs, extent = [xmin, xmax, ymin, ymax], norm = norm, 
-                          cmap = colormap)
-
-    def make_patch(self,
-                   points, 
-                   facecolor, 
-                   edgecolor = 'Black', 
-                   width = 1, 
-                   alpha = None,
-                   hatch = None, 
-                   label = None,
-                   ):
-        """Uses a list or array of points to generate a matplotlib patch."""
-
-        vertices = [(point[0], point[1]) for point in points]
-        vertices.append((points[0][0], points[0][1]))
-
-        codes     = [path.Path.LINETO for i in range(len(points) + 1)]
-        codes[0]  = path.Path.MOVETO
-
-        patch = patches.PathPatch(path.Path(vertices, codes), 
-                                  facecolor = facecolor,
-                                  edgecolor = edgecolor, 
-                                  lw = width, 
-                                  hatch = hatch,
-                                  alpha = alpha, 
-                                  label = label)
-        return patch
-
     def plot_gage_watershed(self, 
                             gage, 
                             title      = None,
@@ -1068,11 +1070,41 @@ class NHDPlusDelineator:
     
         pyplot.close()
 
-    def make_subbasin_outlets(self, 
+class UMRBDelineator(NHDPlusDelineator):
+    """An NHDPlusDelineator subclass to perform watershed delineation with 
+    NHDPlus data from a HUC8 that builds subbasins based on a maximum area, 
+    location of dams, and location of NWIS gages following extraction with
+    the NHDPlusExtractor.
+    """
+
+    def __init__(self,
+                 HUC8,
+                 attributefile, 
+                 flowlinefile, 
+                 catchmentfile, 
+                 elevfile,
+                 gagefile, 
+                 damfile,
+                 landuse = None,
+                 ):
+
+        NHDPlusDelineator.__init__(self, 
+                                   attributefile, 
+                                   flowlinefile, 
+                                   catchmentfile, 
+                                   elevfile,
+                                   gageid   = None,
+                                   gagefile = gagefile, 
+                                   damfile  = damfile,
+                                   landuse  = landuse,
+                                   )
+        self.HUC8 = HUC8
+
+    def make_subbasin_outlets(self,
                               extras   = None,
                               years    = None,
                               drainmax = None,
-                              verbose  = True
+                              verbose  = True,
                               ):
         """
         Creates a feature class of outlets containing all the data needed 
@@ -1099,14 +1131,6 @@ class NHDPlusDelineator:
 
         if self.damfile is not None:
 
-            dam_comids = find_flowlines(self.damfile)
-
-            for comid in dam_comids:
-                
-                if comid is not None and comid in hydroseqs: 
-                    
-                    outlets.append(comid)
-
             # read the dam file to find the outlet points
 
             damreader  = Reader(self.damfile, shapeType = 1)
@@ -1114,6 +1138,14 @@ class NHDPlusDelineator:
             damrecords = damreader.records()
 
             nid_index = damreader.fields.index(['NIDID', 'C', 7, 0]) - 1
+
+            dam_comids = self.find_flowlines(dampoints)
+
+            for comid in dam_comids:
+                
+                if comid is not None and comid in hydroseqs: 
+                    
+                    outlets.append(comid)
 
         else: dam_comids = []
 
@@ -1131,17 +1163,20 @@ class NHDPlusDelineator:
 
             day1_index  = gagereader.fields.index(['DAY1',    'N', 19, 0]) - 1
             dayn_index  = gagereader.fields.index(['DAYN',    'N', 19, 0]) - 1
+            drain_index = gagereader.fields.index(['DA_SQ_MILE','N',19,2]) - 1
             HUC8_index  = gagereader.fields.index(['HUC',     'C',  8, 0]) - 1
             site_index  = gagereader.fields.index(['SITE_NO', 'C', 15, 0]) - 1
             nwis_index  = gagereader.fields.index(['NWISWEB', 'C', 75, 0]) - 1
             ave_index   = gagereader.fields.index(['AVE',     'N', 19, 3]) - 1
 
-            gage_outlets = []
-            last_HUC     = []
-            next_HUC     = None
-
             gage_comids = self.find_flowlines([s.points[0] 
                                                for s in gagereader.shapes()])
+
+            # list of the comids of the gage outlets
+
+            gage_outlets = []
+
+            # iterate through the gages and see that they meet the criteria
 
             for record, comid in zip(gagerecords, gage_comids):
 
@@ -1165,12 +1200,13 @@ class NHDPlusDelineator:
                 # make sure it is not an inlet and that it's in the watershed
             
                 watershed_criteria = (flowlines[hydroseqs[comid]].up in 
-                                      flowlines and record[HUC8_index] == HUC8)
+                                      flowlines and record[HUC8_index] == 
+                                      self.HUC8)
 
                 existing = comid not in outlets
 
-                if all(data_criteria, year_criteria, watershed_criteria, 
-                       existing):
+                if all([data_criteria, year_criteria, watershed_criteria, 
+                        existing]):
 
                     gage_outlets.append(comid)
 
@@ -1185,7 +1221,7 @@ class NHDPlusDelineator:
 
         for comid in gage_outlets:
             outlets.append(comid)
-            if verbose: print('adding outlet %d for gage station' % comid)
+            if verbose: print('adding outlet {} for gage station'.format(comid))
 
         # find all the inlets
 
@@ -1203,7 +1239,7 @@ class NHDPlusDelineator:
 
         # check to see if there are two flowlines feeding the watershed outlet
 
-        for k,v in flowlines.items():
+        for k, v in flowlines.items():
             if (v.down == flowlines[hydroseqs[last_comid]].down and
                 v.comid != last_comid):
                 print('adding outlet for second watershed outlet at', 
@@ -1367,14 +1403,13 @@ class NHDPlusDelineator:
                         subbasins[subbasin].append(comid)
                         current.append(hydroseqs[comid])
 
+        # keep track of the subbasin dictionary
+
+        self.subbasins = subbasins
+
         # make a shapefile containing the outlet points
 
         if verbose: print('copying the projections\n')
-
-        # start by copying the projection files
-
-        shutil.copy(self.flowlinefile + '.prj', outletfile + '.prj')
-        shutil.copy(self.flowlinefile + '.prj', inletfile  + '.prj')
 
         # read the flowline and gage files
 
@@ -1469,7 +1504,11 @@ class NHDPlusDelineator:
                 w.point(point[0], point[1])
                 w.record(comid, reachcode, site_no, area, flow, gnis, nwis)
     
-            w.save(inletfile)
+            w.save(self.inletfile)
+
+            # copy the projection files
+
+            shutil.copy(self.flowlinefile + '.prj', self.inletfile  + '.prj')
 
         # create the outlet point file that will store the comid and reachcode
 
@@ -1508,7 +1547,7 @@ class NHDPlusDelineator:
 
             if outlet in dam_comids:
 
-                distances = [get_distance(point, p) for p in dampoints]
+                distances = [self.get_distance(point, p) for p in dampoints]
                 closest   = distances.index(min(distances))
 
                 dam_no = damrecords[closest][nid_index]
@@ -1521,7 +1560,7 @@ class NHDPlusDelineator:
 
             if outlet in gage_outlets:
 
-                distances = [get_distance(point, p) for p in gagepoints]
+                distances = [self.get_distance(point, p) for p in gagepoints]
                 closest   = distances.index(min(distances))
 
                 site_no = gagerecords[closest][site_index]
@@ -1542,22 +1581,15 @@ class NHDPlusDelineator:
                        next_gage.down in flowlines):
                     next_gage = flowlines[next_gage.down]
 
-                # see if the next_gage is outside the watershed, otherwise get 
-                # the flows from the gage file (note units)
+                # find the area for interpolating flows
 
-                if next_gage.comid == last_comid:
-                    next_drains = [r[drain_index] for r in down_gages]
-                    next_index  = next_drains.index(max(next_drains))
-                    next_flow   = down_gages[next_index][ave_index]
-                    next_area   = down_gages[next_index][drain_index]
-                else: 
-                    i = comids.index(next_gage.comid)
-                    next_point = flowreader.shape(i).points[-1]
-                    distances  = [get_distance(next_point, p) 
-                                  for p in gagepoints]
-                    closest    = distances.index(min(distances))
-                    next_flow  = gagerecords[closest][ave_index]
-                    next_area  = gagerecords[closest][drain_index] * 2.59
+                i = comids.index(next_gage.comid)
+                next_point = flowreader.shape(i).points[-1]
+                distances  = [self.get_distance(next_point, p) 
+                              for p in gagepoints]
+                closest    = distances.index(min(distances))
+                next_flow  = gagerecords[closest][ave_index]
+                next_area  = gagerecords[closest][drain_index] * 2.59
 
                 last_gage = flowlines[hydroseqs[comid]]
                 while (last_gage.comid not in gage_comids and
@@ -1567,18 +1599,16 @@ class NHDPlusDelineator:
                 # see whether it's at the top of the watershed or an inlet
                 # otherwise get the flows from the gage file (note units)
 
-                if last_gage.up == 0 or len(up_gages) == 0:
+                if last_gage.up == 0:
                     last_flow = 0
                     last_area = 0
                 elif last_gage.up not in flowlines: 
-                    last_drains = [r[drain_index] for r in up_gages]
-                    last_index  = last_drains.index(max(last_drains))
                     last_flow   = up_gages[last_index][ave_index]
                     last_area   = up_gages[last_index][drain_index]
                 else: 
                     i = comids.index(last_gage.comid)
                     last_point = flowreader.shape(i).points[-1]
-                    distances  = [get_distance(last_point, p) 
+                    distances  = [self.get_distance(last_point, p) 
                                   for p in gagepoints]
                     closest    = distances.index(min(distances))
                     last_flow  = gagerecords[closest][ave_index]
@@ -1592,9 +1622,13 @@ class NHDPlusDelineator:
             w.point(point[0], point[1])
             w.record(comid, reachcode, dam_no, site_no, area, flow, gnis, nwis)
     
-        w.save(outletfile)
+        w.save(self.outletfile)
 
-        with open(subbasinfile, 'wb') as f: pickle.dump(subbasins, f)
+        # copy the projection files
+
+        shutil.copy(self.flowlinefile + '.prj', self.outletfile + '.prj')
+
+        #with open(self.subbasinfile, 'wb') as f: pickle.dump(subbasins, f)
 
     def make_subbasin_flowlines(self, 
                                 comids, 
@@ -1605,7 +1639,7 @@ class NHDPlusDelineator:
         within a HUC8.
         """
 
-        if output is None: output = os.getcwd() + '/subbasin_flowlines'
+        if output is None: output = '{}/subbasin_flowlines'.format(os.getcwd())
 
         # start by copying the projection files
 
@@ -1658,7 +1692,8 @@ class NHDPlusDelineator:
         if verbose: print('successfully extracted subbasin flowlines')
 
     def combine_flowlines(self, 
-                          output = None, 
+                          inputfile,
+                          outputfile, 
                           overwrite = False,
                           verbose = True
                           ):
@@ -1666,15 +1701,14 @@ class NHDPlusDelineator:
         within a subbasin based on the NHDPlus dataset.
         """
 
-        if output is None: output = '{}/combined_flowline'.format(os.getcwd())
-
-        if os.path.isfile(output) and not overwrite:
-            if verbose: print('combined flowline shapefile %s exists' % output)
+        if os.path.isfile(outputfile + '.shp') and not overwrite:
+            if verbose: print('combined flowline shapefile ' +
+                              '{} exists'.format(outputfile))
             return
 
         # start by copying the projection files
 
-        shutil.copy(self.flowlinefile + '.prj', output + '.prj')
+        shutil.copy(inputfile + '.prj', outputfile + '.prj')
 
         # get the flowline attributes
 
@@ -1699,7 +1733,7 @@ class NHDPlusDelineator:
         # go through the reach indices, add add them to the list of flowlines if
         # they are in the watershed, and make a list of the corresponding comids
   
-        shapefile = Reader(self.flowlinefile, shapeType = 3)
+        shapefile = Reader(inputfile, shapeType = 3)
         records   = shapefile.records()
 
         # figure out which field code is the comid, reachcode, and gnis name
@@ -1777,16 +1811,14 @@ class NHDPlusDelineator:
 
         w.poly(shapeType = 3, parts = [points])
 
-        w.save(output)
+        w.save(outputfile)
 
         if verbose: 
             print('successfully combined subbasin ' +
                   '{} flowlines'.format(last_comid))
 
     def combine_subbasin_flowlines(self,
-                                   directory, 
-                                   comids, 
-                                   output, 
+                                   output,
                                    overwrite = False, 
                                    verbose = True
                                    ):
@@ -1801,27 +1833,28 @@ class NHDPlusDelineator:
         """
 
         l = Writer(shapeType = 3)
-        projection = None
-        fields     = None
 
-        for comid in comids:
-            filename = directory + '/%d/combined_flowline' % comid
+        # copy the fields
+
+        comid = [s for s in self.subbasins.keys()][0]
+        filename = '{}/{}/combined_flowline'.format(output, comid)
+        for field in Reader(filename).fields: l.field(*field)
+
+        # iterate to get the vector data from each combined flowline file
+
+        for comid in self.subbasins:
+
+            filename = '{}/{}/combined_flowline'.format(output, comid)
+
             if os.path.isfile(filename + '.shp'):
+
                 if verbose: print('found combined file %s\n' % filename)
-
-                # start by copying the projection files
-
-                if projection is None:
-                    projection = output + '.prj'
-                    shutil.copy(filename + '.prj', projection)
 
                 # read the new file
   
                 r = Reader(filename, shapeType = 3)
 
-                if fields is None:
-                    fields = r.fields
-                    for field in fields: l.field(*field)
+                # get the shape (only 1)
 
                 shape = r.shape(0)
 
@@ -1835,19 +1868,27 @@ class NHDPlusDelineator:
 
             elif verbose: print('unable to locate %s\n' % filename)
 
-        if fields is not None:  
-            l.save(output)
-            if verbose: print('successfully combined flowline shapefiles')
-        elif verbose: print('warning: unable to combine flowline shapefiles')
+        # save the merged file
 
-    def subdivide_watershed(self, 
-                            HUC8, 
-                            extra_outlets = None,
-                            drainmax = None, 
-                            outputpath = None,
-                            verbose = True, 
-                            vverbose = False
-                            ):
+        l.save(self.subbasinflowlines)
+
+        # copy the projection files
+
+        shutil.copy(filename + '.prj', self.subbasinflowlines + '.prj')
+
+        if verbose: print('successfully combined flowline shapefiles')
+
+    def delineate(self, 
+                  output,
+                  extra_outlets  = None,
+                  drainmax       = None,
+                  parallel       = True,
+                  subbasinplots  = False,
+                  watershedplots = True,
+                  form           = 'png',
+                  verbose        = True, 
+                  vverbose       = False,
+                  ):
         """
         Analyzes the GIS data, subdivides the watershed into subbasins 
         that are co-located with the gages and have drainage areas no larger 
@@ -1859,24 +1900,34 @@ class NHDPlusDelineator:
 
         start = time.time()
 
-        if outputpath is None: output = os.getcwd()
-        else:                  output = outputpath
-
         # subdivide the watershed using the USGS NWIS stations and any 
         # additional subbasins
 
-        attributefile = output + '/%s/flowlineVAAs'         %  HUC8
-        subbasinfile  = output + '/%s/subbasincomids'       %  HUC8
-        merged        = output + '/%s/%ssubbasin_flowlines' % (HUC8, HUC8)
-        outletfile    = output + '/%s/%ssubbasin_outlets'   % (HUC8, HUC8)
-        inletfile     = output + '/%s/%ssubbasin_inlets'    % (HUC8, HUC8)
+        its = output, self.HUC8
 
-        if (not os.path.isfile(subbasinfile) or 
-            not os.path.isfile(outletfile + '.shp') or
-            not os.path.isfile(merged + '.shp')):
+        self.outletfile         = '{}/{}/subbasin_outlets'.format(*its)
+        self.inletfile          = '{}/{}/subbasin_inlets'.format(*its)
+        self.subbasinflowlines  = '{}/{}/subbasin_flowlines'.format(*its)
+        self.subbasincatchments = '{}/{}/subbasin_catchments'.format(*its)
+        self.elevations         = '{}/{}/elevations.tif'.format(*its)
+        self.boundary           = '{}/{}/boundary'.format(*its)
+
+        # images
+
+        its = output, self.HUC8, form
+
+        self.preliminary = '{}/{}/preliminary.{}'.format(*its)
+        self.delineated  = '{}/{}/delineated.{}'.format(*its)
+
+        if (not os.path.isfile(self.outletfile        + '.shp') or
+            not os.path.isfile(self.subbasinflowlines + '.shp') or
+            not os.path.isfile(self.subbasinflowlines + '.shp') or
+            not os.path.isfile(self.subbasincatchments + '.shp')
+            ):
 
             if verbose: 
-                print('delineating HSPF watershed for USGS HUC %s\n' % HUC8)
+                print('delineating HSPF watershed for HUC ' +
+                      '{}\n'.format(self.HUC8))
 
             # add any additional outlets as a list of points (or None) and 
             # divide the flowfiles into subbasins above each of the subbasin 
@@ -1884,63 +1935,70 @@ class NHDPlusDelineator:
             # comid to the comids of all the tributaries up to the 
             # previous outlet
 
-            subbasins = self.make_subbasin_outlets(HUC8, 
-                                                   attributefile, 
-                                                   gagefile, 
-                                                   damfile, 
-                                                   flowfile, 
-                                                   outletfile, 
-                                                   inletfile, 
-                                                   subbasinfile, 
-                                                   drainmin = drainmin, 
-                                                   drainmax = drainmax, 
-                                                   extras = extra_outlets, 
-                                                   verbose = vverbose
-                                                   )
-
-        else: 
-            if verbose: print('HSPF watershed {} exists\n'.format(HUC8))
-            with open(subbasinfile, 'rb') as f: subbasins = pickle.load(f)
-
-        # divide the flowline shapefile into subbasin flowline shapefiles 
-
-        for subbasin in subbasins:
-            path = output + '/%s/%d' % (HUC8, subbasin)
-            flow = path + '/flowlines'
-        
-            # make a directory for the output if needed
-
-            if not os.path.isdir(path): os.mkdir(path)
-
-            # extract the flowlines if needed
-
-            if not os.path.isfile(flow + '.shp'):
-                make_subbasin_flowlines(flowfile, subbasins[subbasin], output = 
-                                        flow, verbose = vverbose)
-
-        # combine the flowlines in each subbasin into a combined shapefile
-
-        for subbasin in subbasins:
-            flow     = output + '/%s/%d/flowlines' % (HUC8, subbasin)
-            combined = output + '/%s/%d/combined_flowline' % (HUC8, subbasin)
-            if not os.path.isfile(combined + '.shp'):
-                combine_flowlines(attributefile, flow, output = combined, 
-                                  verbose = verbose)
-        if verbose: print('')
-
-        # merge the flowlines into a single file
-
-        if not os.path.isfile(merged + '.shp'):
-            combine_subbasin_flowlines(output + '/%s' % HUC8, 
-                                       subbasins, 
-                                       merged, 
-                                       overwrite = True, 
+            self.make_subbasin_outlets(drainmax = drainmax, 
+                                       extras = extra_outlets, 
                                        verbose = vverbose
                                        )
+
+            # divide the flowline shapefile into subbasin flowline shapefiles 
+
+            for subbasin, comids in self.subbasins.items():
+
+                path     = '{}/{}/{}'.format(output, self.HUC8, subbasin)
+                flow     = path + '/flowlines'
+                combined = path + '/combined_flowline'
+        
+                # make a directory for the output if needed
+
+                if not os.path.isdir(path): os.mkdir(path)
+
+                # extract the flowlines if needed
+
+                if not os.path.isfile(flow + '.shp'):
+
+                    self.make_subbasin_flowlines(comids,
+                                                 output = flow, 
+                                                 verbose = vverbose,
+                                                 )
+
+                # combine the flowlines into a single shapefile
+
+                if not os.path.isfile(combined + '.shp'):
+
+                    self.combine_flowlines(flow, 
+                                           combined, 
+                                           verbose = verbose
+                                           )
+
             if verbose: print('')
 
-        if verbose: print('successfully divided watershed in %.1f seconds\n' %
-                          (time.time() - start))
+            # merge the flowlines into a single file
+
+            if not os.path.isfile(self.subbasinflowlines + '.shp'):
+
+                combined = '{}/{}'.format(output, self.HUC8)
+                self.combine_subbasin_flowlines(combined,
+                                                overwrite = True, 
+                                                verbose = vverbose
+                                                )
+                if verbose: print('')
+
+            if verbose: 
+
+                print('successfully divided watershed in ' +
+                      '{:.1f} seconds\n'.format((time.time() - start)))
+
+            if not os.path.isfile(self.subbasincatchments + '.shp'):
+
+                self.make_subbasins(output,
+                                    subbasin_plots  = subbasinplots, 
+                                    watershed_plots = watershedplots, 
+                                    parallel        = parallel, 
+                                    verbose         = verbose, 
+                                    vverbose        = vverbose,
+                                    )
+
+        elif verbose: print('HSPF watershed {} exists\n'.format(self.HUC8))
 
     def get_distance_vector(self, catchpoints, closest):
         """Vectorized version of get_distance method 
@@ -2004,8 +2062,14 @@ class NHDPlusDelineator:
 
         return Cx, Cy
 
-    def combine_catchments(self, catchmentfile, flowfile, elevationfile, comid, 
-                           output = None, overwrite = False, verbose = True):
+    def combine_catchments(self, 
+                           catchmentfile, 
+                           flowfile, 
+                           comid, 
+                           output, 
+                           overwrite = False, 
+                           verbose = True
+                           ):
         """Combines together all the catchments in a basin catchment shapefile.
         Creates a new shapefile called "combined" in the same directory as the 
         original file.  Uses the elevation data from the raster file and the 
@@ -2015,8 +2079,6 @@ class NHDPlusDelineator:
 
         t0 = time.time()
         numpy.seterr(all = 'raise')
-
-        if output is None: output = os.getcwd() + r'\combined'
 
         if os.path.isfile(output + '.shp') and not overwrite:
             if verbose: print('combined catchment shapefile %s exists' % output)
@@ -2095,11 +2157,16 @@ class NHDPlusDelineator:
             catchment = c.shape(i)
             flowline  = f.shape(comids.index(featureids[i]))
 
-            catchpoints = get_raster_on_poly(elevationfile, catchment.points,
-                                             verbose = verbose)
+            catchpoints = get_raster_on_poly(self.elevations, 
+                                             catchment.points,
+                                             verbose = verbose
+                                             )
             catchpoints = numpy.array([p for p in catchpoints])
 
-            zs = get_raster(elevationfile, flowline.points, quiet = True)
+            zs = get_raster(self.elevations, 
+                            flowline.points, 
+                            quiet = True
+                            )
 
             flowpoints = numpy.array([[p[0], p[1], z] 
                                       for p, z in zip(flowline.points, zs)])
@@ -2137,12 +2204,14 @@ class NHDPlusDelineator:
         # get the centroid and the average elevation
 
         combined = [[float(x), float(y)] for x, y in combined]
-        centroid = get_centroid(numpy.array(combined))
+        centroid = self.get_centroid(numpy.array(combined))
 
         Cx, Cy = round(centroid[0], 4), round(centroid[1], 4)
 
-        elev_matrix, origin = get_raster_in_poly(elevationfile, combined, 
-                                                 verbose = verbose)
+        elev_matrix, origin = get_raster_in_poly(self.elevations, 
+                                                 combined, 
+                                                 verbose = verbose
+                                                 )
 
         elev_matrix = elev_matrix.flatten()
         elev_matrix = elev_matrix[elev_matrix.nonzero()]
@@ -2173,3 +2242,692 @@ class NHDPlusDelineator:
 
         if verbose: print('\ncompleted catchment combination in ' +
                           '%.1f seconds\n' % (time.time() - t0))
+
+    def make_subbasins(self, 
+                       output,
+                       subbasin_plots  = True, 
+                       watershed_plots = True, 
+                       parallel        = False, 
+                       verbose         = True, 
+                       vverbose        = False, 
+                       form = 'png',
+                       ):
+        """Extracts catchments from the watershed catchment file for each 
+        subbasin and then combines the catchments together and calculates 
+        slope parameters."""
+
+        start = time.time()
+
+        # paths to input/output files
+
+        #catchmentfile = directory + '/%s/%scatchments'     % (HUC8, HUC8)
+        #dem           = directory + '/%s/%selevations.tif' % (HUC8, HUC8)
+        #subbasinfile  = directory + '/%s/%ssubbasins'      % (HUC8, HUC8)
+        #boundaries    = directory + '/%s/%sboundaries'     % (HUC8, HUC8)
+        #comidfile     = directory + '/%s/subbasincomids'   %  HUC8
+
+        # image paths
+
+        #imagepath     = directory + '/%s/images'        %  HUC8
+        #preliminary   = imagepath + '/%spreliminary.%s' % (HUC8, form)
+        #delineated    = imagepath + '/%sdelineated.%s'  % (HUC8, form)
+
+        #preliminary = '{}'.format()
+
+        # open up the subbasin dictionaries
+
+        #with open(comidfile, 'rb') as f: subbasins = pickle.load(f)
+
+        # set up an output folder for images
+
+        #if not os.path.isdir(imagepath): os.mkdir(imagepath)
+
+        # divide the catchment shapefile into subbasin catchment shapefiles 
+
+        if parallel:
+
+            processes = []
+            for subbasin, names in self.subbasins.items():
+                its = output, self.HUC8, subbasin
+                catchments = '{}/{}/{}/catchments'.format(*its)
+
+                if not os.path.isfile(catchments + '.shp'):
+
+                    processes.append(Process(target = self.extract_catchments,
+                                             args = (names, catchments),
+                                             kwargs = {'verbose': vverbose}
+                                             )
+                                     )
+
+            for p in processes: p.start()
+            for p in processes: p.join()
+            processes = None
+
+        else:
+
+            for subbasin, names in self.subbasins.items():
+
+                its = output, self.HUC8, subbasin
+                catchments = '{}/{}/{}/catchments'.format(*its)
+
+                if not os.path.isfile(catchments + '.shp'):
+
+                    self.extract_catchments(names,
+                                            catchments, 
+                                            verbose = vverbose,
+                                            )
+
+        # combine the catchments in each subbasin into a single shapefile
+
+        if parallel and not os.path.isfile(self.subbasincatchments + '.shp'):
+
+            if verbose: print('attempting to combine subbasin catchments ' +
+                              'in parallel, this may take a while...\n')
+
+            processes = []
+            for subbasin in self.subbasins:
+
+                its = output, self.HUC8, subbasin
+                catchments = '{}/{}/{}/catchments'.format(*its)
+                flowlines  = '{}/{}/{}/flowlines'.format(*its)
+                combined   = '{}/{}/{}/combined'.format(*its)
+
+            #catchments = directory + '/%s/%d/catchments' % (HUC8, subbasin)
+            #flowlines  = directory + '/%s/%d/flowlines'  % (HUC8, subbasin)
+            #combined   = directory + '/%s/%d/combined'   % (HUC8, subbasin)
+
+                if not os.path.isfile(combined + '.shp'):
+
+                    processes.append(Process(target = self.combine_catchments, 
+                                             args   = (catchments, 
+                                                       flowlines,
+                                                       subbasin,
+                                                       combined,
+                                                       ),
+                                             kwargs = {'verbose': vverbose}
+                                             )
+                                     )
+
+            for p in processes: p.start()
+            for p in processes: p.join()
+            processes = None
+
+            if verbose: print('successfully combined catchments in parallel ' +
+                              'in {:.1f} seconds \n'.format(time.time() -start))
+
+        elif not os.path.isfile(self.subbasincatchments + '.shp'):
+
+            #for n, subbasin in zip(range(len(subbasins)), subbasins):
+            for subbasin in self.subbasins:
+
+                its = output, self.HUC8, subbasin
+                catchments = '{}/{}/{}/catchments'.format(*its)
+                flowlines  = '{}/{}/{}/flowlines'.format(*its)
+                combined   = '{}/{}/{}/combined'.format(*its)
+
+
+            #catchments = directory + '/%s/%d/catchments' % (HUC8, subbasin)
+            #flowlines  = directory + '/%s/%d/flowlines'  % (HUC8, subbasin)
+            #combined   = directory + '/%s/%d/combined'   % (HUC8, subbasin)
+                if not os.path.isfile(combined + '.shp'):
+                    try:
+
+                        self.combine_catchments(catchments, 
+                                                flowlines, 
+                                                subbasin, 
+                                                combined, 
+                                                verbose = vverbose
+                                                )
+
+                        if verbose: 
+
+                            print('successfully combined catchments in ' +
+                                  'subbasin {}\n'.format(subbasin))
+
+                    except:
+
+                        if verbose: 
+
+                            print('warning: unable to combine catchments ' + 
+                                  'in {}\n'.format(path))
+
+        # make the plots
+
+        if subbasin_plots:
+
+            for subbasin in self.subbasins:
+
+                its = output, self.HUC8, subbasin
+                prelim = '{}/{}/{}/preliminary.tif'.format(*its)
+                post   = '{}/{}/{}/combined.tif'.format(*its)
+
+                if not os.path.isfile(prelim):
+
+                    plot_subbasin(output, 
+                                       self.HUC8, 
+                                       subbasin, 
+                                       raster = 'elevation', 
+                                       catchments = True, 
+                                       flowlines  = True, 
+                                       outlets    = False, 
+                                       output = prelim,
+                                       verbose = vverbose
+                                       )
+
+                    #except: print('warning: failed to generate subbasin plot\n')
+
+                if not os.path.isfile(post):
+
+                    plot_subbasin(output, 
+                                       self.HUC8, 
+                                       subbasin, 
+                                       raster = 'elevation', 
+                                       catchments = False, 
+                                       flowlines  = False, 
+                                       outlets    = True, 
+                                       output = post,
+                                       verbose = vverbose
+                                       )
+
+                    #except: print('warning: failed to generate combined plot\n')
+
+        # put together the combined subbasins into a single file
+
+        if not os.path.isfile(self.subbasincatchments + '.shp'):
+
+            self.combine_subbasins(output, verbose = verbose)
+
+        if not os.path.isfile(self.boundary + '.shp'):
+
+            merge_shapes(self.subbasincatchments, 
+                         outputfile = boundaries, 
+                         verbose = verbose,
+                         vverbose = vverbose
+                         )
+
+        if watershed_plots:
+
+            if not os.path.isfile(self.preliminary):
+
+                plot_watershed(output, 
+                               self.HUC8, 
+                               raster = 'elevation', 
+                               dams = True,
+                               output = self.preliminary,
+                               verbose = verbose
+                               )
+            #except: print('unable to make preliminary plot for %s\n' % HUC8)
+
+            if not os.path.exists(self.delineated):
+
+                plot_watershed(output, 
+                               self.HUC8, 
+                               raster = 'elevation', 
+                               gages = 'calibration', 
+                               catchments = False, 
+                               flowlines = False, 
+                               dams = True, 
+                               output = self.delineated, 
+                               verbose = verbose
+                               )
+            #except: print('unable to make delineated plot for %s\n' % HUC8)
+
+        if verbose: 
+            print('completed subbasin delineation in ' +
+                  '{:.1f} seconds\n'.format(time.time() - start))
+
+    def extract_catchments(self, 
+                           comids, 
+                           output, 
+                           verbose = True
+                           ):
+        """Iterates through a catchment shapefile for a basin and makes a new
+        shapefile containing only catchments with comids from the "comids" list.
+        """
+
+        # start by copying the projection files
+
+        shutil.copy(self.catchmentfile + '.prj', output + '.prj')
+  
+        shapefile = Reader(self.catchmentfile, shapeType = 5)
+        records   = shapefile.records()
+
+        # figure out which field code is the comid
+
+        feature_index = shapefile.fields.index(['FEATUREID', 'N', 9,  0]) - 1
+
+        # go through the reach indices, add add them to the list of flowlines if
+        # they are in the watershed, and make a list of the corresponding comids
+
+        if verbose: print('searching for catchments\n')
+
+        indices = []
+   
+        i = 0
+        for record in records:
+            if record[feature_index] in comids:
+                indices.append(i)
+            i+=1
+
+        # write the data from the HUC8 to a new shapefile
+
+        w = Writer(shapeType = 5)
+
+        for field in shapefile.fields:  w.field(*field)
+
+        for i in indices:
+            shape  = shapefile.shape(i)
+            w.poly(shapeType = 5, parts = [shape.points])
+            w.record(*records[i])
+
+        w.save(output)
+
+        if verbose: print('successfully extracted catchments\n')
+
+    def combine_subbasins(self, 
+                          output,
+                          verbose = True
+                          ):
+        """Combines outlet subbasins for an 8-digit hydrologic unit into a 
+        single shapefile.  Assumes directory structure of:
+
+        directory\HUC8\comids\combined.shp 
+    
+        where comids are all the elements in a list of the subbasin outlets 
+        from the NHDPlus dataset.
+        """
+
+        if verbose: 
+            print('trying to combine subbasin shapefiles into a single file\n')
+
+        w = Writer(shapeType = 5)
+
+        projection = None
+        fields     = None
+
+        for comid in self.subbasins:
+
+            its = output, self.HUC8, comid
+            filename = '{}/{}/{}/combined'.format(*its)
+            if os.path.isfile(filename + '.shp'):
+
+                # start by copying the projection files
+
+                if projection is None:
+                    projection = self.subbasincatchments + '.prj'
+                    shutil.copy(filename + '.prj', projection)
+
+                # read the new file
+  
+                r = Reader(filename, shapeType=5)
+
+                if fields is None:
+                    fields = r.fields
+                    for field in fields: w.field(*field)
+
+                shape = r.shape(0)
+
+                # write the shape and record to the new file
+
+                w.poly(shapeType = 5, parts = [shape.points])
+                record = r.record(0)
+                w.record(*record)
+
+            elif verbose: print('unable to locate {}'.format(filename))
+
+        if fields is not None: 
+            w.save(self.subbasincatchments)
+            if verbose: print('successfully combined subbasin shapefiles\n')
+        elif verbose: print('unable to combine subbasins\n')
+
+def plot_watershed(directory, HUC8, raster = None, catchments = True, 
+                   flowlines = True, outlets = False, gages = 'all',
+                   dams = False, title = None, legend = True, grid = False, 
+                   patchcolor = None, output = None, show = False, 
+                   verbose = True):
+    """Makes a plot of all the flowlines and catchments of a basin on top of a
+    raster image file."""
+
+    # paths to the files used herein
+
+    cfile      = directory + '/%s/%scatchments'         % (HUC8, HUC8)
+    sfile      = directory + '/%s/%ssubbasins'          % (HUC8, HUC8)
+    bfile      = directory + '/%s/%sboundaries'         % (HUC8, HUC8)
+    flowfile   = directory + '/%s/%sflowlines'          % (HUC8, HUC8)
+    flowVAAs   = directory + '/%s/flowlineVAAs'         %  HUC8
+    dem        = directory + '/%s/%selevations.tif'     % (HUC8, HUC8)
+    crop       = directory + '/%s/%scropland.tif'       % (HUC8, HUC8)
+    combined   = directory + '/%s/%ssubbasin_flowlines' % (HUC8, HUC8)
+    outletfile = directory + '/%s/%ssubbasin_outlets'   % (HUC8, HUC8)
+    inletfile  = directory + '/%s/%ssubbasin_inlets'    % (HUC8, HUC8)
+    gagefile   = directory + '/%s/%sgagestations'       % (HUC8, HUC8)
+
+    if raster == 'elevation':
+        raster_file = dem
+        resolution = 400
+        colormap = 'gist_earth'
+        intensity = [100, 600]
+
+    if raster == 'cropland':
+        raster_file = crop
+        resolution = 400
+        colormap = 'summer_r'
+        intensity = None
+
+    if verbose: print('generating plot of watershed %s\n' % HUC8)
+
+    fig = pyplot.figure()
+    subplot = fig.add_subplot(111, aspect = 'equal')
+    subplot.tick_params(axis = 'both', which = 'major', labelsize = 10)
+
+    # add the title
+
+    if catchments: 
+        description = 'Catchments'
+        if flowlines:  description += ', Flowlines, and Gage Stations'
+        else:          description += ', Major Flowlines, and Gage Stations'
+    else:
+        description = 'Subbasins'
+        if flowlines:  description += ' and Flowlines'
+        else:          description += ', Major Flowlines, and Calibration Gages'
+
+    if raster == 'elevation': description = description + ' on 30 meter DEM'
+    if raster == 'cropland':  description = description + ', Crop Land Use'
+
+    if title is None: title = 'Cataloging Unit %s\n%s' % (HUC8, description)
+    subplot.set_title(title, fontsize = 14)
+
+    # open up and show the catchments
+
+    if patchcolor is None: facecolor = (1,0,0,0.)
+    else:                  facecolor = patchcolor
+
+    b = Reader(bfile, shapeType = 5)
+
+    points = np.array(b.shape(0).points)
+    subplot.add_patch(make_patch(points, facecolor = facecolor, width = 1.))
+
+    extent = get_boundaries(b.shapes(), space = 0.02)
+
+    xmin, ymin, xmax, ymax = extent
+
+    # figure out how far one foot is on the map
+
+    points_per_width = 72 * 8
+    ft_per_km = 3280.84
+    scale_factor = (points_per_width / 
+                    get_distance([xmin, ymin], [xmax, ymin]) / ft_per_km)
+
+    if catchments:
+        c = Reader(cfile, shapeType = 5)
+
+        # make patches of the catchment area
+
+        for i in range(len(c.records())):
+            catchment = c.shape(i)
+            points = np.array(catchment.points)
+            subplot.add_patch(make_patch(points, facecolor, width = 0.06))
+
+        if legend:
+
+            subplot.plot([-200, -199], [-200, -199], 'black', lw = 0.2,
+                         label = 'catchments')
+
+    else:
+        s = Reader(sfile, shapeType = 5)
+
+        # make patches of the subbasins
+
+        for i in range(len(s.records())):
+            shape = s.shape(i)
+            points = np.array(shape.points)
+            subplot.add_patch(make_patch(points, facecolor, width = 0.15))
+
+        if legend:
+
+            subplot.plot([-200, -199], [-200, -199], 'black', lw = 0.3,
+                         label = 'subbasins')
+
+    # get the flowline attributes, make an "updown" dictionary to follow flow,
+    # and change the keys to comids
+
+    f = open(flowVAAs, 'rb')
+    flowlineVAAs = pickle.load(f)
+    f.close()
+
+    updown = {}
+    for f in flowlineVAAs:
+        if flowlineVAAs[f].down in flowlineVAAs:
+            updown[flowlineVAAs[f].comid] = \
+                flowlineVAAs[flowlineVAAs[f].down].comid
+
+    flowlineVAAs = {flowlineVAAs[f].comid:flowlineVAAs[f] for f in flowlineVAAs}
+
+    # open up and show the flowfiles
+
+    f = Reader(flowfile, shapeType = 3)
+    comid_index = f.fields.index(['COMID', 'N',  9, 0]) - 1
+
+    all_comids = [r[comid_index] for r in f.records()]
+
+    if flowlines:     # show all the flowfiles 
+        
+        # get the flows and velocities from the dictionary
+        
+        widths = []
+        comids = []
+        for comid in all_comids:
+            if comid in flowlineVAAs:
+                flow = flowlineVAAs[comid].flow
+                velocity = flowlineVAAs[comid].velocity
+
+                # estimate flow width (ft) assuming triangular 90 deg channel 
+
+                comids.append(comid)
+                widths.append(math.sqrt(4 * flow / velocity))
+        
+        # convert widths in feet to points on the figure; exaggerated by 10
+
+        widths = [w * scale_factor * 10 for w in widths]
+
+        # get the flowline and the corresponding catchment
+
+        for comid, w in zip(comids, widths):
+
+            i = all_comids.index(comid)
+            flowline = np.array(f.shape(i).points)
+
+            # plot it
+
+            subplot.plot(flowline[:, 0], flowline[:, 1], 'b', lw = w)
+
+        if legend:
+
+            avg_width = sum(widths) / len(widths)
+            subplot.plot([-200, -199], [-200, -199], 'b', lw = 5 * avg_width,
+                         label = 'flowlines')
+
+    else: # use the combined flowlines
+
+        c = Reader(combined, shapeType = 3)
+
+        comids = []
+        for r in c.records():
+
+            inlet_comid  = r[c.fields.index(['InletComID', 'N', 9, 0])  - 1]
+            outlet_comid = r[c.fields.index(['OutComID', 'N', 9, 0]) - 1]
+
+            # get the primary flowline from the hydroseqs
+
+            comids.append(inlet_comid)
+
+            if inlet_comid in updown:
+                while updown[comids[-1]] in updown:
+                    comids.append(updown[comids[-1]])
+                if outlet_comid not in comids: comids.append(outlet_comid)
+
+        # get the flows and velocities from the dictionary
+
+        widths = []
+        for comid in comids:
+            flow     = flowlineVAAs[comid].flow
+            velocity = flowlineVAAs[comid].velocity
+
+            # estimate the flow width in feet assuming triangular 90 deg channel
+
+            widths.append(math.sqrt(4 * flow / velocity))
+                
+        # convert widths in feet to points on the figure; exaggerated by 10
+
+        widths = [w * scale_factor * 10 for w in widths]
+
+        # get the flowline and the corresponding catchment
+
+        for comid, w in zip(comids, widths):
+
+            i = all_comids.index(comid)
+            flowline = np.array(f.shape(i).points)
+
+            # plot it
+
+            subplot.plot(flowline[:, 0], flowline[:, 1], 'b', lw = w)
+
+        if legend:
+
+            avg_width = sum(widths) / len(widths)
+            subplot.plot([-200, -199], [-200, -199], 'b', lw = 3 * avg_width,
+                         label = 'flowlines')
+
+    if outlets:
+
+        f = Reader(outletfile, shapeType = 1)
+
+        outlet_shapes = f.shapes()
+        outlet_records = f.records()
+        flow_index = f.fields.index(['AVG_FLOW', 'N', 15, 3]) - 1
+        flows = [r[flow_index] for r in outlet_records]
+        outlet_points = [o.points[0] for o in outlet_shapes]
+        x1, y1 = zip(*outlet_points)
+        subplot.scatter(x1, y1, marker = 'o', c = 'r', s = 30, 
+                        label = 'outlets')
+
+        if os.path.isfile(inletfile + '.shp'): 
+            f = Reader(inletfile, shapeType = 1)
+            inlet_shapes = f.shapes()
+            inlet_points = [s.points[0] for s in inlet_shapes]
+            inlet_flows = [r[flow_index] for r in f.records()]
+            x2, y2 = zip(*inlet_points)
+            subplot.scatter(x2, y2, marker = 'o', c = 'b', s = 30)
+
+    if gages == 'all':
+        
+        f = Reader(gagefile, shapeType = 1)
+
+        gage_shapes = f.shapes()
+        gage_points = [g.points[0] for g in gage_shapes]
+
+        x1, y1 = zip(*gage_points)
+        subplot.scatter(x1, y1, marker = 'o', c = 'r', s = 30, label = 'gauges')
+
+    elif gages == 'calibration': # show gages used for calibration
+
+        f1 = Reader(outletfile, shapeType = 1)
+
+        outlet_records = f1.records()
+
+        site_index = f1.fields.index(['SITE_NO', 'C', 15, 0]) - 1
+        flow_index = f1.fields.index(['AVG_FLOW', 'N', 15, 3]) - 1
+
+        flows = [r[flow_index] for r in outlet_records]
+        sites = [r[site_index] for r in outlet_records]
+
+        f2 = Reader(gagefile, shapeType = 1)
+
+        gage_shapes  = f2.shapes()
+        gage_records = f2.records()
+
+        site_index = f2.fields.index(['SITE_NO', 'C', 15, 0]) - 1
+
+        gage_points = []
+        for shape, record in zip(gage_shapes, gage_records):
+
+            if record[site_index] in sites:
+
+                gage_points.append(shape.points[0])
+
+        x1, y1 = zip(*gage_points)
+        subplot.scatter(x1, y1, marker = 'o', c = 'r', s = 30, label = 'gauges')
+
+    if dams:  # show dams
+
+        f = Reader(outletfile, shapeType = 1)
+
+        outlet_records = f.records()
+
+        dam_index = f.fields.index(['NIDID', 'C', 7, 0]) - 1
+
+        nidids = [r[dam_index] for r in outlet_records]
+
+        dam_points = []
+        for nid, s in zip(nidids, f.shapes()):
+            if isinstance(nid, bytes): nid = nid.decode('utf-8')
+            nid = nid.strip()
+
+            if len(nid) > 0:
+                
+                dam_points.append(s.points[0])
+
+        x1, y1 = zip(*dam_points)
+        subplot.scatter(x1, y1, marker = 's', c = 'y', s = 30, label = 'dams')
+
+    subplot.set_xlabel('Longitude, Decimal Degrees', size = 13)
+    subplot.set_ylabel('Latitude, Decimal Degrees',  size = 13)
+
+    # add the raster
+
+    if raster is 'elevation':
+
+        im = add_raster(subplot, raster_file, resolution, extent, colormap, 
+                        intensity, scale = 100) 
+
+        divider = make_axes_locatable(subplot)
+        cax = divider.append_axes('right', size = 0.16, pad = 0.16)
+        colorbar = fig.colorbar(im, cax = cax, orientation = 'vertical')
+        colorbar.set_label('Elevation, m', size = 12)
+        cbax = pyplot.axes(colorbar.ax)
+        yaxis = cbax.get_yaxis()
+        ticks = yaxis.get_majorticklabels()
+        for t in ticks: t.set_fontsize(10)
+
+    elif raster is 'cropland':
+
+        im = add_scatter(subplot, raster_file, subbasinpoints)
+
+    else:
+
+        pyplot.xlim([xmin, xmax])
+        pyplot.ylim([ymin, ymax])
+
+    if grid:
+
+        subplot.xaxis.set_minor_locator(MultipleLocator(0.1))
+        subplot.yaxis.set_minor_locator(MultipleLocator(0.1))
+
+        subplot.xaxis.grid(True, 'minor', linestyle = '-', linewidth = 0.5)
+        subplot.yaxis.grid(True, 'minor', linestyle = '-', linewidth = 0.5)
+
+    if legend: 
+        leg = subplot.legend(loc = 'upper right')
+        leg.get_frame().set_alpha(0.)
+        legtext = leg.get_texts()
+        pyplot.setp(legtext, fontsize = 10)
+
+    # show it
+
+    pyplot.tight_layout()
+
+    if output is not None:  pyplot.savefig(output)
+
+    if show: pyplot.show()
+
+    pyplot.close()

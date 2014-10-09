@@ -46,8 +46,9 @@ import os, time, datetime
 # local imports
 
 from .nhdplusextractor    import NHDPlusExtractor
-from .delineators         import NHDPlusDelineator
+from .delineators         import UMRBDelineator#, NHDPlusDelineator
 from .nwisextractor       import NWISExtractor
+from .nidextractor        import NIDExtractor
 from .extract_gis_data    import extract_gis_data
 from .subdivide_watershed import subdivide_watershed
 from .make_subbasins      import make_subbasins
@@ -99,18 +100,20 @@ def preprocess(network,
     NED      = '{}/NEDSnapshot'.format(NHDPlus)
     NWIS     = '{}/NWIS'.format(network)
     NASS     = '{}/NASS'.format(network)
-    NID      = '{}/NID/dams00x020'.format(network)
+    NID      = '{}/NID'.format(network)
     AQUI     = '{}/Aquifers/aquifrp025'.format(network)
 
     # file paths
 
     gagepath     = '{0}/{1}/NWIS'.format(output, HUC8)
-    subbasinfile = '{0}/{1}/{1}subbasins'.format(output, HUC8)
-    outletfile   = '{0}/{1}/{1}subbasin_outlets'.format(output, HUC8)
-    gagefile     = '{0}/{1}/{1}gagestations'.format(output, HUC8)
-    damfile      = '{0}/{1}/{1}dams'.format(output, HUC8)
+    subbasinfile = '{0}/{1}/subbasins'.format(output, HUC8)
+    inletfile    = '{0}/{1}/subbasin_inlets'.format(output, HUC8)
+    outletfile   = '{0}/{1}/subbasin_outlets'.format(output, HUC8)
+    gagefile     = '{0}/{1}/gagestations'.format(output, HUC8)
+    damfile      = '{0}/{1}/dams'.format(output, HUC8)
     landfile     = '{0}/{1}/subbasinlanduse'.format(output, HUC8)
     VAAfile      = '{0}/{1}/flowlineVAAs'.format(output, HUC8)
+    bfile        = '{0}/{1}/boundary'.format(output, HUC8)
     cfile        = '{0}/{1}/catchments'.format(output, HUC8)
     flowfile     = '{0}/{1}/flowlines'.format(output, HUC8)
     elevfile     = '{0}/{1}/elevations'.format(output, HUC8)
@@ -125,10 +128,6 @@ def preprocess(network,
 
         nhdplusextractor = NHDPlusExtractor(HUC8[:2], NHDPlus)
 
-        # download the source data from NHDPlusV2 if necessary
-
-        nhdplusextractor.download_data()
-
         # extract the HUC8 data for the Patuxent watershed
 
         nhdplusextractor.extract_HUC8(HUC8, output)
@@ -137,31 +136,53 @@ def preprocess(network,
 
         nwisextractor = NWISExtractor(NWIS)
 
-        # extract the gage stations into a new shapefile for the HUC8
+        # extract the gage stations into a new shapefile for the HUC8 and place
+        # them into the newly generated directory for the HUC8
 
-        nwisextractor.extract_HUC8(HUC8, output)
+        nwisextractor.extract_HUC8(HUC8, '{}/{}'.format(output, HUC8))
 
-        # download all the gage data
+        # download all the gage data to the gagepath directory
 
         nwisextractor.download_all(datetime.datetime(start, 1, 1),
                                    datetime.datetime(end, 1, 1), 
                                    output = gagepath)
+
+        # extract the dam data from the NID
+
+        nidextractor = NIDExtractor(NID)
+
+        # extract dams in the HUC8 using the shapefile for the boundary
+
+        nidextractor.extract_shapefile(bfile, damfile)
 
         #extract_gis_data(NHDPlus, NED, NWIS, NASS, NID, AQUI, RPU, HUC8, state,
         #                 years, outputpath = output, parallel = parallel, 
         #                 overwrite = overwrite, verbose = verbose,
         #                 vverbose = vverbose)
 
+    # create an instance of the UMRBDelineator to use to delineate the watershed
+
+    delineator = UMRBDelineator(HUC8, VAAfile, flowfile, cfile, elevfile,
+                                gagefile, damfile)
+
     # delineate the watershed using the NHDPlus data and delineator
 
-    delineator = NHDPlusDelineator(VAAfile, flowfile, cfile, elevfile,
-                                   gagefile = gagefile)
+    delineator.delineate(output, 
+                         drainmax = drainmax, 
+                         extra_outlets = extra_outlets,
+                         verbose = vverbose,
+                         )
 
     # subdivide the watershed to meet the subbasin criteria
 
-    subbasins = delineator.make_subbasin_outlets(drainmax = drainmax, 
-                                                 extras = extra_outlets, 
-                                                 verbose = vverbose)
+    #subbasins = delineator.make_subbasin_outlets(HUC8,
+    #                                             outletfile,
+    #                                             inletfile,
+    #                                             subbasinfile,
+    #                                             drainmax = drainmax, 
+    #                                             extras = extra_outlets, 
+    #                                             verbose = verbose
+    #                                             )
     
 
 #    if subdivide:

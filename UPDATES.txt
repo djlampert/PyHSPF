@@ -25,8 +25,9 @@ Added example7.py to illustrate the use of special actions
 
 Version 0.1.4
 
-Changed directories to one source "src" (trying to use the GitHub version contorl--future release will be "forks").
-Modified the setup.py file to remove the download from source, and make directory "misc" that has a file that can compile HSPF (separate from Python) and generate the message file.
+Changed directories to one source "src" (trying to use the GitHub version control--future release will be "forks").
+Modified the setup.py file to remove the download from source
+make directory "misc" that has a file that can compile HSPF (separate from Python) and generate the message file.
 Re-organized and updated climate data extraction tools
 New example climate data download tools
 New tests running existing HSPF UCI files from the main HSPF source code
@@ -55,6 +56,8 @@ Added AutoCalibrator
 Added hunting.py example--comprehensive build of HSPF model including all source data and autocalibration
 
 Version 0.1.8
+Added extractor class for National Inventory of Dams (NID)
+Added UMRBDelineator subclass for NHDPlusExtractor
 Added storm plot features to postprocessor
 Removed redundant specification of outlets in the Watershed masslink dictionary
 Improved NHDPlusExtractor to deal with organization of files on their server

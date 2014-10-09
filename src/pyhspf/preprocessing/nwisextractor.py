@@ -341,10 +341,6 @@ if __name__ == '__main__':
 
     extractor = NWISExtractor(NWIS)
 
-    # download and decompress the source metadata files
-
-    extractor.download_metadata()
-
     # extract the gage stations for the HUC8
 
     extractor.extract_HUC8(HUC8, output = '{}/{}'.format(output, gagefile))

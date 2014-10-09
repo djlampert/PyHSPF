@@ -661,6 +661,10 @@ class NHDPlusExtractor:
         Output shapefiles are written to the optional "output" directory.
         """
 
+        # if the source data doesn't exist locally, download it
+
+        self.download_data()
+
         start = time.time()
 
         # if the destination folder does not exist, make it
@@ -777,8 +781,8 @@ class NHDPlusExtractor:
     
         # merge the shapes into a watershed
 
-        bfile = '{}/{}.shp'.format(output, boundaryfile)
-        if not os.path.exists(bfile):
+        bfile = '{}/{}'.format(output, boundaryfile)
+        if not os.path.exists(bfile + '.shp'):
 
             cfile = '{}/{}'.format(output, catchmentfile)
             merge_shapes(cfile, outputfile = bfile)
@@ -789,7 +793,7 @@ class NHDPlusExtractor:
 
             flowfile = '{}/{}'.format(output, flowlinefile)
             cfile    = '{}/{}'.format(output, catchmentfile)
-            bfile    = '{}/{}.shp'.format(output, boundaryfile)
+            bfile    = '{}/{}'.format(output, boundaryfile)
             VAAfile  = '{}/{}'.format(output, VAAfile)
             elevfile = '{}/{}'.format(output, elevfile)
             pfile    = '{}/{}'.format(output, plotfile)

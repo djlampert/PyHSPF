@@ -33,8 +33,10 @@ __all__ = [
     'raster',
     'subdivide_watershed',
     'NWISExtractor',
+    'NIDExtractor',
     'NHDPlusExtractor',
     'NHDPlusDelineator',
+    'UMRBDelineator',
     'GHCNDStation',
     'GSODStation',
     'Precip3240Station',
@@ -53,8 +55,10 @@ from .preprocess        import preprocess
 from .climateplots      import *
 from .gisplots          import *
 from .nwisextractor     import NWISExtractor
+from .nidextractor      import NIDExtractor
 from .nhdplusextractor  import NHDPlusExtractor
 from .delineators       import NHDPlusDelineator
+from .delineators       import UMRBDelineator
 from .dbf               import read_dbf
 from .ncdcstations      import NSRDBStation
 from .ncdcstations      import GSODStation

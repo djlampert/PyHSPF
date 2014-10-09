@@ -233,9 +233,9 @@ def merge_shapes(inputfile, outputfile = None, overwrite = False,
                  verbose = True, vverbose = False):
     """Merges all the shapes in a shapefile into a single shape."""
 
-    if outputfile is None: output = os.getcwd() + r'\merged'
+    if outputfile is None: output = '{}/merged'.format(os.getcwd())
 
-    if os.path.isfile(outputfile) and not overwrite:
+    if os.path.isfile(outputfile + '.shp') and not overwrite:
         if verbose: print('combined watershed shapefile %s exists' % outputfile)
         return
    
