@@ -25,10 +25,8 @@ from pyhspf.preprocessing import preprocess
 # 8-digit hydrologic unit code of interest; the lists here of states, years,
 # and RPUs are just used to point to location of the data files below
 
-VPU       = '07'           # NHDPlus Vector Processing Unit
 HUC8   = '07080106'
 state = 'ia'
-RPU   = '7b'
 start = 2001
 end   = 2010
 

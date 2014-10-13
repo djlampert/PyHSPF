@@ -13,7 +13,7 @@ from shapefile       import Reader
 from numpy           import array, unique, argwhere
 from multiprocessing import Process
 
-from .raster import get_raster_in_poly
+from .rasterutils import get_raster_in_poly
 
 def is_number(s):
     try: float(s) 

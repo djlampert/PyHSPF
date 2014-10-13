@@ -6,7 +6,7 @@
 #                                                                             #
 # David J. Lampert, PhD, PE                                                   #
 #                                                                             #
-# last updated: 09/26/2014                                                    #
+# last updated: 10/09/2014                                                    #
 #                                                                             #
 # Purpose: Extracts GIS data from sources and builds the input file for HSPF  #
 # for a given set of assumptions for a USGS 8-digit Watershed. Details below. #
@@ -46,14 +46,15 @@ import os, time, datetime
 # local imports
 
 from .nhdplusextractor    import NHDPlusExtractor
-from .delineators         import UMRBDelineator#, NHDPlusDelineator
 from .nwisextractor       import NWISExtractor
 from .nidextractor        import NIDExtractor
-from .extract_gis_data    import extract_gis_data
-from .subdivide_watershed import subdivide_watershed
-from .make_subbasins      import make_subbasins
-from .calculate_landuse   import calculate_landuse
-from .landuse_stats       import landuse_stats
+from .delineators         import HUC8Delineator
+#from .extract_gis_data    import extract_gis_data
+#from .subdivide_watershed import subdivide_watershed
+#from .make_subbasins      import make_subbasins
+#from .calculate_landuse   import calculate_landuse
+#from .landuse_stats       import landuse_stats
+from .cdlextractor        import CDLExtractor
 from .build_watershed     import build_watershed
 from .make_gagestations   import make_gagestations
 from .download_climate    import download_climate
@@ -68,26 +69,27 @@ def preprocess(network,
                landcodes = 'aggregate.csv', 
                drainmin = 0, 
                drainmax = 400, 
-               extra_outlets = None,
-               overwrite = False, 
-               verbose = True, 
-               vverbose = False, 
-               parallel = True, 
-               extract = True, 
-               subdivide = True, 
-               subbasins = True, 
-               landuse = True, 
-               landstats = True, 
-               build = True, 
-               climate = True, 
-               gagedata = True,
-               subbasinplots = False, 
+               extra_outlets  = None,
+               overwrite      = False, 
+               verbose        = True, 
+               vverbose       = False, 
+               parallel       = True, 
+               extract        = True, 
+#               subdivide      = True, 
+#               subbasins      = True, 
+               delineate      = True,
+               landuse        = True, 
+               landstats      = True, 
+               build          = True, 
+               climate        = True, 
+               gagedata       = True,
+               subbasinplots  = False, 
                watershedplots = True, 
-               landplots = True,
-               landpercents = False, 
-               flowplots = True, 
-               metstatplots = True,
-               metgageplots = True,
+               landplots      = True,
+               landpercents   = False, 
+               flowplots      = True, 
+               metstatplots   = True,
+               metgageplots   = True,
                ):
     """Preprocess the data for HSPF."""
 
@@ -95,11 +97,10 @@ def preprocess(network,
 
     # source data locations on the network
 
-    #NHDPlus  = '{}/NHDPlus/NHDPlusMS/NHDPlus07'.format(network)
     NHDPlus  = '{}/NHDPlus'.format(network)
     NED      = '{}/NEDSnapshot'.format(NHDPlus)
     NWIS     = '{}/NWIS'.format(network)
-    NASS     = '{}/NASS'.format(network)
+    CDL      = '{}/CDL'.format(network)
     NID      = '{}/NID'.format(network)
     AQUI     = '{}/Aquifers/aquifrp025'.format(network)
 
@@ -155,23 +156,44 @@ def preprocess(network,
 
         nidextractor.extract_shapefile(bfile, damfile)
 
-        #extract_gis_data(NHDPlus, NED, NWIS, NASS, NID, AQUI, RPU, HUC8, state,
-        #                 years, outputpath = output, parallel = parallel, 
-        #                 overwrite = overwrite, verbose = verbose,
-        #                 vverbose = vverbose)
+        # extract cropland data from NASS
 
-    # create an instance of the UMRBDelineator to use to delineate the watershed
+        cdlextractor = CDLExtractor(CDL)
 
-    delineator = UMRBDelineator(HUC8, VAAfile, flowfile, cfile, elevfile,
-                                gagefile, damfile)
+        # download the data for each state for each year
 
-    # delineate the watershed using the NHDPlus data and delineator
+        cdlextractor.download_data(state.upper(), years)
 
-    delineator.delineate(output, 
-                         drainmax = drainmax, 
-                         extra_outlets = extra_outlets,
-                         verbose = vverbose,
-                         )
+        # extract the data for the bounding box
+
+        bbox = -93.3, 41.2, -92, 42.1
+        for year in years:
+            
+            cdl = '{}/{}_CDL_{}.tif'.format(output, state, year)
+            cdlextractor.extract_bbox(state.upper(), year, bbox, cdl)
+
+    if delineate:
+
+        # create an instance of the UMRBDelineator to delineate the watershed
+
+        delineator = HUC8Delineator(HUC8, 
+                                    VAAfile, 
+                                    flowfile, 
+                                    cfile, 
+                                    elevfile,
+                                    gagefile, 
+                                    damfile
+                                    )
+
+        # delineate the watershed using the NHDPlus data and delineator
+
+        delineator.delineate(output, 
+                             parallel      = parallel,
+                             drainmax      = drainmax, 
+                             extra_outlets = extra_outlets,
+                             verbose       = verbose,
+                             vverbose      = vverbose,
+                             )
 
     # subdivide the watershed to meet the subbasin criteria
 
@@ -183,25 +205,6 @@ def preprocess(network,
     #                                             extras = extra_outlets, 
     #                                             verbose = verbose
     #                                             )
-    
-
-#    if subdivide:
-    if 1==2:
-        subdivide_watershed(HUC8, flowfile, gagefile, damfile, 
-                            drainmin = drainmin, 
-                            drainmax = drainmax, extra_outlets = extra_outlets,
-                            outputpath = output, verbose = verbose, 
-                            vverbose = vverbose) 
-
-    # make the subbasins from the outlets (time-consuming)
-
-    if 1==2:
-    #if subbasins:
-        make_subbasins(HUC8, output, subbasin_plots = subbasinplots, 
-                       watershed_plots = watershedplots, parallel = 
-                       parallel, verbose = verbose, vverbose = vverbose)
-
-    # calculate the landuse statistics for each year and each subbasin
 
     if 1==2:
     #if landuse:
@@ -256,6 +259,6 @@ def preprocess(network,
     if not os.path.isdir(hspfdirectory): os.mkdir(hspfdirectory)
 
     if verbose: 
-        print('\ncompleted preprocessing watershed in %.1f seconds\n' % 
+        print('completed preprocessing watershed in %.1f seconds\n' % 
               (time.time() - go))
 

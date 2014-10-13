@@ -1,5 +1,5 @@
-PyHSPF, Version 0.1.7
-last updated: 08/02/2014
+PyHSPF, Version 0.1.8
+last updated: 10/12/2014
 Developed by David J. Lampert and May M. Wu, Argonne National Laboratory
 
 Summary: PyHSPF contains a library of subroutines to run the Hydrological 
@@ -51,16 +51,16 @@ Python Imaging Library (Pillow)
 
 Installation: Extract the source zip files, then open a command prompt,
 navigate to the PyHSPF directory, and run "python setup.py install." 
-I am providing a few pre-built distributions in addition, although I
-cannot guarantee that they will port to different machines. The binaries 
+I am providing a few pre-built distributions in addition, although these
+cannot be guaranteed to port to different machines. The binaries 
 can be rebuilt using the open source GNU compiler collection (other 
 compilers may work but are untested). The HSPF13 folder contains the 
 source code including some minor modifications needed to simplify the 
 compilation. Assuming gfortran and gcc are available as environment 
 variables, the HSPF library can be rebuilt by navigating as before, 
 running "python setup.py build," and then (as adminstrator) 
-"python setup.py install." Contact me if you have trouble with the 
-installation.
+"python setup.py install." Do not hesitate to contact the develop if 
+there are problems with the installation.
 
 Testing: Open the Python interpreter (from a command prompt simply type 
 "python"). Then try "import pyhspf"; the base Fortran subroutines can be

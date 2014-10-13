@@ -21,10 +21,10 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # local imports
 
-from .dbf                    import read_dbf
-from .raster                 import get_raster_table
-from .raster                 import get_degree_transform
-from .raster                 import get_raster
+from .dbfutils               import read_dbf
+from .rasterutils            import get_raster_table
+from .rasterutils            import get_degree_transform
+from .rasterutils            import get_raster
 from .merge_shapes           import merge_shapes
 
 from .flowline import Flowline

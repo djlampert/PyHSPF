@@ -2,7 +2,7 @@ import os, shutil, numpy, time, math
 
 from shapefile import Reader, Writer
 
-from .raster       import get_raster, get_raster_on_poly, get_raster_in_poly
+from .rasterutils  import get_raster, get_raster_on_poly, get_raster_in_poly
 from .merge_shapes import format_shape, combine_shapes
 
 def get_distance(p1, p2):

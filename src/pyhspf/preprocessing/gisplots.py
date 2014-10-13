@@ -20,9 +20,9 @@ from PIL                     import Image, ImageDraw
 
 from .merge_shapes       import format_shape
 from .combine_catchments import get_distance
-from .raster             import get_pixel, get_raster
-from .raster             import get_raster_in_poly
-from .raster             import get_raster_on_poly
+from .rasterutils        import get_pixel, get_raster
+from .rasterutils        import get_raster_in_poly
+from .rasterutils        import get_raster_on_poly
 
 def is_number(s):
     try: float(s) 

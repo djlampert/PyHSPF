@@ -1,18 +1,16 @@
-PyHSPF is in need of further development. The following are specific functions that
-need to be added. Please contact the development team if you have other suggestions or are
-interested in contributing to the development of these applications.
+PyHSPF is in need of further development. The following are specific features that
+need to be added. Contact the developers if you have other suggestions or are
+interested in contributing to development/extension of these or other applications.
 
-1.  National Agricultural Statistics Service Cropland Data Layer (CDL) extraction/integration
-2.  Examples of potential evapotranspiration time series development
-3.  Examples of snow simulations and time series integration
-4.  Examples of sediment transport simulations
-5.  Examples of Upper Mississippi HydrologyCalibrator application
-6.  More Special Actions added to existing functions
-7.  Additional PyHSPF temperature modules for the HSPFModel and associated classes
-8.  Additional PyHSPF utility modules to improve memory allocation (COPY)
-9.  Additional PyHSPF quality modules for the HSPFModel and associated classes
-10. Development of more sophisticated auto-calibration routines
-11. Add PyHSPF nitrogen, phosphorous, and pesticide modules
-12. Integration with watershed delineation tools (e.g., TauDEM)
-13. Variable land use with time
-14. Open Source GIS Integration
+01. Examples of potential evapotranspiration time series development
+02. Examples of snow simulations and time series integration
+03. Examples of sediment transport simulations
+04. Examples of Upper Mississippi HydrologyCalibrator application
+05. More Special Actions added to existing functions
+06. Additional PyHSPF temperature modules for the HSPFModel and associated classes
+07. Additional PyHSPF utility modules to improve memory allocation (COPY)
+08. Additional PyHSPF quality modules for the HSPFModel and associated classes
+09. Add PyHSPF nitrogen, phosphorous, and pesticide modules
+10. Integration with other watershed delineation tools (e.g., TauDEM)
+11. Variable land use with time
+12. Open Source GIS Integration
