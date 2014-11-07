@@ -1,10 +1,10 @@
-PyHSPF, Version 0.1.8
-last updated: 10/12/2014
+PyHSPF, Version 0.1.9
+last updated: 11/04/2014
 Developed by David J. Lampert and May M. Wu, Argonne National Laboratory
 
 Summary: PyHSPF contains a library of subroutines to run the Hydrological 
 Simulation Program in Fortran (HSPF), Version 12.2, Python extensions to 
-the HSPF library, and classes for for building the required input files, 
+the HSPF library, and classes for building the required input files, 
 performing simulations, and postprocessing simulation results.  
 
 HSPF requires flowline and catchment data for a stream network, land use 

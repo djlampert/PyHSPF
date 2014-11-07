@@ -78,7 +78,7 @@ from pyhspf import Postprocessor
 # the dates of the processing period can be changed, and the postprocessor
 # can be used to analyze part of the watershed rather than the whole model.
 # for example, if a gage is located at a subbasin other than the last outlet.
-# these are optional, the last outlet is assumed to the be gage otherwise and 
+# these are optional, the last outlet is assumed to be the gage otherwise and 
 # the run dates are used as the processing dates by default.
 
 process_dates = run_dates   # postprocessing dates
@@ -116,14 +116,10 @@ p.get_mass_balance()
 
 p.get_hspexp_parameters()
 
-# get the calibration parameters for a simulation (without plotting)
-
-p.get_calibration()
-
-# calculate the errors in the calibration parameters (requires get_calibration
-# to have been run). the product of the daily log-flow and daily flow Nash-
-# Sutcliffe model efficiency are one possible optimization parameter for a
-# calibration. the log-flow captures relative errors (low-flow conditions)
-# while the flow captures absolute error (high-flow conditions).
+# calculate and show the errors in the calibration parameters. the product 
+# of the daily log-flow and daily flow Nash-Sutcliffe model efficiency are 
+# one possible optimization parameter for a calibration. the log-flow 
+# captures relative errors (low-flow conditions) while the flow captures 
+# absolute error (high-flow conditions).
 
 p.calculate_errors()

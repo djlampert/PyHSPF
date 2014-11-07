@@ -1,52 +1,43 @@
-# example07.py
+# example09.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# Illustrates how to extract data from the NHDPlus website for the Middle 
-# Atlantic Region (drainid MA, VPU 02), then extract data for Hydrologic
-# Unit Code (HUC) 02060006 (Patuxent River Basin). This takes a while since
-# the source files are huge. If the source files are present the extractor
-# will not download them; thus this could very easily be adapted to look at
-# other HUC8s. The extractor will merge all the catchments together into
-# a new shapefile for the boundary which takes a while (~1 minute).
+# Shows how to use the NHDPlusDelineator to delineate the watershed for a gage
+# within a HUC8. Assumes the NHDPlus Hydrography data and gage station 
+# shapefile for the HUC8 exist already.
 
-from pyhspf.preprocessing import NHDPlusExtractor
+# base python module imports needed
 
-# paths for NHDPlus source data files (modified as needed)
+import os, datetime
 
-NHDPlus = 'NHDPlus'
+# pyhspf imports
 
-# path for HUC8 output (modify as needed)
+from pyhspf.preprocessing import NHDPlusDelineator
 
-output = 'HSPF_data'
+# paths for downloaded files
 
-# HUC8 NHDPlus info (get from Horizon Systems website)
+output = 'HSPF_data'     # output for the HUC8
 
-VPU     = '02'        # NHDPlus Vector Processing Unit
-HUC8    = '02060006'  # 8-digit HUC
+# HUC8 info
 
-# paths for the extracted files for the HUC8
+HUC8       = '02060006'                         # 8-digit HUC
+gage       = '01594670'                         # USGS Gage Site ID number
 
+# extracted files
+
+gagefile  = '{}/gagestations'.format(output)   # HUC8 gage station shapefile
 flowfile  = '{}/flowlines'.format(output)      # HUC8 flowline shapefile
 cfile     = '{}/catchments'.format(output)     # HUC8 catchment shapefile
 bfile     = '{}/boundary'.format(output)       # HUC8 boundary shapefile
 VAAfile   = '{}/flowlineVAAs'.format(output)   # NHDPlus value added attributes
 elevfile  = '{}/elevations.tif'.format(output) # NED raster file
-waterplot = '{}/watershed.png'.format(output)  # plot of the data
+watershed = '{}/{}'.format(output, gage)       # gage watershed files directory
 
-# title for the plot
+# create an instance of the delineator and supply the path to the source files
 
-title  = ('Cataloging Unit {}\n'.format(HUC8) +
-          'NHDPlus Catchments and Flowlines on 30 meter NED DEM')
+delineator = NHDPlusDelineator(VAAfile, flowfile, cfile, elevfile,
+                               gagefile = gagefile)
 
-# create an instance of the NHDPlus extractor
+# extracts the catchments and flowlines for the gage's watershed and plot it
 
-nhdplusextractor = NHDPlusExtractor(VPU, NHDPlus)
-
-# download and decompress the source data
-
-nhdplusextractor.download_data()
-
-# extract the HUC8 data for the Patuxent watershed
-
-nhdplusextractor.extract_HUC8(HUC8, output)
+delineator.delineate_gage_watershed(gage, output = watershed)

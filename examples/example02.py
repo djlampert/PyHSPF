@@ -27,10 +27,6 @@ end   = datetime.datetime(1990, 10, 1)
 
 tstep = 60 * 24
 
-# units for HSPF
-
-units = 'English'
-
 # import the Watershed and Subbasin classes to use to build the model
 
 from pyhspf import Watershed, Subbasin
@@ -82,7 +78,7 @@ ftable = [[  0.0,    0.0,   0.0,      0.0],
           [4.907, 71.162, 163.46,  747.96],
           [6.043, 78.442, 248.35, 1356.32],
           [7.179, 83.771, 340.12, 2146.83],
-          [8.315, 91.541, 438.68, 3060.87]
+          [8.315, 91.541, 438.68, 3060.87],
           ]
 
 # add the reach info to the subbasin
@@ -94,7 +90,7 @@ subbasin.add_reach(name, maxelev, minelev, slopelen, ftable = ftable)
 landuse_names = ['FOREST', 'ROWCRP', 'GRASS', 'Developed']
 areas         = [4428.9,     641.63,  776.87,      120.18]  # acres
 
-# fraction of developed land that is impervious (assume all developed land)
+# fraction of developed land that is impervious (assume all impervious land)
 
 ifraction = 1.
 
@@ -119,11 +115,12 @@ watershed = Watershed(description, subbasins)
 watershed.add_mass_linkage(updown)
 watershed.add_outlet(sname)
 
-# make the HSPFModel instance
+# make the HSPFModel instance (the data for this example use the non-default
+# option of English instead of metric units)
 
 from pyhspf import HSPFModel
 
-hspfmodel = HSPFModel(units = units)
+hspfmodel = HSPFModel(units = 'English')
 
 # since the climate data are provided with hspexp in an export file called
 # "huntobs.exp."  WDMUtil has a method to automatically import the data to a 

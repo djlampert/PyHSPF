@@ -58,7 +58,7 @@ from .cdlextractor        import CDLExtractor
 from .build_watershed     import build_watershed
 from .make_gagestations   import make_gagestations
 from .download_climate    import download_climate
-from .extract_climate     import extract_climate
+#from .extract_climate     import extract_climate
 
 def preprocess(network, 
                output, 

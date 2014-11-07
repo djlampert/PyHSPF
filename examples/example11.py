@@ -1,42 +1,110 @@
 # example11.py
-#
+# 
 # David J. Lampert (djlampert@gmail.com)
 #
-# Shows how to use the NHDPlusDelineator to delineate the watershed for a gage
-# within a HUC8. Assumes the data from the previous examples exist already.
+# illustrates how to use the preprocessing tools to download climate data.
+#
+# last updated: 11/04/2014
 
-# base python module imports needed
+from pyhspf.preprocessing import climateutils
 
-import os, datetime
+import os, pickle, datetime
 
-# pyhspf imports
+# bounding box of interest
 
-from pyhspf.preprocessing import NHDPlusDelineator
+bbox = -94, 41.3, -91.3, 42.5 
 
-# paths for downloaded files
+# start and end dates
 
-output = 'HSPF_data'     # output for the HUC8
+start = datetime.datetime(1980, 1, 1)
+end   = datetime.datetime(2011, 1, 1)
 
-# HUC8 info
+# this was (at the time of writing) the url to the NCDC database for the GHCND:
+#
+# GHCND = 'http://www1.ncdc.noaa.gov/pub/data/ghcn/daily'
+#
+# if the site changes this can be updated
 
-HUC8       = '02060006'                         # 8-digit HUC
-gage       = '01594670'                         # USGS Gage Site ID number
+# find the stations with evaporation data and make a list of GHCNDStation 
+# instances to use to download the data for the stations
 
-# extracted files
+# GHCND variable to look for data ('EVAP' is pan evaporation--look this up)
 
-gagefile  = '{}/gagestations'.format(output)   # HUC8 gage station shapefile
-flowfile  = '{}/flowlines'.format(output)      # HUC8 flowline shapefile
-cfile     = '{}/catchments'.format(output)     # HUC8 catchment shapefile
-bfile     = '{}/boundary'.format(output)       # HUC8 boundary shapefile
-VAAfile   = '{}/flowlineVAAs'.format(output)   # NHDPlus value added attributes
-elevfile  = '{}/elevations.tif'.format(output) # NED raster file
-watershed = '{}/{}'.format(output, gage)       # gage watershed files directory
+var = 'EVAP'
 
-# create an instance of the delineator and supply the path to the source files
+# find the stations with EVAP data
 
-delineator = NHDPlusDelineator(VAAfile, flowfile, cfile, elevfile,
-                               gagefile = gagefile)
+stations = climateutils.find_ghcnd(bbox, var = var, dates = (start, end), 
+                                   verbose = True)
 
-# extracts the catchments and flowlines for the gage's watershed and plot it
+# download the data to "output" location (here it's the current directory, ".")
+# each station will be saved as a binary file with its unique GHCND ID
 
-delineator.delineate_gage_watershed(gage, output = watershed)
+output = '.'
+
+for station in stations: station.download_data(output, start = start, end = end,
+                                               plot = False)
+
+# there are 4 files in the bounding box (you wouldn't know this in advance); 
+# let's just look at Ames (Iowa State) and Iowa City (Iowa) since the other 
+# data sets are really limited.  
+
+names = ['USC00130200', 'USC00134101']
+
+# the "GHCNDStation" class is used to download data, but an additional class 
+# to the binary files, but other classes exist to store and manipulate the data
+# such as make timeseries for removing missing values, etc.
+
+from pyhspf.preprocessing.ncdcstations import EvapStation
+
+evapstations = []
+for n in names:
+    with open('{}/{}'.format(output, n), 'rb') as f: ghcnd = pickle.load(f)
+
+    # make the EvapStation
+
+    evapstation = EvapStation()
+
+    # add the GHCND station metadata to the EvapStation
+
+    evapstation.add_ghcnd_data(ghcnd)
+
+    # add the EvapStation to the dictionary
+
+    evapstations.append(evapstation)
+
+# now we can plot the time series (or whatever you need the data for)
+# note that there appears to be a few errors in the data set for Ames
+
+from matplotlib import pyplot
+
+fig = pyplot.figure()
+sub = fig.add_subplot(111)
+
+t = ('GHCND {} data for bounding box '.format(var) + 
+     '({}, {}) to ({}, {})'.format(*bbox))
+sub.set_title(t)
+sub.set_xlabel('Time')
+sub.set_ylabel('Daily Evaporation')
+sub.set_ylim([0, 30])
+
+# times for a time series plot
+
+times = [start + i * datetime.timedelta(days = 1) 
+         for i in range((end-start).days)]
+
+text = ''
+for s in evapstations:
+    total_evaporation = s.get_evaporation(start, end)
+    avg_evap = total_evaporation / (end-start).days * 365.25
+    values = s.make_timeseries(start, end)
+    sub.plot(times, values, label = s.name)
+    i = s.station, s.name, avg_evap
+    text+='\nStation {}, {}\nAnnual average evaporation = {:.0f} mm'.format(*i)
+
+sub.text(0.99, 1., text, ha = 'right', va = 'top', 
+         transform = sub.transAxes, size = 8)
+
+leg = sub.legend(loc = 'upper left', prop = {'size': 8})
+
+pyplot.show()

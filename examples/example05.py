@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-#
-# Example5.py
+# example05.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #
@@ -32,20 +30,21 @@ start     = datetime.datetime(1988, 10, 1)
 end       = datetime.datetime(1990, 10, 1)
 gagecomid = '30'          
 
-# since we will be running this file repeatedly, we need to keep track of the
-# parameters in an efficient manner. since some of them are specific to the
-# land use or soil, we will define system-wide multipliers to the calibration 
-# parameters relative to the default values in most cases. for example, the 
-# default INFILT is 0.04 in/hr, and the INFILT_multiplier keeps track of the 
-# value throughout the watershed relative to this default, so if 
+# since this file will be run repeatedly, we need to keep track of the 
+# parameters in a systematic  manner. some of the parameters are specific to the
+# land use or soil, so let's define system-wide multipliers to the default  
+# values to keep track of the updates during the calibration. for example, 
+# the default INFILT is 0.04 in/hr, and the INFILT_multiplier keeps track of 
+# the value throughout the watershed relative to the default. so if the
 # INFILT_multipler is 2, then all values of INFILT will be adjusted to 0.08 
 # in/hr.  this allows any variability in space or land use to be retained 
 # while still allowing for adjustment for the calibration. note large changes 
 # cannot be made for many parameters since they would move values outside of 
 # allowable ranges. it is also possible to establish site-wide values such as 
-# AGWRC in the example below. finally, this is just one way to do this but it 
-# illustrates the power of scripting vs a graphical user interface.  
-# brief description of variables provided here too.
+# AGWRC in the example below. finally, this is just one way to do the 
+# calibration but it illustrates the power and flexibility of a scripting 
+# approach vs a graphical user interface. the hydrology process parameters 
+# are briefly described below also.
 
 LZETP_multiplier  = 1.    # lower zone evapotranspiration parameter
 LZSN_multiplier   = 1.    # lower soil zone storage capacity
@@ -78,7 +77,7 @@ for p in hspfmodel.perlnds:
     p.set_pwat_state(AGWS = 0.25)
 
 # since we are looking at gage vs calibration statistics only, the external 
-# target needed are the reach outflow volume and groundwater flow
+# targets needed are the reach outflow volume and groundwater flow
 
 targets = ['groundwater', 'reach_outvolume']
 
@@ -95,13 +94,12 @@ hspfmodel.run(verbose = True)
 
 p = Postprocessor(hspfmodel, (start, end), comid = gagecomid) 
 
-# calculate the errors in the calibration parameters (requires get_calibration
-# to have been run). the product of the daily log-flow and daily flow Nash-
-# Sutcliffe model efficiency are one possible optimization parameter for a
-# calibration. the log-flow captures relative errors (low-flow conditions)
-# while the flow captures absolute error (high-flow conditions).
+# calculate and show the errors in the calibration parameters. the product 
+# of the daily log-flow and daily flow Nash-Sutcliffe model efficiency are 
+# one possible optimization parameter for a calibration. the log-flow 
+# captures relative errors (low-flow conditions) while the flow captures 
+# absolute error (high-flow conditions).
 
-p.get_calibration()
 p.calculate_errors()
 
 # close the open files
@@ -157,16 +155,15 @@ hspfmodel.run(verbose = True)
 
 p = Postprocessor(hspfmodel, (start, end), comid = gagecomid) 
 
-p.get_calibration()
 p.calculate_errors()
 
 # lather, rinse, repeat by changing the multipliers until the calibration is 
 # satisfactory. this first run should have gone from a NS for flow * NS for 
 # log flow of 0.264 to 0.283, meaning for the next run we would want to start
 # with INTFW = 0.9 rather than 1; the optimized values are commented out below.
-# i got a daily NS of 0.77 and daily NS for log flow of 0.68 after about an 
-# hour of adjusting just these parameters. use the commented out values in 
-# the next lines and change the targets above whenever you want to make 
+# the optimized daily NS should be 0.77 and daily NS for log flow of 0.68 
+# after about an hour of adjusting just these parameters manually. use the 
+# commented out values in the next lines and change the targets above to make 
 # plots of the results.
 
 #evap_multiplier   = 0.76

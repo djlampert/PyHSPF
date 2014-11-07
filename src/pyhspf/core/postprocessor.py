@@ -67,6 +67,7 @@ class Postprocessor:
         else: self.gagedates = None
 
         self.wdm_parms = None
+        self.total_error = None
 
     def is_number(self, s):
         """Tests if a string is a number."""
@@ -2270,6 +2271,8 @@ class Postprocessor:
                          output = None):
         """Calculates the percent error for each of the HSPF calibration 
         parameters."""
+
+        if self.total_error is None: self.get_calibration()
 
         self.total_error = (self.sim_total - self.obs_total) / self.obs_total
         self.recession_error = ((self.sim_total_rec - self.obs_total_rec) / 

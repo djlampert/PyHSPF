@@ -2,58 +2,62 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# This example illustrates how to extract NWIS data for HSPF using the 
-# NWISExtractor class. The extractor will download the source shapefile that
-# has the metadata for the daily discharge and water quality data for the
-# entire USA. If the source file already exists it will skip this step. 
-# The example shows how to download all the data for a given HUC8, starting
-# by extracting a point shapefile for the HUC8 then downloading the daily
-# discharge and water quality data using the GageStation class (you can view
-# the class in the preprocessing directory). The example then shows how 
-# to download data for just one station as an alternative.
+# illustrates how to download data from the Cropland Data Layer (CDL),
+# extract a Geotiff for a HUC8 from the source, and calculate the landuse
+# data for each polygon in the shapefile. Example utilizes the subbasin 
+# shapefile for the Patuxent River Watershed (HUC 02060006), which is in 
+# Maryland.
+#
+# last updated: 11/04/2014
 
-# base python module imports needed
+import os
 
-import os, datetime
+output = 'CDL'                      # path to place state CDL source rasters
+state  = 'MD'                       # Maryland (two-digit state abbreviation)
+years  = [2008, 2009, 2010]         # years to extract data (CDL is annual)
+cfile  = 'data/patuxent/catchments' # catchment file for land use calculation
 
-# pyhspf imports
+# the aggregate file (CSV); maps integers in the CDL raster to landuse groups
 
-from pyhspf.preprocessing import NWISExtractor
+aggregate = 'data/patuxent/aggregate.csv'
 
-# paths for downloaded files
+# make the output directory
 
-NWIS   = 'NWIS'         # NWIS metadata files
-output = 'HSPF_data'    # output for the HUC8
+if not os.path.isdir(output): os.mkdir(output)
 
-# HUC8 info
+# extract cropland data for the state from NASS using the CDLExtractor class
 
-HUC8   = '02060006'     # 8-digit HUC
-gage   = '01594670'     # USGS Gage Site ID number
+from pyhspf.preprocessing import CDLExtractor
 
-# extracted files
+# provide the directory where the source data are located (or will be placed)
 
-gagefile  = '{}/gagestations'.format(output)   # HUC8 gage station shapefile
-gagepath  = '{}/gagedata'.format(output)       # all HUC8 NWIS flow data path
-gagedata  = 'hunting_station'                  # data file for one gage
+cdlextractor = CDLExtractor(output)
 
-# time series start and end
+# download the data for the state for each year
 
-start = datetime.datetime(1980, 1, 1)      # start date for timeseries
-end   = datetime.datetime(2010, 1, 1)      # end date for timeseries
+cdlextractor.download_data(state, years)
 
-# create an instance of the NWIS extractor
+# extract the data for the bounding box of the patuxent catchment shapefile 
+# that is located in the "data" directory (this could be generated from another
+# example) and place it in the "output" directory
 
-nwisextractor = NWISExtractor(NWIS)
+cdlextractor.extract_shapefile(cfile, output)
 
-# extract the gage stations into a new shapefile for the HUC8
+# calculate the 2008 landuse for each shape in the catchmentfile using the 
+# "FEATUREID" feature attribute, and make the (optional) csv file of the output
 
-nwisextractor.extract_HUC8(HUC8, output)
+year = 2008
+extracted = '{}/{}landuse.tif'.format(output, year)
+csvfile   = 'landuse.csv'.format(output, year)
 
-# download all the daily flow and water quality data from the gage shapefile
+# the results are stored in a dictionary of dictionaries--the keys are the 
+# 'FEATUREID' attributes from the shapefile each of which has a value that
+# is a dictionary with values that are dictionaries with keys that are
+# the categories from the 3rd column in the aggregate.csv file and values 
+# that are the fractions of the polygon. the landuse for the watershed is
+# is plotted before and after processing to visualize the results.
 
-if not os.path.isdir(gagepath):
-    nwisextractor.download_all(start, end, output = gagepath)
+bfile = 'data/patuxent/boundary'
+cdlextractor.calculate_landuse(extracted, bfile, aggregate, 'FEATUREID', 
+                               csvfile = csvfile, plot = True)
 
-# download the daily flow and water quality data for one gage
-
-nwisextractor.download_gagedata(gage, start, end, output = gagedata)

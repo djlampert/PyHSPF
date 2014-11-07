@@ -6,12 +6,13 @@ summary of the examples:
 03. Building the Hunting Creek HSPF model with an hourly time step
 04. Utilizing the PyHSPF Postprocessor class to analyze the Hunting Creek example
 05. Performing a calibration of the Hunting Creek watershed with Python and PyHSPF
-06. Repeat of example 1 but illustrating the use of Special Actions
-07. Utilizing PyHSPF's extractor for Global Historical Climate Network Daily data
-08. Utilizing PyHSPF's extractor for all HSPF climate data needs
-09. Utilizing PyHSPF's extractor for NHDPlus data
-10. Utilizing PyHSPF's extractor for NWIS data
-11. Utilizing PyHSPF's delineator for the watershed of a gage within a HUC8
+06. Repeat of example01 but illustrating the use of Special Actions
+07. Utilizing PyHSPF's extractor for NHDPlus data
+08. Utilizing PyHSPF's extractor for NWIS data
+09. Utilizing PyHSPF's NHDPlusDelineator for the watershed of a gage within a HUC8
+10. Utilizing PyHSPF's CDLExtractor to download and extract data from the Cropland Data Layer
+11. Utilizing PyHSPF's extractor for Global Historical Climate Network Daily data
+12. Utilizing PyHSPF's extractor for all HSPF climate data needs
 
 The "hunting.py" example illustrates the many features of PyHSPF; the script downloads 
 source data from NHDPlus, extracts data for a HUC8, extracts and delineates the 
@@ -32,6 +33,6 @@ test03.py -- adds datasets to "test.wdm" and runs "test03.uci"
 tests04_15.py -- runs test04.uci through test15.uci simulations (no WDM file manipulation)
 tests04_15_parallel.py -- shows how to run HSPF simulations in parallel
 
-PyHSPF has other functionality beyond what is described in these examples. Direct any
-questions about functionality and applications to the developers. Note that some of these
-examples may not be compatible with older versions of PyHSPF.
+PyHSPF has functionalities beyond those described in these examples. Direct any
+questions about functionality and applications to the developer. Note that these
+examples may not be compatible with older versions of the software.

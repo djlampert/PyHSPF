@@ -1,108 +1,52 @@
-# example7.py
-# 
-# David Lampert
+# example07.py
 #
-# illustrates how to use the preprocessing tools to download climate data.
-
-from pyhspf.preprocessing import climateutils
-
-import os, pickle, datetime
-
-# bounding box of interest
-
-bbox = -94, 41.3, -91.3, 42.5 
-
-# start and end dates
-
-start = datetime.datetime(1980, 1, 1)
-end   = datetime.datetime(2011, 1, 1)
-
-# this was (at the time of writing) the url to the NCDC database for the GHCND:
+# David J. Lampert (djlampert@gmail.com)
 #
-# GHCND = 'http://www1.ncdc.noaa.gov/pub/data/ghcn/daily'
-#
-# if the site changes this can be updated
+# Illustrates how to extract data from the NHDPlus website for the Middle 
+# Atlantic Region (drainid MA, VPU 02), then extract data for Hydrologic
+# Unit Code (HUC) 02060006 (Patuxent River Basin). This takes a while since
+# the source files are huge. If the source files are present the extractor
+# will not download them; thus this could very easily be adapted to look at
+# other HUC8s. The extractor will merge all the catchments together into
+# a new shapefile for the boundary which takes a while (~1 minute).
 
-# find the stations with evaporation data and make a list of GHCNDStation 
-# instances to use to download the data for the stations
+from pyhspf.preprocessing import NHDPlusExtractor
 
-# GHCND variable to look for data ('EVAP' is pan evaporation--look this up)
+# paths for NHDPlus source data files (modified as needed)
 
-var = 'EVAP'
+NHDPlus = 'NHDPlus'
 
-# find the stations with EVAP data
+# path for HUC8 output (modify as needed)
 
-stations = climateutils.find_ghcnd(bbox, var = var, dates = (start, end), 
-                                   verbose = True)
+output = 'HSPF_data'
 
-# download the data to "output" location (here it's the current directory, ".")
-# each station will be saved as a binary file with its unique GHCND ID
+# HUC8 NHDPlus info (get from Horizon Systems website)
 
-output = '.'
+VPU     = '02'        # NHDPlus Vector Processing Unit
+HUC8    = '02060006'  # 8-digit HUC
 
-for station in stations: station.download_data(output, start = start, end = end,
-                                               plot = False)
+# paths for the extracted files for the HUC8 (this represents the "output")
 
-# there are 4 files in the bounding box (you wouldn't know this in advance); 
-# let's just look at Ames (Iowa State) and Iowa City (Iowa) since the other 
-# data sets are really limited.  
+flowfile  = '{}/flowlines'.format(output)      # HUC8 flowline shapefile
+cfile     = '{}/catchments'.format(output)     # HUC8 catchment shapefile
+bfile     = '{}/boundary'.format(output)       # HUC8 boundary shapefile
+VAAfile   = '{}/flowlineVAAs'.format(output)   # NHDPlus value added attributes
+elevfile  = '{}/elevations.tif'.format(output) # NED raster file
+waterplot = '{}/watershed.png'.format(output)  # plot of the data
 
-names = ['USC00130200', 'USC00134101']
+# title for the plot
 
-# the "GHCNDStation" class is used to download data, but an additional class 
-# to the binary files, but other classes exist to store and manipulate the data
-# such as make timeseries for removing missing values, etc.
+title  = ('Cataloging Unit {}\n'.format(HUC8) +
+          'NHDPlus Catchments and Flowlines on 30 meter NED DEM')
 
-from pyhspf.preprocessing.ncdcstations import EvapStation
+# create an instance of the NHDPlus extractor
 
-evapstations = []
-for n in names:
-    with open('{}/{}'.format(output, n), 'rb') as f: ghcnd = pickle.load(f)
+nhdplusextractor = NHDPlusExtractor(VPU, NHDPlus)
 
-    # make the EvapStation
+# download and decompress the source data
 
-    evapstation = EvapStation()
+nhdplusextractor.download_data()
 
-    # add the GHCND station metadata to the EvapStation
+# extract the HUC8 data for the Patuxent watershed
 
-    evapstation.add_ghcnd_data(ghcnd)
-
-    # add the EvapStation to the dictionary
-
-    evapstations.append(evapstation)
-
-# now we can plot the time series (or whatever you need the data for)
-# note that there appears to be a few errors in the data set for Ames
-
-from matplotlib import pyplot
-
-fig = pyplot.figure()
-sub = fig.add_subplot(111)
-
-t = ('GHCND {} data for bounding box '.format(var) + 
-     '({}, {}) to ({}, {})'.format(*bbox))
-sub.set_title(t)
-sub.set_xlabel('Time')
-sub.set_ylabel('Daily Evaporation')
-sub.set_ylim([0, 30])
-
-# times for a time series plot
-
-times = [start + i * datetime.timedelta(days = 1) 
-         for i in range((end-start).days)]
-
-text = ''
-for s in evapstations:
-    total_evaporation = s.get_evaporation(start, end)
-    avg_evap = total_evaporation / (end-start).days * 365.25
-    values = s.make_timeseries(start, end)
-    sub.plot(times, values, label = s.name)
-    i = s.station, s.name, avg_evap
-    text+='\nStation {}, {}\nAnnual average evaporation = {:.0f} mm'.format(*i)
-
-sub.text(0.99, 1., text, ha = 'right', va = 'top', 
-         transform = sub.transAxes, size = 8)
-
-leg = sub.legend(loc = 'upper left', prop = {'size': 8})
-
-pyplot.show()
+nhdplusextractor.extract_HUC8(HUC8, output)

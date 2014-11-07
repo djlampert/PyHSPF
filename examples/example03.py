@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-#
-# Example3.py
+# example03.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #
@@ -20,7 +18,6 @@ description = 'Hunting Creek, Patuxent Basin'
 start       = datetime.datetime(1988, 10, 1)
 end         = datetime.datetime(1990, 10, 1)
 tstep       = 60
-units       = 'English'
 
 # 3 subbasins/reaches; the right and left branch feed the main channel; 
 # call the left and right branches 31 and 32, and main branch 30
@@ -198,7 +195,8 @@ ftable = [[0.0, 0.0, 0.0, 0.0],
           [4.907, 208.006, 477.8, 598.37],
           [6.043, 229.286, 725.92, 1085.06],
           [7.179, 244.862, 994.18, 1717.46],
-          [8.315, 267.574, 1282.26, 2448.7]]
+          [8.315, 267.574, 1282.26, 2448.7],
+          ]
 
 # add the reach info to the subbasin
 
@@ -269,7 +267,7 @@ wdm.close('hunting.wdm')
 # the evaporation data is daily so it needs to be disaggregated to hourly for
 # an hourly simulation (see how easy this is with Python)
 # the time series in the WDM file starts at 1 am so had to add one extra 
-# value to the end of the time series to get them to run
+# value to the beginning of the time series for consistency
 
 evap   = [0] + [e / 24 for e in evap for i in range(24)]
 precip = [0] + [p for p in precip]
@@ -281,7 +279,7 @@ times = [start + (end-start) / len(precip) * i for i in range(len(precip))]
 
 # make the HSPFModel instance
 
-hspfmodel = HSPFModel(units = units)
+hspfmodel = HSPFModel(units = 'English')
 
 # build the model (file will all be called example03)
 

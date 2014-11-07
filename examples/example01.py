@@ -133,7 +133,7 @@ subbasin.add_landuse(2001, landuse_names, areas)
 
 subbasins[number] = subbasin
 
-# make one more subbasin for this example (note all the parameters the
+# make one more subbasin for this example (note all the parameters are the
 # same except these few)
 
 number   = '101'
@@ -168,7 +168,7 @@ watershed_name = 'Dave'
 watershed = Watershed(watershed_name, subbasins)
 
 # another key piece of information for the watershed is the flow network. 
-# it should be provided as  an "updown" dictionary--that is, a subbasin names
+# it should be provided as  an "updown" dictionary--that is, subbasin names
 # are supplied as keys, and the dictionary returns the downstream subbasin 
 # names as values. So for this example the netword is just subbasin reach "100"
 # goes into "101." 
@@ -261,7 +261,7 @@ hspfmodel.add_timeseries(tstype, identifier, start, evaporation, tstep = tstep)
 
 hspfmodel.assign_watershed_timeseries(tstype, identifier)
 
-# now add some random rainfall. here is is assumed there is a 5% chance of rain
+# now add some random rainfall. here it is assumed there is a 5% chance of rain
 # every 4-hour period and that the rainfall is an integer between 0 and 20.
 
 import random
@@ -303,7 +303,8 @@ hspfmodel.build_wdminfile()
 targets = ['reach_outvolume',  # the volume that exits each reach at each step
            'evaporation',      # the evaporation volume in the land segments
            'reach_volume',     # the volume in the reach
-           'runoff']           # the surface runoff
+           'runoff',           # the surface runoff
+           ]
 
 # the targets above each correspond to a particular Fortran variable; the idea
 # is to make them more descriptive and easier to add. the targets above 
@@ -331,7 +332,7 @@ hspfmodel.run(verbose = True)
 # the PyHSPF HSPFModel instance, and forget about the UCI. The UCI file is 
 # always there if you want to see it, but changing the parameters is much 
 # easier in Python, and can even be scripted. The "with" statement just closes 
-# the file where the HSPModel is stored.
+# the file where the HSPFModel is stored.
 
 import pickle
 
