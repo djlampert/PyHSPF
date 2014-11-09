@@ -17,17 +17,14 @@ developed based on flowline and catchment data from the National
 Hydrography Dataset Plus Version 2 (NHDPlus), climate data from the 
 National Climate Data Center (NCDC), and landuse data from the National 
 Agricultural Statistics Service (NASS) Cropland Data Layer (CDL). 
-The preprocessing and calibration routines require GDAL, PyShp, and 
-Pillow in addition to NumPy, SciPy, and Matplotlib, and require the user
-to download the source data files from NASS and NHDPlus. For more info 
-contact me.
+To use the preprocessing and calibration routines, some additional 
+packages are needed including GDAL, PyShp, Pillow, and 7zip.
 
 PyHSPF can be used to assimilate data into an HSPF model, build the 
 HSPF input files, simulate the model over a period of time, and then 
 provide statistics and plots of the simulation output. The "core" module 
 requires NumPy, SciPy, and Matplotlib and can be used for generating input 
-files. A series of examples is provided to illustrate PyHSPF core module 
-usage.
+files. A series of examples is provided to illustrate PyHSPF usage.
 
 The preprocessing modules contain classes to automate extraction of 
 data from various databases including the National Solar Radiation 
@@ -59,8 +56,8 @@ source code including some minor modifications needed to simplify the
 compilation. Assuming gfortran and gcc are available as environment 
 variables, the HSPF library can be rebuilt by navigating as before, 
 running "python setup.py build," and then (as adminstrator) 
-"python setup.py install." Do not hesitate to contact the develop if 
-there are problems with the installation.
+"python setup.py install." Please report any issues encountered with
+the installation or running the example files.
 
 Testing: Open the Python interpreter (from a command prompt simply type 
 "python"). Then try "import pyhspf"; the base Fortran subroutines can be
