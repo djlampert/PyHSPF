@@ -1,7 +1,6 @@
-*.exe
-*.tar.gz
-*.png
-*.pdf
 *.pyc
 *.pyo
+*.o
+*.so
+*.dll
 *~
