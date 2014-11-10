@@ -15,7 +15,7 @@ from pyhspf.preprocessing import NHDPlusDelineator
 # these are provided with the distribution now, though they can be generated
 # from the previous example.
 
-output = 'data/Patuxent'
+output = 'data/patuxent'
 
 # paths to the different source files for the model data
 
@@ -44,4 +44,5 @@ delineator.delineate_watershed(longitude, latitude, output = gagewatershed)
 # make a plot of the watershed
 
 point = longitude, latitude
-delineator.plot_delineated_watershed(point = point, output = gagewatershed)
+plot  = 'hunting_watershed'
+delineator.plot_delineated_watershed(point = point, output = plot)

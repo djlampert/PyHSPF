@@ -43,10 +43,12 @@ title  = ('Cataloging Unit {}\n'.format(HUC8) +
 
 nhdplusextractor = NHDPlusExtractor(VPU, NHDPlus)
 
-# download and decompress the source data
+# download and decompress the source data. worth noting--if you point the 
+# extractor to the source files, it will skip the (lengthy) download.
 
 nhdplusextractor.download_data()
 
-# extract the HUC8 data for the Patuxent watershed
+# extract the HUC8 data for the Patuxent watershed. same thing here--if any of
+# these files already exist the extraction step will be skipped.
 
 nhdplusextractor.extract_HUC8(HUC8, output)

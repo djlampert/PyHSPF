@@ -113,30 +113,6 @@ class CDLExtractor:
         except ValueError: return False
         return True
 
-    def get_aggregate_map(self, aggregatefile):
-        """Creates a dictionary that maps landuse codes to HSPF codes."""
-
-        with open(aggregatefile, 'r') as csvfile:
-            reader = csv.reader(csvfile)
-            rows = [row for row in reader][1:]
-
-        columns = [column for column in zip(*rows)]
-
-        # set up the groups for the unique values in the aggregate file, a 
-        # dictionary to map to the HSPF ID types, and the cumulative areas
-
-        codes      = [int(code) for code in columns[0]]
-        groups     = [int(code) for code in columns[2]]
-        categories = [category for category in columns[3]]
-
-        m         = {code: group for code, group in zip(codes, groups)}
-        landtypes = {group: category 
-                     for group, category in zip(groups, categories)}
-        groups = list(set(groups))
-        groups.sort()
-
-        return m, landtypes, groups
-
     def shape_to_mask(self, shape, width = 1000):
         """Converts a shapefile into a raster mask."""
         
@@ -281,6 +257,7 @@ class CDLExtractor:
                 print('decompressing {} archive\n'.format(compressed))
                 f = zipfile.ZipFile(compressed)
                 f.extractall(self.destination)
+                print('')
 
             # keep track of all the years where the source files exist
 
@@ -402,7 +379,7 @@ class CDLExtractor:
         self.reds       = {i:int(r)  for i,r in zip(columns[2], columns[3])}
         self.greens     = {i:int(g)  for i,g in zip(columns[2], columns[4])}
         self.blues      = {i:int(b)  for i,b in zip(columns[2], columns[5])}
-        
+
         # make and preserve a unique, ordered list of the groups
 
         seen = set()
@@ -414,7 +391,6 @@ class CDLExtractor:
                           aggregatefile, 
                           attribute,
                           csvfile = None,
-                          plot = False,
                           ):
         """
         Calculates the land use for the given year for the "attribute" 
@@ -500,7 +476,7 @@ class CDLExtractor:
             writer.writerow(row)
 
             for k,d in self.landuse.items():
-                row = [k] + [d[r] for r in self.reds]
+                row = [k] + [d[r] for r in self.order]
                 writer.writerow(row)
 
     def make_patch(self, points, facecolor, edgecolor = 'Black', width = 1, 
@@ -532,6 +508,7 @@ class CDLExtractor:
                      overwrite = False,
                      pixels = 1000,
                      border = 0.02,
+                     lw = 0.5,
                      show = False,
                      verbose = True, 
                      vverbose = False
@@ -570,12 +547,17 @@ class CDLExtractor:
 
         color_table = [(self.reds[g] / 255, self.greens[g] / 255, 
                         self.blues[g] / 255) for g in self.order]
-
+            
         cmap = colors.ListedColormap(color_table)
-        bounds = [i for i in range(len(self.order))]
+        
+        # provide the cutoff boundaries for the mapping of values to the table
+
+        bounds = [i-0.5 for i in range(len(self.order)+1)]
+
+        # create a norm to map the bounds to the colors
+
         norm = colors.BoundaryNorm(bounds, cmap.N)
 
-        print(bounds)
         # get the pixel width and origin
 
         w = (xmax - xmin) / pixels
@@ -652,7 +634,7 @@ class CDLExtractor:
                     # the land area cdf
 
                     while area_cdf[i] <= p: 
-                        color_array[i] = n + 1
+                        color_array[i] = n
                         if i < len(area_cdf) - 1: i += 1
                         else: break
 
@@ -666,7 +648,7 @@ class CDLExtractor:
 
                 # add a patch for the shape boundary
 
-                subplot.add_patch(self.make_patch(points, (1,0,0,0), width = 1))
+                subplot.add_patch(self.make_patch(points, (1,0,0,0), width=lw))
 
             # show the bands
 
@@ -688,40 +670,42 @@ class CDLExtractor:
             xmin, xmax = xmin-border * (xmax-xmin), xmax + border * (xmax-xmin)
             ymin, ymax = ymin-border * (ymax-ymin), ymax + border * (ymax-ymin)
 
-            # show the raw cropland raster file
+            # pixel width in latitude
 
-            resolution = pixels // 2
-            xs = numpy.array([xmin + (xmax - xmin) / resolution * i 
-                              for i in range(resolution + 1)])
-            ys = numpy.array([ymax  - (ymax  - ymin)  / resolution * i 
-                              for i in range(resolution + 1)])
-            zs = numpy.zeros((resolution + 1, resolution + 1))
+            pw = (xmax - xmin) / pixels
+
+            # calculate the image height in pixels
+
+            ny = int(numpy.ceil((ymax - ymin) / (xmax - xmin) * pixels))
+
+            # note the height of pixels = width of pixels
+            # and image width in pixels is "pixels"
+
+            xs = numpy.array([xmin + (i + 0.5) * pw for i in range(pixels)])
+            ys = numpy.array([ymin + (i + 0.5) * pw for i in range(ny)])
+
+            # set up an array of values for the image
+
+            zs = numpy.zeros((ny, pixels))
 
             for i in range(len(ys)):
-                zs[i, :] = get_raster(landuse, 
-                                      zip(xs, [ys[i]] * (resolution + 1)),
-                                      quiet = True)
+                ps = [(x, ys[i]) for x in xs]
+                zs[i, :] = numpy.array(get_raster(landuse, ps, quiet = True))
 
-            values = numpy.unique(zs)
+            zs = zs.astype(int)
 
-            for v in values:
+            tot = zs.size
+
+            for v in numpy.unique(zs):
                 group = self.groups[v]
                 i = self.order.index(group)
-                print(group, v, i)
                 zs[numpy.where(zs == v)] = i
-
-                #print(group, v,i, self.reds[group], self.greens[group], self.blues[group])
-
-            values = numpy.unique(zs)
-
-            for v, o in zip(values, self.order):
-                print(v, o, len(zs[numpy.where(zs == v)]))
-
                 
             # plot the grid
 
             im = subplot.imshow(zs,
                                 interpolation = 'nearest',
+                                origin = 'upper left',
                                 extent = [xmin, xmax, ymin, ymax], 
                                 norm = norm, 
                                 cmap = cmap,

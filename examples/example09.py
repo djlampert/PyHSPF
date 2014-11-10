@@ -8,23 +8,17 @@
 # shapefile for the Patuxent River Watershed (HUC 02060006), which is in 
 # Maryland.
 #
-# last updated: 11/04/2014
-
-import os
+# last updated: 11/10/2014
 
 output = 'CDL'                      # path to place state CDL source rasters
 state  = 'MD'                       # Maryland (two-digit state abbreviation)
 years  = [2008, 2009, 2010]         # years to extract data (CDL is annual)
-sfile  = 'data/patuxent/catchments' # catchment file for land use calculation
 sfile  = 'data/patuxent/boundary'   # catchment file for land use calculation
 
 # the aggregate file (CSV); maps integers in the CDL raster to landuse groups
+# make sure you look at this file to understand what these commands are doing
 
 aggregate = 'data/patuxent/aggregate.csv'
-
-# make the output directory
-
-if not os.path.isdir(output): os.mkdir(output)
 
 # extract cropland data for the state from NASS using the CDLExtractor class
 
@@ -49,7 +43,7 @@ cdlextractor.extract_shapefile(sfile, output)
 
 year = 2008
 extracted = '{}/{}landuse.tif'.format(output, year)
-csvfile   = 'landuse.csv'.format(output, year)
+csvfile   = 'basin_landuse.csv'
 
 # the results are returned as a dictionary of dictionaries--the keys are the 
 # 'FEATUREID' attributes from the shapefile and the categories from the 3rd 
@@ -83,3 +77,15 @@ cdlextractor.plot_landuse(extracted, sfile, attribute,
                           output = 'results'.format(extracted), 
                           datatype = 'results')
 
+# now let's repeat it using the catchment rather than just the boundary
+
+sfile   = 'data/patuxent/catchments'
+csvfile = 'catchment_landuse.csv'
+landuse = cdlextractor.calculate_landuse(extracted, sfile, aggregate, 
+                                         attribute, csvfile = csvfile)
+
+# this WILL take a while (adjust the border linewidth for clarity)
+
+cdlextractor.plot_landuse(extracted, sfile, attribute, lw = 0.1,
+                          output = 'catchmentresults'.format(extracted), 
+                          datatype = 'results')
