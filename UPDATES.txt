@@ -67,3 +67,6 @@ Updated examples (consistency with changes based on redundancy)
 Version 0.1.9
 Added extractor class for Cropland Data Layer
 Cleaned up calculate_errors method in the Postprocessor
+Re-organized examples
+Some other changes to the NHDPlus extractor/delineator
+Added example for CDLExtractor

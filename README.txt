@@ -17,8 +17,6 @@ developed based on flowline and catchment data from the National
 Hydrography Dataset Plus Version 2 (NHDPlus), climate data from the 
 National Climate Data Center (NCDC), and landuse data from the National 
 Agricultural Statistics Service (NASS) Cropland Data Layer (CDL). 
-To use the preprocessing and calibration routines, some additional 
-packages are needed including GDAL, PyShp, Pillow, and 7zip.
 
 PyHSPF can be used to assimilate data into an HSPF model, build the 
 HSPF input files, simulate the model over a period of time, and then 
@@ -48,7 +46,7 @@ Python Imaging Library (Pillow)
 
 Installation: Extract the source zip files, then open a command prompt,
 navigate to the PyHSPF directory, and run "python setup.py install." 
-I am providing a few pre-built distributions in addition, although these
+I am providing a few pre-built distributions for Windows, although these
 cannot be guaranteed to port to different machines. The binaries 
 can be rebuilt using the open source GNU compiler collection (other 
 compilers may work but are untested). The HSPF13 folder contains the 
