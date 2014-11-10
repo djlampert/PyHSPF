@@ -7,10 +7,10 @@ summary of the examples:
 04. Utilizing the PyHSPF Postprocessor class to analyze the Hunting Creek example
 05. Performing a calibration of the Hunting Creek watershed with Python and PyHSPF
 06. Repeat of example01 but illustrating the use of Special Actions
-07. Utilizing PyHSPF's extractor for NHDPlus data
-08. Utilizing PyHSPF's extractor for NWIS data
-09. Utilizing PyHSPF's NHDPlusDelineator for the watershed of a gage within a HUC8
-10. Utilizing PyHSPF's CDLExtractor to download and extract data from the Cropland Data Layer
+07. Utilizing PyHSPF's NHDPlusExtractor to download and extract NHDPlus data
+08. Utilizing PyHSPF's NHDPlusDelineator to delineate a watershed for a point in a HUC8
+09. Utilizing PyHSPF's CDLExtractor to download and extract data from the Cropland Data Layer
+10. Utilizing PyHSPF's NWISExtractor for NWIS data
 11. Utilizing PyHSPF's extractor for Global Historical Climate Network Daily data
 12. Utilizing PyHSPF's extractor for all HSPF climate data needs
 

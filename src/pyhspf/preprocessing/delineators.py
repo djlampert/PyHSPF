@@ -35,13 +35,13 @@ class NHDPlusDelineator:
         self.attributes = attributes
         self.flowlines  = flowlines
         self.catchments = catchments
-        self.elevations      = elevations
-        self.gageid        = gageid
-        self.gagefile      = gagefile
-        self.damfile       = damfile
-        self.landuse       = landuse
-        self.gagecomid     = None
-        self.updown        = None
+        self.elevations = elevations
+        self.gageid     = gageid
+        self.gagefile   = gagefile
+        self.damfile    = damfile
+        self.landuse    = landuse
+        self.gagecomid  = None
+        self.updown     = None
         
     def get_distance2(self, p1, p2):
         """Returns the square of the distance between two points."""
@@ -178,18 +178,12 @@ class NHDPlusDelineator:
         return Cx, Cy
 
     def get_boundaries(self, 
-                       shapes, 
+                       shapefile, 
                        space = 0.1
                        ):
         """Gets the boundaries for the plot."""
 
-        boundaries = shapes[0].bbox
-        for shape in shapes[0:]:
-            b = shape.bbox
-            if b[0] < boundaries[0]: boundaries[0] = b[0]
-            if b[1] < boundaries[1]: boundaries[1] = b[1]
-            if b[2] > boundaries[2]: boundaries[2] = b[2]
-            if b[3] > boundaries[3]: boundaries[3] = b[3]
+        boundaries = shapefile.bbox
 
         xmin = boundaries[0] - (boundaries[2] - boundaries[0]) * space
         ymin = boundaries[1] - (boundaries[3] - boundaries[1]) * space
@@ -296,7 +290,7 @@ class NHDPlusDelineator:
         return comids
 
     def find_comid(self, 
-                   point
+                   point,
                    ):
         """Finds the comid of the flowline closest to the point."""
 
@@ -315,7 +309,7 @@ class NHDPlusDelineator:
         return flowlines.record(i)[comid_index]
 
     def find_gagecomid(self, 
-                       gageid
+                       gageid,
                        ):
         """Finds the comid of the gage."""
         
@@ -434,9 +428,6 @@ class NHDPlusDelineator:
         # path to the watershed boundary file
 
         self.boundary = '{}/{}'.format(output, boundaryfile)
-
-        if output is None: output = os.getcwd()
-        if not os.path.isdir(output): os.mkdir(output)
         
         if (not os.path.isfile(self.subbasinflowlines + '.shp') or 
             not os.path.isfile(self.subbasincatchments + '.shp')):
@@ -576,6 +567,162 @@ class NHDPlusDelineator:
         if not os.path.isfile(pfile):
             self.plot_gage_watershed(gageid, output = pfile)
 
+    def delineate_watershed(self, 
+                            lon,
+                            lat,
+                            output       = None,
+                            flowlines    = 'flowlines',
+                            catchments   = 'catchments',
+                            boundaryfile = 'boundary',
+                            verbose      = True,
+                            ):
+        """Delineates the watershed for the provided point using the NHDPlus
+        data for the given longitude, latitude."""
+
+        if output is None:              output = os.getcwd()
+        elif not os.path.isdir(output): os.mkdir(output)
+
+        # path to the delineated flowline file
+
+        self.subbasinflowlines = '{}/{}'.format(output, flowlines)
+
+        # path to the delineated subbasin file
+
+        self.subbasincatchments = '{}/{}'.format(output, catchments)
+
+        # path to the watershed boundary file
+
+        self.boundary = '{}/{}'.format(output, boundaryfile)
+        
+        if (not os.path.isfile(self.subbasinflowlines + '.shp') or 
+            not os.path.isfile(self.subbasincatchments + '.shp')):
+
+            # find the comid of the flowline associated with the point
+            # and then trace the upstream comids from that location
+
+            comids = self.find_subbasin_comids(self.find_comid((lon, lat)))
+
+        # extract the flowline shapes from the watershed files
+
+        if not os.path.isfile(self.subbasinflowlines + '.shp'):
+
+            # copy the projection
+
+            shutil.copy(self.flowlines + '.prj', 
+                        self.subbasinflowlines + '.prj')
+
+            if verbose: print('reading the flowline file\n')
+    
+            shapefile = Reader(self.flowlines, shapeType = 3)
+            records   = shapefile.records()
+    
+            # figure out which field codes are the comid
+    
+            comid_index = shapefile.fields.index(['COMID', 'N',  9, 0]) - 1
+    
+            # go through the indices and find the comids
+    
+            if verbose: 
+                print('searching for upstream flowlines in the watershed\n')
+    
+            indices = []
+       
+            i = 0
+            for record in records:
+                if record[comid_index] in self.updown: 
+                    indices.append(i)
+                i+=1
+
+            if len(indices) == 0:
+                if verbose: print('error: query returned no values')
+                raise
+    
+            # write the data for the comids to a new shapefile
+    
+            w = Writer(shapeType = 3)
+    
+            for field in shapefile.fields: w.field(*field)
+    
+            for i in indices:
+                shape = shapefile.shape(i)
+                w.poly(shapeType = 3, parts = [shape.points])
+    
+                record = records[i]
+    
+                # little work around for blank GNIS_ID and GNIS_NAME values
+    
+                if isinstance(record[3], bytes):
+                    record[3] = record[3].decode('utf-8')
+                if isinstance(record[4], bytes):
+                    record[4] = record[4].decode('utf-8')
+    
+                w.record(*record)
+    
+            w.save(self.subbasinflowlines)
+    
+            if verbose: 
+                l = len(indices)
+                print('queried {} flowlines\n'.format(l))
+
+        # extract the catchment shapes from the watershed files
+
+        if not os.path.isfile(self.subbasincatchments + '.shp'):
+
+            # copy the projection
+
+            shutil.copy(self.flowlines + '.prj', 
+                        self.subbasincatchments + '.prj')
+
+            if verbose: print('reading the catchment file\n')
+    
+            shapefile = Reader(self.catchments, shapeType = 5)
+            records   = shapefile.records()
+    
+            # get the index of the feature id, which links to the flowline comid
+    
+            feature_index = shapefile.fields.index(['FEATUREID', 'N', 9, 0]) - 1
+    
+            # go through the indices and find the comids
+    
+            if verbose: 
+                print('searching for upstream catchments in the watershed\n')
+    
+            indices = []
+       
+            i = 0
+            for record in records:
+                if record[feature_index] in self.updown: 
+                    indices.append(i)
+                i+=1
+
+            if len(indices) == 0:
+                if verbose: print('error: query returned no values')
+                raise
+    
+            # write the data for the comids to a new shapefile
+    
+            w = Writer(shapeType = 5)
+    
+            for field in shapefile.fields: w.field(*field)
+    
+            for i in indices:
+                shape = shapefile.shape(i)
+                w.poly(shapeType = 5, parts = [shape.points])    
+                record = records[i]
+                w.record(*record)
+    
+            w.save(self.subbasincatchments)
+
+        # merge the catchments together to form the watershed boundary
+
+        if not os.path.isfile(self.boundary + '.shp'):
+        
+            if verbose: print('merging the catchments to form a boundary\n')
+    
+            print('{}/{}'.format(output, catchments))
+            merge_shapes('{}/{}'.format(output, catchments), 
+                         outputfile = self.boundary)
+
     def get_overland(self, 
                      catchpoints, 
                      closest, 
@@ -626,7 +773,6 @@ class NHDPlusDelineator:
 
         f = self.get_overland(catchpoints, closest)
 
-        print(*f)
         if verbose: 
             print('flowplane length = {:5.0f} m; slope = {:.4f}'.format(*f))
 
@@ -985,18 +1131,20 @@ class NHDPlusDelineator:
         pyplot.savefig(output, dpi = 200)
         pyplot.close()
 
-    def plot_gage_watershed(self, 
-                            gage, 
-                            title      = None,
-                            resolution = 200,
-                            output     = None,
-                            show       = False,
-                            verbose    = True,
-                            ):
+    def plot_delineated_watershed(self,
+                                  gageid     = None,
+                                  point      = None,
+                                  title      = None,
+                                  cmap       = 'gist_earth',
+                                  resolution = 200,
+                                  output     = None,
+                                  show       = False,
+                                  verbose    = True,
+                                  ):
         """Makes a plot of the delineated watershed."""
 
         if verbose: 
-            print('generating plot of watershed for gage {0}\n'.format(gage))
+            print('generating plot of watershed for point\n')
 
         fig = pyplot.figure()
         subplot = fig.add_subplot(111, aspect = 'equal')
@@ -1012,9 +1160,7 @@ class NHDPlusDelineator:
         subplot.add_patch(self.make_patch(points, facecolor = facecolor, 
                                           width = 1.))
 
-        extent = self.get_boundaries(b.shapes(), space = 0.02)
-
-        xmin, ymin, xmax, ymax = extent
+        xmin, ymin, xmax, ymax = self.get_boundaries(b, space = 0.02)
 
         # figure out how far one foot is on the map
 
@@ -1092,17 +1238,9 @@ class NHDPlusDelineator:
         while updown[comids[i]] in updown: i+=1
         gnis_name = f.record(all_comids.index(comids[i]))[4]
     
-        # get the gage info
-    
-        f = Reader(self.gagefile, shapeType = 1)
-    
-        site_index = f.fields.index(['SITE_NO', 'C', 15, 0]) - 1
-        gage_ids    = [r[site_index] for r in f.records()]
-        gage_points = [g.points[0] for g in f.shapes()]
-    
-        x1, y1 = gage_points[gage_ids.index(gage)]
-    
-        subplot.scatter(x1, y1, marker = 'o', c = 'r', s = 60)
+        # show the point
+
+        subplot.scatter(point[0], point[1], marker = 'o', c = 'r', s = 60)
     
         subplot.set_xlabel('Longitude, Decimal Degrees', size = 13)
         subplot.set_ylabel('Latitude, Decimal Degrees',  size = 13)
@@ -1110,14 +1248,11 @@ class NHDPlusDelineator:
         subplot.xaxis.set_major_formatter(ticker.ScalarFormatter('%.1f'))
         subplot.ticklabel_format(useOffset=False)
 
-        # add the raster
+        # add the raster using the min and max elev to set the countours
     
-        colormap = 'gist_earth'
-    
-        # use the min and max elev to set the countours
-    
+        extent = xmin, ymin, xmax, ymax
         im = self.add_raster(subplot, self.elevations, resolution, extent, 
-                             colormap, 100) 
+                             cmap, 200) 
     
         divider = make_axes_locatable(subplot)
         cax = divider.append_axes('right', size = 0.16, pad = 0.16)
@@ -1133,8 +1268,11 @@ class NHDPlusDelineator:
         if not isinstance(gnis_name, bytes) > 0: descrip = ', ' + gnis_name
         else:                                    descrip = ''
     
-        if title is None: 
-            title = 'Watershed for Gage {0}{1}'.format(gage, descrip)
+        if title is None and point is not None: 
+            its = point[0], point[1], descrip
+            title = 'Watershed for {:7.4f}, {:7.4f}{}'.format(*its)
+        elif title is None and gageid is not None:
+            title = 'Watershed for {}{}'.format(gageid, descrip)
     
         subplot.set_title(title, fontsize = 14)
     
@@ -2587,7 +2725,7 @@ class HUC8Delineator(NHDPlusDelineator):
         subplot.add_patch(self.make_patch(points, facecolor = facecolor, 
                                           width = 1.))
 
-        extent = self.get_boundaries(b.shapes(), space = 0.02)
+        extent = self.get_boundaries(b, space = 0.02)
 
         xmin, ymin, xmax, ymax = extent
 

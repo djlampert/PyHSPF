@@ -454,7 +454,7 @@ class CDLExtractor:
 
             # store the results
 
-            self.landuse[k] = {r:0 for r in self.reds}
+            self.landuse[k] = {r:0 for r in self.order}
 
             try:
 
@@ -468,32 +468,35 @@ class CDLExtractor:
                 # count the number of pixels of each land use type
                                    
                 for v in numpy.unique(values):
-                    f = len(values[numpy.argwhere(values == v)]) / len(values)
+
+                    # find all the indices for each pixel value
+
+                    pixels = numpy.argwhere(values == v)
+                    
+                    # normalize by the total # of pixels
+
+                    f = len(values[pixels]) / tot_pixels
+                    
+                    # add the landuse to the aggregated value
+
                     self.landuse[k][self.groups[v]] += f
     
             # work around for small shapes
             
             except: self.landuse[k][self.groups[0]] = 1
 
-        if csvfile is not None:  self.make_csv(csvfile)
+        if csvfile is not None:  self.make_csv(attribute, csvfile)
 
-        if plot: 
+        return self.landuse
 
-            self.plot_landuse(rasterfile, shapefile, attribute, 
-                              output = 'raw'.format(rasterfile), 
-                              datatype = 'raw')
-            self.plot_landuse(rasterfile, shapefile, attribute, 
-                              output = 'results'.format(rasterfile), 
-                              datatype = 'results')
-
-    def make_csv(self, output):
+    def make_csv(self, attribute, output):
 
         with open(output, 'w', newline = '') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(['Catchment Land Use Fractions'])
             writer.writerow([''])
 
-            row = [''] + self.order
+            row = [attribute] + self.order
             writer.writerow(row)
 
             for k,d in self.landuse.items():
@@ -567,11 +570,12 @@ class CDLExtractor:
 
         color_table = [(self.reds[g] / 255, self.greens[g] / 255, 
                         self.blues[g] / 255) for g in self.order]
-                   
+
         cmap = colors.ListedColormap(color_table)
-        bounds = [i+1 for i in range(len(self.order))]
+        bounds = [i for i in range(len(self.order))]
         norm = colors.BoundaryNorm(bounds, cmap.N)
 
+        print(bounds)
         # get the pixel width and origin
 
         w = (xmax - xmin) / pixels
@@ -600,67 +604,69 @@ class CDLExtractor:
                 pixel_polygon = [(get_pixel(x, xmin, w), get_pixel(y, ymin, h))
                                  for x, y in points]
 
-            # make a PIL image with the appropriate dimensions to use as a mask 
+                # make a PIL image to use as a mask 
 
-            rasterpoly = Image.new('L', (pixels, height), 1)
-            rasterize  = ImageDraw.Draw(rasterpoly)
+                rasterpoly = Image.new('L', (pixels, height), 1)
+                rasterize  = ImageDraw.Draw(rasterpoly)
 
-            # rasterize the polygon
+                # rasterize the polygon
 
-            rasterize.polygon(pixel_polygon, 0)
+                rasterize.polygon(pixel_polygon, 0)
 
-            # convert the PIL array to numpy boolean to use as a mask
+                # convert the PIL array to numpy boolean to use as a mask
 
-            mask = 1 - numpy.array(rasterpoly)
+                mask = 1 - numpy.array(rasterpoly)
 
-            # get the total number of pixels in the shape
+                # get the total number of pixels in the shape
 
-            tot = mask.sum()
+                tot = mask.sum()
 
-            # iterate from left to right and get the fraction of the total area
-            # inside the shape as a function of x (takes into account the depth)
+                # iterate from left to right and get the fraction of the total 
+                # area inside the shape as a function of x (takes into account 
+                # the depth)
 
-            fractions = [column.sum() / tot for column in mask.transpose()]
-            area_cdf  = [sum(fractions[:i+1]) for i in range(len(fractions))]
+                fractions = [column.sum() / tot for column in mask.transpose()]
+                area_cdf  = [sum(fractions[:i+1]) 
+                             for i in range(len(fractions))]
 
-            # convert the land use fractions into a land use cdf
+                # convert the land use fractions into a land use cdf
 
-            fractions = [self.landuse[comid][g] for g in self.order]
-            land_cdf = [sum(fractions[:i+1]) for i in range(len(fractions))]
+                fractions = [self.landuse[comid][g] for g in self.order]
+                land_cdf = [sum(fractions[:i+1]) for i in range(len(fractions))]
 
-            # use the area cdf to determine the break points for the land 
-            # use patches. note this array does not account for the masking 
-            # of the patch. thus there are n+1 vertical bands. the first and 
-            # last are the "empty" (first in the aggregate file). in between 
-            # the break points are determined from the area cdf.
+                # use the area cdf to determine the break points for the land 
+                # use patches. note this array does not account for the masking 
+                # of the patch. thus there are n+1 vertical bands. the first 
+                # and last are the "empty" (first in the aggregate file). in 
+                # between the break points are determined from the area cdf.
 
-            color_array = numpy.zeros(len(mask[0]), dtype = 'uint8')
+                color_array = numpy.zeros(len(mask[0]), dtype = 'uint8')
 
-            # find the break point for each band by looping through the land
-            # ues cdf and filling from left to right
+                # find the break point for each band by looping through the land
+                # ues cdf and filling from left to right
 
-            i = 0
-            for p, n in zip(land_cdf, range(len(self.order))):
+                i = 0
+                for p, n in zip(land_cdf, range(len(self.order))):
 
-                # move from left to right nuntil the area_cdf exceeds the land
-                # area cdf
+                    # move from left to right nuntil the area_cdf exceeds 
+                    # the land area cdf
 
-                while area_cdf[i] <= p: 
-                    color_array[i] = n + 1
-                    if i < len(area_cdf) - 1: i += 1
-                    else: break
+                    while area_cdf[i] <= p: 
+                        color_array[i] = n + 1
+                        if i < len(area_cdf) - 1: i += 1
+                        else: break
 
-            # multiply the color band array by the mask to get the subbasin img
+                # multiply the color band array by the mask to get the img
 
-            sub_img = mask * color_array
+                sub_img = mask * color_array
 
-            # add the new mask to the watershed image
+                # add the new mask to the watershed image
 
-            image_array = image_array + sub_img
+                image_array = image_array + sub_img
 
-            # add a patch for the shape boundary
+                # add a patch for the shape boundary
 
-            subplot.add_patch(self.make_patch(points, (1,0,0,0), width = 1))
+                subplot.add_patch(self.make_patch(points, (1,0,0,0), width = 1))
 
             # show the bands
 
@@ -698,25 +704,34 @@ class CDLExtractor:
 
             values = numpy.unique(zs)
 
-            groups = [self.groups[v] for v in values]
-
             for v in values:
                 group = self.groups[v]
                 i = self.order.index(group)
+                print(group, v, i)
                 zs[numpy.where(zs == v)] = i
 
+                #print(group, v,i, self.reds[group], self.greens[group], self.blues[group])
+
+            values = numpy.unique(zs)
+
+            for v, o in zip(values, self.order):
+                print(v, o, len(zs[numpy.where(zs == v)]))
+
+                
             # plot the grid
 
-            im = subplot.imshow(zs, 
+            im = subplot.imshow(zs,
+                                interpolation = 'nearest',
                                 extent = [xmin, xmax, ymin, ymax], 
                                 norm = norm, 
                                 cmap = cmap,
                                 )
 
-            # add a patch for the shape boundary
+            # add patch for the shape boundary
 
-            points = numpy.array(s.shape(0).points)
-            subplot.add_patch(self.make_patch(points, (1,0,0,0), width = 1))
+            for shape in s.shapes():
+                points = numpy.array(shape.points)
+                subplot.add_patch(self.make_patch(points, (1,0,0,0), width=0.5))
 
         # add the legend using a dummy box to make patches for the legend
 

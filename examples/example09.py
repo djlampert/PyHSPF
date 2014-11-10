@@ -2,42 +2,84 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# Shows how to use the NHDPlusDelineator to delineate the watershed for a gage
-# within a HUC8. Assumes the NHDPlus Hydrography data and gage station 
-# shapefile for the HUC8 exist already.
+# illustrates how to download data from the Cropland Data Layer (CDL),
+# extract a Geotiff for a HUC8 from the source, and calculate the landuse
+# data for each polygon in the shapefile. Example utilizes the subbasin 
+# shapefile for the Patuxent River Watershed (HUC 02060006), which is in 
+# Maryland.
+#
+# last updated: 11/04/2014
 
-# base python module imports needed
+import os
 
-import os, datetime
+output = 'CDL'                      # path to place state CDL source rasters
+state  = 'MD'                       # Maryland (two-digit state abbreviation)
+years  = [2008, 2009, 2010]         # years to extract data (CDL is annual)
+sfile  = 'data/patuxent/catchments' # catchment file for land use calculation
+sfile  = 'data/patuxent/boundary'   # catchment file for land use calculation
 
-# pyhspf imports
+# the aggregate file (CSV); maps integers in the CDL raster to landuse groups
 
-from pyhspf.preprocessing import NHDPlusDelineator
+aggregate = 'data/patuxent/aggregate.csv'
 
-# paths for downloaded files
+# make the output directory
 
-output = 'HSPF_data'     # output for the HUC8
+if not os.path.isdir(output): os.mkdir(output)
 
-# HUC8 info
+# extract cropland data for the state from NASS using the CDLExtractor class
 
-HUC8       = '02060006'                         # 8-digit HUC
-gage       = '01594670'                         # USGS Gage Site ID number
+from pyhspf.preprocessing import CDLExtractor
 
-# extracted files
+# provide the directory where the source data are located (or will be placed)
 
-gagefile  = '{}/gagestations'.format(output)   # HUC8 gage station shapefile
-flowfile  = '{}/flowlines'.format(output)      # HUC8 flowline shapefile
-cfile     = '{}/catchments'.format(output)     # HUC8 catchment shapefile
-bfile     = '{}/boundary'.format(output)       # HUC8 boundary shapefile
-VAAfile   = '{}/flowlineVAAs'.format(output)   # NHDPlus value added attributes
-elevfile  = '{}/elevations.tif'.format(output) # NED raster file
-watershed = '{}/{}'.format(output, gage)       # gage watershed files directory
+cdlextractor = CDLExtractor(output)
 
-# create an instance of the delineator and supply the path to the source files
+# download the data for the state for each year
 
-delineator = NHDPlusDelineator(VAAfile, flowfile, cfile, elevfile,
-                               gagefile = gagefile)
+cdlextractor.download_data(state, years)
 
-# extracts the catchments and flowlines for the gage's watershed and plot it
+# extract the data for the bounding box of the patuxent catchment shapefile 
+# that is located in the "data" directory (this could be generated from another
+# example) and place it in the "output" directory
 
-delineator.delineate_gage_watershed(gage, output = watershed)
+cdlextractor.extract_shapefile(sfile, output)
+
+# calculate the 2008 landuse for each shape in the catchmentfile using the 
+# "FEATUREID" feature attribute, and make an (optional) csv file of the output
+
+year = 2008
+extracted = '{}/{}landuse.tif'.format(output, year)
+csvfile   = 'landuse.csv'.format(output, year)
+
+# the results are returned as a dictionary of dictionaries--the keys are the 
+# 'FEATUREID' attributes from the shapefile and the categories from the 3rd 
+# column in the aggregate.csv file. the values in the dictionary are the 
+# fractions of the polygon for the shapefile. 
+
+attribute = 'FEATUREID'
+landuse = cdlextractor.calculate_landuse(extracted, sfile, aggregate, 
+                                         attribute, csvfile = csvfile)
+
+# the results are returned as a dictionary of dictionaries as follows:
+#
+# the keys to the first dictionary are the field values for the 'FEATUREID' 
+# attribute (or whatever field you want to use)
+#
+# the keys to the second dictionary are the unique values of the landuse
+# specified the data/patuxent/aggregate.csv file
+#
+# to understand this works, it's a good idea to spend some time looking at 
+# the aggregate file and CDL rasters and the output.
+
+# the processing can be visualized using the plot_landuse method. the 
+# "datatype" keyword of 'raw' or 'results' can be used to see the aggregated
+# values before and a "band chart" where the area of the stripes corresponds
+# to the area of the land use fraction (this is how HSPF "thinks" about landuse)
+
+cdlextractor.plot_landuse(extracted, sfile, attribute, 
+                          output = 'raw'.format(extracted), 
+                          datatype = 'raw')
+cdlextractor.plot_landuse(extracted, sfile, attribute, 
+                          output = 'results'.format(extracted), 
+                          datatype = 'results')
+

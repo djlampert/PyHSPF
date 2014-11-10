@@ -2,55 +2,46 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# This example illustrates how to extract NWIS data for HSPF using the 
-# NWISExtractor class. The extractor will download the source shapefile that
-# has the metadata for the daily discharge and water quality data for the
-# entire USA. If the source file already exists it will skip this step. 
-# The example shows how to download all the data for a given HUC8, starting
-# by extracting a point shapefile for the HUC8 then downloading the daily
-# discharge and water quality data using the GageStation class (you can view
-# the class in the preprocessing directory). The example then shows how 
-# to download data for just one station as an alternative.
-
-# base python module imports needed
-
-import os, datetime
+# Shows how to use the NHDPlusDelineator to delineate the watershed for a point
+# within a HUC8. Assumes the NHDPlus Hydrography data exist already. This 
+# example delineates the watershed for the location of the discontinued flow
+# gage at Hunting Creek, MD.
 
 # pyhspf imports
 
-from pyhspf.preprocessing import NWISExtractor
+from pyhspf.preprocessing import NHDPlusDelineator
 
-# paths for downloaded files
+# paths to the downloaded and extracted files from NHDPlus for the HUC8.
+# these are provided with the distribution now, though they can be generated
+# from the previous example.
 
-NWIS      = 'NWIS'         # location for NWIS metadata files
-directory = 'HSPF_data'    # working directory for input/output
-HUC8      = '02060006'     # 8-digit HUC
-gage      = '01594670'     # USGS Gage Site ID number
+output = 'data/Patuxent'
 
-# extracted files
+# paths to the different source files for the model data
 
-output    = '{}/{}'.format(directory, HUC8)    # output directory for the HUC8
-gagepath  = '{}/gagedata'.format(output)       # all HUC8 NWIS flow data path
-gagedata  = 'hunting_station'                  # data file for one gage
+flowfile  = '{}/flowlines'.format(output)      # HUC8 flowline shapefile
+cfile     = '{}/catchments'.format(output)     # HUC8 catchment shapefile
+VAAfile   = '{}/flowlineVAAs'.format(output)   # NHDPlus value added attributes
+elevfile  = '{}/elevations.tif'.format(output) # NED raster file
+watershed = '{}/delineated'.format(output)     # directory for delineated files
 
-# time series start and end
+# create an instance of the delineator and supply the path to the source files
 
-start = datetime.datetime(1980, 1, 1)      # start date for timeseries
-end   = datetime.datetime(2010, 1, 1)      # end date for timeseries
+delineator = NHDPlusDelineator(VAAfile, flowfile, cfile, elevfile)
 
-# create an instance of the NWIS extractor
+# longitude, latitude of the point to delineate (the delineator looks for the
+# closest flowline to this point)
 
-nwisextractor = NWISExtractor(NWIS)
+longitude = -76.6056
+latitude  =  38.5839
 
-# extract the gage stations into a new shapefile for the HUC8
+# extracts the catchments and flowlines for the gage's watershed and merge
+# the shapes together to make a boundary file
 
-nwisextractor.extract_HUC8(HUC8, output)
+gagewatershed = '{}/01594670'.format(output)
+delineator.delineate_watershed(longitude, latitude, output = gagewatershed)
 
-# download all the daily flow and water quality data from the gage shapefile
+# make a plot of the watershed
 
-if not os.path.isdir(gagepath):
-    nwisextractor.download_all(start, end, output = gagepath)
-
-# download the daily flow and water quality data for one gage
-
-nwisextractor.download_gagedata(gage, start, end, output = gagedata)
+point = longitude, latitude
+delineator.plot_delineated_watershed(point = point, output = gagewatershed)
