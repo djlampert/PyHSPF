@@ -2,6 +2,8 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
+# last updated: 01/10/2015
+#
 # This example illustrates how to extract NWIS data for HSPF using the 
 # NWISExtractor class. The extractor will download the source shapefile that
 # has the metadata for the daily discharge and water quality data for the
@@ -10,11 +12,12 @@
 # by extracting a point shapefile for the HUC8 then downloading the daily
 # discharge and water quality data using the GageStation class (you can view
 # the class in the preprocessing directory). The example then shows how 
-# to download data for just one station as an alternative.
+# to download data for just one station as an alternative. Finally, the example
+# shows how to open and work with the data for each gage in the watershed.
 
 # base python module imports needed
 
-import os, datetime
+import os, datetime, pickle
 
 # pyhspf imports
 
@@ -35,7 +38,8 @@ gagepath  = '{}/gagedata'.format(directory)     # all HUC8 NWIS flow data path
 start = datetime.datetime(1980, 1, 1)      # start date for timeseries
 end   = datetime.datetime(2010, 1, 1)      # end date for timeseries
 
-# create an instance of the NWIS extractor
+# create an instance of the NWIS extractor and provide the location of the 
+# metadata file (that is downloaded if it doesn't exist)
 
 nwisextractor = NWISExtractor(NWIS)
 
@@ -56,3 +60,64 @@ if not os.path.isdir(gagepath):
 gageid    = '01594670'
 gagedata  = 'hunting_station'
 nwisextractor.download_gagedata(gageid, start, end, output = gagedata)
+
+# the output directory will contain images with flow-duration curves and 
+# daily flow hydrographs. the statements below show how to access the data 
+# from the downloaded files. let's open up the data files from the patuxent 
+# directory that was made above.
+
+print('fetching flow data from the Patuxent watershed')
+
+# make a list of all the data files just downloaded
+
+datafiles = [f for f in os.listdir(gagepath) if f[-3:] != 'png']
+
+# iterate through the list, get/print some data for each gage
+
+print('Data for downloaded stations:')
+
+# let's get the data for the year 2001 for each gage if it's available
+
+s = datetime.datetime(2001, 1, 1)
+e = datetime.datetime(2002, 1, 1)
+
+for n in datafiles:
+
+    p = '{}/{}'.format(gagepath, n)
+    with open(p, 'rb') as f: station = pickle.load(f)
+
+    # the following are attributes of the station directly from the database
+
+    print('Gage ID:                     ', station.gageid)
+    print('Name:                        ', station.name)
+    print('State:                       ', station.state)
+    print('First day of measurement:    ', station.day1)
+    print('Last day of measurement:     ', station.dayn)
+    print('Drainage area (square miles):', station.drain)
+    print('Average flow (cfs):          ', station.ave)
+    print('NWIS url:                    ', station.web)
+
+    # get the time series of daily flow data from the start to end date
+    # if it's available:
+
+    try: 
+
+        ts = station.make_timeseries(start = s, end = e)
+
+        # if the start and end dates are not supplied, the function return the 
+        # data for the whole period
+
+        its = s.year, s.month, s.day, ts[0]
+        print('flow on {:04d}-{:02d}-{:02d} (cfs):     {}'.format(*its))
+
+        # calculate the average flow across the dates specified
+
+        ave = sum(ts) / (e - s).days
+        print('mean flow across dates (cfs): {:.1f}'.format(ave))
+
+    except: pass
+
+    # if the flow values are missing, the function will fill the value for 
+    # the data with a "None"
+
+    print('')

@@ -1,11 +1,11 @@
-# hspfmodel.py
+# rchres.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# Purpose: Builds an instance of the HSPFModel class that can be used to
-# generate UCI files for an HSPF simulation.
+# Purpose: Contains the Rchres class that acts as a container for information
+# about an HSPF RCHRES (Reach/Mixed Reservoir).
 #
-# last updated: 04/30/2014
+# last updated: 01/10/2015
 
 class Rchres:
     """A class to store and retrieve information for a reach/reservoir 

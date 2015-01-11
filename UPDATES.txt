@@ -70,3 +70,8 @@ Cleaned up calculate_errors method in the Postprocessor
 Re-organized examples
 Some other changes to the NHDPlus extractor/delineator
 Added example for CDLExtractor
+
+Version 0.1.10
+Added NID extractor example
+Expanded NWIS example to show how to work with the data files
+Cleaned up some file names
