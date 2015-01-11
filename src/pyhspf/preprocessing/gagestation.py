@@ -1,13 +1,11 @@
-#!/usr/bin/env python3
+# gagestation.py
 #
-# File: make_gages.py
+# David J. Lampert (djlampert@gmail.com)
 #
-# by David J. Lampert, PhD, PE (djlampert@gmail.com)
+# Last updated: 01/10/2015
 #
-# Last updated: 07/27/2014
-#
-# Purpose: imports gage files to Python pickled files for easy access to data
-#
+# Contains the GageStation class that is used to extract, store and manipulate
+# data from the USGS National Water Information System gages.
 
 import os, csv, pickle, datetime, io
 

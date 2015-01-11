@@ -1,11 +1,11 @@
-# hspfmodel.py
+# implnd.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# Purpose: Builds an instance of the HSPFModel class that can be used to
-# generate UCI files for an HSPF simulation.
+# Purpose: Contains the Implnd class that acts as a container to store
+# information about an HSPF IMPLND (Impervious Land Segment).
 #
-# last updated: 04/30/2013
+# last updated: 01/10/2015
 
 class Implnd:
     """A class for an impervious land segment for an HSPF model."""

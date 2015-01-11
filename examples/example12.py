@@ -2,10 +2,9 @@
 # 
 # David J. Lampert (djlampert@gmail.com)
 #
-# illustrates how to use the preprocessing tools to download climate data
-# needed to estimate the potential evapotranspiration and perform a snow 
-# simulation. similar to the last example but shows other climate data
-# extraction tools that are available.
+# illustrates how to use the preprocessing tools to download climate data.
+#
+# last updated: 01/10/2015
 
 from pyhspf.preprocessing import climateutils
 
@@ -19,109 +18,94 @@ bbox = -94, 41.3, -91.3, 42.5
 
 start = datetime.datetime(1980, 1, 1)
 end   = datetime.datetime(2011, 1, 1)
-dates = start, end
 
-# download all the GHCND data (this includes daily values of tmin, tmax, 
-# wind, snow, precipitation, and pan evaporation)
+# this was (at the time of writing) the url to the NCDC database for the GHCND:
+#
+# GHCND = 'http://www1.ncdc.noaa.gov/pub/data/ghcn/daily'
+#
+# if the site changes this can be updated
 
-stations = climateutils.find_ghcnd(bbox, dates = dates, verbose = True)
+# find the stations with evaporation data and make a list of GHCNDStation 
+# instances to use to download the data for the stations
 
-# download the data to "output" location
+# GHCND variable to look for data ('EVAP' is pan evaporation--look at the
+# website if you are interested in other variables)
 
-output = 'GHCND'
-if not os.path.isdir(output): os.mkdir(output)
+var = 'EVAP'
 
-for station in stations: 
+# find the stations with EVAP data
 
-    if not os.path.isfile('{}/{}'.format(output, station.station)):
+stations = climateutils.find_ghcnd(bbox, var = var, dates = (start, end), 
+                                   verbose = True)
 
-        station.download_data(output, start = start, end = end, plot = True)
+# download the data to "output" location (here it's the current directory, ".")
+# each station will be saved as a binary file with its unique GHCND ID
 
+output = '.'
 
+for station in stations: station.download_data(output, start = start, end = end,
+                                               plot = False)
 
-# download all the GSOD data (this includes daily values of tmin, tmax, 
-# wind, precipitation, and dew point)
+# there are 4 files in the bounding box (you wouldn't know this in advance); 
+# let's just look at Ames (Iowa State) and Iowa City (Iowa) since the other 
+# data sets are really limited.  
 
-stations = climateutils.find_gsod(bbox, dates = dates, verbose = True)
+names = ['USC00130200', 'USC00134101']
 
-# download the data to "output" location
+# the "GHCNDStation" class is used to download data to the binary files, 
+# but other classes exist to store and manipulate the data (generating a
+# timeseries, removing missing values, plotting, etc.)
 
-output = 'GSOD'
-if not os.path.isdir(output): os.mkdir(output)
+from pyhspf.preprocessing.ncdcstations import EvapStation
 
-for station in stations: 
+evapstations = []
+for n in names:
+    with open('{}/{}'.format(output, n), 'rb') as f: ghcnd = pickle.load(f)
 
-    var = output, station.airforce, station.wban
-    destination = '{0}/{1:06d}-{2:05d}'.format(*var)
+    # make the EvapStation
 
-    if not os.path.isfile(destination):
+    evapstation = EvapStation()
 
-        station.download_data(output, start = start, end = end, plot = True)
+    # add the GHCND station metadata to the EvapStation
 
+    evapstation.add_ghcnd_data(ghcnd)
 
+    # add the EvapStation to the dictionary
 
-# download all the hourly precipitation data from NCDC Prec3240 dataset
+    evapstations.append(evapstation)
 
-stations = climateutils.find_precip3240(bbox, dates = dates, verbose = True)
+# now we can get the time series and make a plot of the data (or whatever you 
+# need to do); note there appear to be a few errors in the data set for Ames.
 
-# download the data to "output" location
+from matplotlib import pyplot
 
-output = 'hourlyprecip'
-if not os.path.isdir(output): os.mkdir(output)
+fig = pyplot.figure()
+sub = fig.add_subplot(111)
 
-# the hourly precipiation data are stored by state using Unix-style 
-# compression, so have to download these files then process them (requires
-# 7-zip on Windows, Python can't do this on Windoze as of now)
+t = ('GHCND {} data for bounding box '.format(var) + 
+     '({}, {}) to ({}, {})'.format(*bbox))
+sub.set_title(t)
+sub.set_xlabel('Time')
+sub.set_ylabel('Daily Evaporation')
+sub.set_ylim([0, 30])
 
-# the path to 7zip 
+# times for a time series plot
 
-path_to_7z = r'C:/Program Files/7-Zip/7z.exe'
+times = [start + i * datetime.timedelta(days = 1) 
+         for i in range((end-start).days)]
 
-# make a list of all the states since that's how the NCDC data are stored
+text = ''
+for s in evapstations:
+    total_evaporation = s.get_evaporation(start, end)
+    avg_evap = total_evaporation / (end-start).days * 365.25
+    values = s.make_timeseries(start, end)
+    sub.plot(times, values, label = s.name)
+    i = s.station, s.name, avg_evap
+    text+='\nStation {}, {}\nAnnual average evaporation = {:.0f} mm'.format(*i)
 
-states = list(set([s.code for s in stations]))
+sub.text(0.99, 1., text, ha = 'right', va = 'top', 
+         transform = sub.transAxes, size = 8)
 
-# download the state data for each year
-    
-for state in states: climateutils.download_state_precip3240(state, output)
+leg = sub.legend(loc = 'upper left', prop = {'size': 8})
 
-# find all the compressed files we just downloaded
-
-archives = ['{}/{}'.format(output, a) for a in os.listdir(output)
-            if a[-6:] == '.tar.Z']
-    
-for a in archives:
-
-    # decompress the archive
-
-    if not os.path.isfile(a[:-2]): 
-            
-        print(a)
-        if os.name == 'nt':
-            climateutils.decompress7z(a, output, path_to_7z = path_to_7z)
-        else:
-            climateutils.decompresszcat(compressed, output)
-
-        print('')
-            
-# import the data into Precip3240Station objects (they are saved automatically)
-
-for station in stations: station.import_data(output, start, end)
-
-
-
-# download all the solar radiation data from NREL's NSRDB
-
-stations = climateutils.find_nsrdb(bbox, dates = dates, verbose = True)
-
-# download the data to "output" location
-
-output = 'NSRDB'
-if not os.path.isdir(output): os.mkdir(output)
-
-for station in stations: 
-
-    if not os.path.isfile('{}/{}'.format(output, station.usaf)):
-
-        station.download_data(output, dates = (start, end))
-
+pyplot.show()

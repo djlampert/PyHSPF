@@ -86,6 +86,8 @@ landuse = cdlextractor.calculate_landuse(extracted, sfile, aggregate,
 
 # this WILL take a while (adjust the border linewidth for clarity)
 
+print('\nthis WILL take a while...\n')
+
 cdlextractor.plot_landuse(extracted, sfile, attribute, lw = 0.1,
                           output = 'catchmentresults'.format(extracted), 
                           datatype = 'results')

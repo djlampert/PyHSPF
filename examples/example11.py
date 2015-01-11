@@ -1,110 +1,82 @@
 # example11.py
-# 
+#
 # David J. Lampert (djlampert@gmail.com)
 #
-# illustrates how to use the preprocessing tools to download climate data.
+# last updated: 01/10/2015
 #
-# last updated: 11/04/2014
+# shows how to download, extract, and work with data from the US National 
+# Inventory of Dams (NID) using PyHSPF's built-in NIDExtractor class.
 
-from pyhspf.preprocessing import climateutils
+from pyhspf.preprocessing import NIDExtractor
 
-import os, pickle, datetime
+# extract data for the Patuxent River, MD, HUC 02060006, using the boundary
+# shapefile in the data directory
 
-# bounding box of interest
+sfile = 'data/patuxent/boundary'
 
-bbox = -94, 41.3, -91.3, 42.5 
+# output shapefile name
 
-# start and end dates
+damfile = '02060006dams'
 
-start = datetime.datetime(1980, 1, 1)
-end   = datetime.datetime(2011, 1, 1)
+# path to place the NID shapefile
 
-# this was (at the time of writing) the url to the NCDC database for the GHCND:
-#
-# GHCND = 'http://www1.ncdc.noaa.gov/pub/data/ghcn/daily'
-#
-# if the site changes this can be updated
+NID = 'NID'
 
-# find the stations with evaporation data and make a list of GHCNDStation 
-# instances to use to download the data for the stations
+# make an instance of the extractor to work with; the base US NID shapefile
+# will be downloaded and extracted automatically if it doesn't exist
 
-# GHCND variable to look for data ('EVAP' is pan evaporation--look this up)
+nidextractor = NIDExtractor(NID)
 
-var = 'EVAP'
+# extract the data to a new shapefile
 
-# find the stations with EVAP data
+nidextractor.extract_shapefile(sfile, damfile)
 
-stations = climateutils.find_ghcnd(bbox, var = var, dates = (start, end), 
-                                   verbose = True)
+# the extractor can also extract data to a new shapefile using a bounding box 
 
-# download the data to "output" location (here it's the current directory, ".")
-# each station will be saved as a binary file with its unique GHCND ID
+bbox = -78, 38, -75, 40
 
-output = '.'
+# output file name
 
-for station in stations: station.download_data(output, start = start, end = end,
-                                               plot = False)
+bboxfile = 'bbox'
 
-# there are 4 files in the bounding box (you wouldn't know this in advance); 
-# let's just look at Ames (Iowa State) and Iowa City (Iowa) since the other 
-# data sets are really limited.  
+nidextractor.extract_bbox(bbox, bboxfile)
 
-names = ['USC00130200', 'USC00134101']
+# let's use pyshp to open up the patuxent shapefile and get some info about the
+# dams that we downloaded
 
-# the "GHCNDStation" class is used to download data, but an additional class 
-# to the binary files, but other classes exist to store and manipulate the data
-# such as make timeseries for removing missing values, etc.
+from shapefile import Reader
 
-from pyhspf.preprocessing.ncdcstations import EvapStation
+sf = Reader(damfile)
 
-evapstations = []
-for n in names:
-    with open('{}/{}'.format(output, n), 'rb') as f: ghcnd = pickle.load(f)
+# these are the attributes of each dam stored in the NID
 
-    # make the EvapStation
+name_index  = sf.fields.index(['DAM_NAME',   'C', 65,   0]) - 1
+nid_index   = sf.fields.index(['NIDID',      'C', 7,    0]) - 1
+lon_index   = sf.fields.index(['LONGITUDE',  'N', 19,  11]) - 1
+lat_index   = sf.fields.index(['LATITUDE',   'N', 19,  11]) - 1
+river_index = sf.fields.index(['RIVER',      'C', 65,   0]) - 1
+owner_index = sf.fields.index(['OWN_NAME',   'C', 65,   0]) - 1
+type_index  = sf.fields.index(['DAM_TYPE',   'C', 10,   0]) - 1
+purp_index  = sf.fields.index(['PURPOSES',   'C', 254,  0]) - 1
+year_index  = sf.fields.index(['YR_COMPL',   'C', 10,   0]) - 1
+high_index  = sf.fields.index(['NID_HEIGHT', 'N', 19,  11]) - 1
+mstor_index = sf.fields.index(['MAX_STOR',   'N', 19,  11]) - 1
+nstor_index = sf.fields.index(['NORMAL_STO', 'N', 19,  11]) - 1
+area_index  = sf.fields.index(['SURF_AREA',  'N', 19,  11]) - 1
 
-    evapstation = EvapStation()
+# iterate through the records and get whatever information is needed
 
-    # add the GHCND station metadata to the EvapStation
+for r in sf.records():
 
-    evapstation.add_ghcnd_data(ghcnd)
+    name  = r[name_index]
+    nidid = r[nid_index]
+    lon   = r[lon_index]
+    lat   = r[lat_index]
+    pur   = r[purp_index]
 
-    # add the EvapStation to the dictionary
-
-    evapstations.append(evapstation)
-
-# now we can plot the time series (or whatever you need the data for)
-# note that there appears to be a few errors in the data set for Ames
-
-from matplotlib import pyplot
-
-fig = pyplot.figure()
-sub = fig.add_subplot(111)
-
-t = ('GHCND {} data for bounding box '.format(var) + 
-     '({}, {}) to ({}, {})'.format(*bbox))
-sub.set_title(t)
-sub.set_xlabel('Time')
-sub.set_ylabel('Daily Evaporation')
-sub.set_ylim([0, 30])
-
-# times for a time series plot
-
-times = [start + i * datetime.timedelta(days = 1) 
-         for i in range((end-start).days)]
-
-text = ''
-for s in evapstations:
-    total_evaporation = s.get_evaporation(start, end)
-    avg_evap = total_evaporation / (end-start).days * 365.25
-    values = s.make_timeseries(start, end)
-    sub.plot(times, values, label = s.name)
-    i = s.station, s.name, avg_evap
-    text+='\nStation {}, {}\nAnnual average evaporation = {:.0f} mm'.format(*i)
-
-sub.text(0.99, 1., text, ha = 'right', va = 'top', 
-         transform = sub.transAxes, size = 8)
-
-leg = sub.legend(loc = 'upper left', prop = {'size': 8})
-
-pyplot.show()
+    print('Dam name:       ', name)
+    print('NID ID:         ', nidid)
+    print('Longitude:      ', lon)
+    print('Latitude:       ', lat)
+    print('Primary Purpose:', pur)
+    print('')

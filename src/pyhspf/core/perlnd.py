@@ -1,11 +1,11 @@
-# hspfmodel.py
+# perlnd.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# Purpose: Builds an instance of the HSPFModel class that can be used to
-# generate UCI files for an HSPF simulation.
+# Purpose: Contains the Perlnd class that acts as a container for the 
+# information in an HSPF PERLND (Pervious Land Segment).
 #
-# last updated: 08/27/2013
+# last updated: 01/10/2015
 
 class Perlnd:
     """A class for a pervious land segment for an HSPF model."""

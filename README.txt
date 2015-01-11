@@ -1,5 +1,5 @@
-PyHSPF, Version 0.1.9
-last updated: 11/04/2014
+PyHSPF, Version 0.1.10
+last updated: 01/10/2015
 Developed by David J. Lampert and May M. Wu, Argonne National Laboratory
 
 Summary: PyHSPF contains a library of subroutines to run the Hydrological 
@@ -13,23 +13,28 @@ parameters, and hydrology parameters for each land use category/subbasin.
 These data sources can be supplied externally as needed (e.g., using 
 Python extensions for geographic information systems (GIS) software). 
 Alternatively, a series of preprocessing classes and routines were 
-developed based on flowline and catchment data from the National 
-Hydrography Dataset Plus Version 2 (NHDPlus), climate data from the 
-National Climate Data Center (NCDC), and landuse data from the National 
-Agricultural Statistics Service (NASS) Cropland Data Layer (CDL). 
+developed for a number of databases including:
+
+-flowline and catchment data from the National Hydrography Dataset Plus 
+Version 2 (NHDPlus)
+-flow and water quality data from the National Water Information Service
+(NWIS)
+-dam data from the National Inventory of Dams (NID)
+-landuse data from the National Agricultural Statistics Service (NASS) 
+Cropland Data Layer (CDL)
+-climate data from several climate databases from the National Climate 
+Data Center (NCDC) including:
+-National Solar Radiation Database (NSRDB)
+-Global Historical Climate Network Daily (GHCND)
+-Global Summary of the Day (GSOD)
+-Hourly Precipitation Database (DSI-3240)
 
 PyHSPF can be used to assimilate data into an HSPF model, build the 
 HSPF input files, simulate the model over a period of time, and then 
 provide statistics and plots of the simulation output. The "core" module 
-requires NumPy, SciPy, and Matplotlib and can be used for generating input 
-files. A series of examples is provided to illustrate PyHSPF usage.
-
-The preprocessing modules contain classes to automate extraction of 
-data from various databases including the National Solar Radiation 
-Database (NSRDB), Global Historical Climate Network Daily (GHCND), Global
-Summary of the Day (GSOD), the NCDC Hourly Precipitation Database 
-(DSI-3240), the National Water Information System (NWIS), and the National
-Hydrography Dataset Plus Version 2 (NHDPlus). The data extractors and 
+requires NumPy, SciPy, and Matplotlib and can be used for generating
+input files. The "preprocessing" modules contain classes to automate
+extraction of data from the various databases. The data extractors and
 calculators can be used independently of the HSPF classes.
 
 Core Dependencies: 
@@ -38,7 +43,7 @@ Numeric Python (NumPy)
 Scientific Python (SciPy)
 Matplotlib
 
-Preprocessing and Calibration Dependencies:
+Preprocessing Dependencies:
 Geospatial Data Abstract Library (GDAL)
 Python Shapefile Library (PyShp)
 Python Imaging Library (Pillow)
@@ -46,8 +51,8 @@ Python Imaging Library (Pillow)
 
 Installation: Extract the source zip files, then open a command prompt,
 navigate to the PyHSPF directory, and run "python setup.py install." 
-I am providing a few pre-built distributions for Windows, although these
-cannot be guaranteed to port to different machines. The binaries 
+A few pre-built distributions are also provided for Windows, although
+these cannot be guaranteed to port to different machines. The binaries 
 can be rebuilt using the open source GNU compiler collection (other 
 compilers may work but are untested). The HSPF13 folder contains the 
 source code including some minor modifications needed to simplify the 
@@ -61,10 +66,9 @@ Testing: Open the Python interpreter (from a command prompt simply type
 "python"). Then try "import pyhspf"; the base Fortran subroutines can be
 accessed from pyhspf.hspf. If the import succeeds, then try to run 
 pyhspf.hspf.sydatepy(), which should print the date as a tuple. There 
-are numerous examples scripts provided. The examples are simple and designed
-to illustrate the basic concepts used to build HSPF models. Each example 
-contains a detailed explanation of about the particular HSPF model used
-and how to build the model with PyHSPF.
+are numerous examples scripts provided. The examples are designed to
+illustrate the basic concepts used to build HSPF models and extract
+relevant data. 
 
 Acknowledgements: Developed with funding from the United States Department of 
 Energy, Energy Efficiency & Renewable Energy, Bioenergy Technologies Office

@@ -270,9 +270,16 @@ class NHDPlusExtractor:
 
         args = ['7z', 'x', '-o{}'.format(self.destination), filename]
 
-        with subprocess.Popen(args, stdout = subprocess.PIPE).stdout as s:
+        try:
 
-            print(s.read().decode())
+            with subprocess.Popen(args, stdout = subprocess.PIPE).stdout as s:
+
+                print(s.read().decode())
+
+        except:
+
+            print('error: unable to decompress files')
+            print('is 7zip installed?')
 
     def download_compressed(self, webfile, name, verbose = True):
         """Private method to download a compressed file."""
