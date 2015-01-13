@@ -34,6 +34,7 @@ class CDLExtractor:
         self.years       = []           # years with data
         self.categories  = None         # land use category key-value
         self.landuse     = {}           # dictionary of results
+        self.order       = None         # aggregate data
 
         # make the destination directory if needed
 
@@ -517,6 +518,10 @@ class CDLExtractor:
         Makes a plot of the landuse of a catchment shapefile on top of a
         raster landuse file.
         """
+
+        if self.order is None:
+            print('error: no aggregate file information specified')
+            raise Exception
 
         if verbose: print('generating land use plot\n')
 

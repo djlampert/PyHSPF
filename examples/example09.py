@@ -71,10 +71,10 @@ landuse = cdlextractor.calculate_landuse(extracted, sfile, aggregate,
 # to the area of the land use fraction (this is how HSPF "thinks" about landuse)
 
 cdlextractor.plot_landuse(extracted, sfile, attribute, 
-                          output = 'raw'.format(extracted), 
+                          output = '{}/{}raw'.format(output, year),
                           datatype = 'raw')
 cdlextractor.plot_landuse(extracted, sfile, attribute, 
-                          output = 'results'.format(extracted), 
+                          output = '{}/{}results'.format(output, year),
                           datatype = 'results')
 
 # now let's repeat it using the catchment rather than just the boundary
@@ -86,7 +86,7 @@ landuse = cdlextractor.calculate_landuse(extracted, sfile, aggregate,
 
 # this WILL take a while (adjust the border linewidth for clarity)
 
-print('\nthis WILL take a while...\n')
+print('this will take a while...\n')
 
 cdlextractor.plot_landuse(extracted, sfile, attribute, lw = 0.1,
                           output = 'catchmentresults'.format(extracted), 

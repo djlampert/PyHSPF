@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 #
-# hindcaster.py
-# Hindcaster class for HSPF model hindcasting
+# forecaster.py
+# Forecaster class for HSPF model forecasting or hindcasting
 # David J. Lampert
 # djlampert@gmail.com
 #
-# last updated: 03/05/2014
+# last updated: 01/11/2015
 
 import os, sys, shutil, pickle, datetime, time, math
 

@@ -1562,19 +1562,12 @@ class HUC8Delineator(NHDPlusDelineator):
                 closest.append(flowpoints[j])
 
             closest = numpy.array(closest)
-            #closest = numpy.empty((len(catchpoints), 3), dtype = 'float')
 
-            #for point, j in zip(catchpoints, range(len(catchpoints))):
-            #    closest[j] = flowpoints[numpy.dot(flowpoints[:, :2], 
-            #                                      point[:2]).argmin()]
-
-            #print(closest.shape)
-            #exit()
             # estimate the slope and overland flow plane length
 
             length, slope = self.get_overland(catchpoints, closest)
 
-            if verbose: 
+            if vverbose: 
                 print('avg slope and length =', slope.mean(), length.mean())
 
             lengths[i], slopes[i] = length.mean(), slope.mean()
