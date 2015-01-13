@@ -49,14 +49,8 @@ from .nhdplusextractor    import NHDPlusExtractor
 from .nwisextractor       import NWISExtractor
 from .nidextractor        import NIDExtractor
 from .delineators         import HUC8Delineator
-#from .extract_gis_data    import extract_gis_data
-#from .subdivide_watershed import subdivide_watershed
-#from .make_subbasins      import make_subbasins
-#from .calculate_landuse   import calculate_landuse
-#from .landuse_stats       import landuse_stats
 from .cdlextractor        import CDLExtractor
 from .build_watershed     import build_watershed
-from .make_gagestations   import make_gagestations
 from .download_climate    import download_climate
 #from .extract_climate     import extract_climate
 
@@ -107,11 +101,12 @@ def preprocess(network,
     # file paths
 
     gagepath     = '{0}/{1}/NWIS'.format(output, HUC8)
-    subbasinfile = '{0}/{1}/subbasins'.format(output, HUC8)
+    subbasinfile = '{0}/{1}/subbasin_catchments'.format(output, HUC8)
     inletfile    = '{0}/{1}/subbasin_inlets'.format(output, HUC8)
     outletfile   = '{0}/{1}/subbasin_outlets'.format(output, HUC8)
     gagefile     = '{0}/{1}/gagestations'.format(output, HUC8)
     damfile      = '{0}/{1}/dams'.format(output, HUC8)
+    landusedata  = '{0}/{1}/landuse'.format(output, HUC8)
     landfile     = '{0}/{1}/subbasinlanduse'.format(output, HUC8)
     VAAfile      = '{0}/{1}/flowlineVAAs'.format(output, HUC8)
     bfile        = '{0}/{1}/boundary'.format(output, HUC8)
@@ -156,22 +151,6 @@ def preprocess(network,
 
         nidextractor.extract_shapefile(bfile, damfile)
 
-        # extract cropland data from NASS
-
-        cdlextractor = CDLExtractor(CDL)
-
-        # download the data for each state for each year
-
-        cdlextractor.download_data(state.upper(), years)
-
-        # extract the data for the bounding box
-
-        bbox = -93.3, 41.2, -92, 42.1
-        for year in years:
-            
-            cdl = '{}/{}_CDL_{}.tif'.format(output, state, year)
-            cdlextractor.extract_bbox(state.upper(), year, bbox, cdl)
-
     if delineate:
 
         # create an instance of the UMRBDelineator to delineate the watershed
@@ -195,56 +174,73 @@ def preprocess(network,
                              vverbose      = vverbose,
                              )
 
-    # subdivide the watershed to meet the subbasin criteria
+    if landuse:
 
-    #subbasins = delineator.make_subbasin_outlets(HUC8,
-    #                                             outletfile,
-    #                                             inletfile,
-    #                                             subbasinfile,
-    #                                             drainmax = drainmax, 
-    #                                             extras = extra_outlets, 
-    #                                             verbose = verbose
-    #                                             )
+        # extract cropland data from NASS
 
-    if 1==2:
-    #if landuse:
-        calculate_landuse(output, HUC8, years, landcodes, overwrite = 
-                          overwrite, parallel = parallel, verbose = verbose)
+        cdlextractor = CDLExtractor(CDL)
 
-    # tabulate the land use statistics
+        # download the data for each state for each year
 
-    if landpercents:
-        landusepercent = output + '/%s/%slandpercent.csv' % (HUC8, HUC8)
-        landuse_stats(output, HUC8, landcodes, subbasinfile, landusepercent,
-                      units = 'percent', overwrite = overwrite,
-                      verbose = verbose, vverbose = vverbose)
+        cdlextractor.download_data(state.upper(), years)
 
-    if 1==2:
-    #if landstats:
-        landusekm = output + '/%s/%slanduse.csv'     % (HUC8, HUC8)
-        landuse_stats(output, HUC8, landcodes, subbasinfile, landusekm, 
-                      picklefile = landfile, units = 'sqkm', 
-                      overwrite = overwrite, plots = landplots, 
-                      verbose = verbose, vverbose = vverbose) 
+        # make a directory for the CDL files
+
+        if not os.path.isdir(landusedata): os.mkdir(landusedata)
+
+        # extract the data for the watershed using the boundary shapefile
+
+        if not any([os.path.isfile('{}/{}landuse.tif'.format(landusedata, year))
+                    for year in years]):
+                                   
+            cdlextractor.extract_shapefile(bfile, landusedata)
+
+        # calculate the landuse in each subbasin for each year
+
+        for year in years:
+
+            attribute = 'ComID'
+            extracted = '{}/{}landuse.tif'.format(landusedata, year)
+
+            # csv file of the output
+
+            csvfile = '{}/{}landuse.csv'.format(landusedata, year)
+            if not os.path.isfile(csvfile):
+                cdlextractor.calculate_landuse(extracted, subbasinfile, 
+                                               landcodes, attribute,
+                                               csvfile = csvfile)
+
+            # raw landuse plot
+
+            raw = '{}/{}raw'.format(landusedata, year)
+            if not os.path.isfile(raw + '.png'):
+                cdlextractor.plot_landuse(extracted, subbasinfile, attribute, 
+                                          output = raw, lw = 2.,
+                                          datatype = 'raw')
+
+            # aggregated land use plot
+
+            results = '{}/{}results'.format(landusedata, year)
+            if not os.path.isfile(results + '.png'):
+                cdlextractor.plot_landuse(extracted, subbasinfile, attribute, 
+                                          output = results, 
+                                          datatype = 'results')
 
     # build the watershed object
 
-    if 1==2:
-    #if build:
-        flowlinefile = output + '/%s/%ssubbasin_flowlines' % (HUC8, HUC8)
-        VAAfile  = output + '/%s/flowlineVAAs'    % HUC8
-        build_watershed(subbasinfile, flowlinefile, outletfile, damfile, 
-                        gagefile, landfile, landcodes, VAAfile, 
-                        years, HUC8, output, plots = flowplots)
+    if build:
+
+        if not os.path.isfile('{}/{}/watershed'.format(output, HUC8)):
+            flowlinefile = '{}/{}/subbasin_flowlines'.format(output, HUC8)
+            VAAfile      = '{}/{}/flowlineVAAs'.format(output, HUC8)
+            build_watershed(subbasinfile, flowlinefile, outletfile, damfile, 
+                            gagefile, landusedata, VAAfile, 
+                            years, HUC8, output, plots = flowplots)
 
     # extract gage station data
 
     s = datetime.datetime(start, 1, 1)
     e = datetime.datetime(end, 1, 1)
-
-    if 1==2:
-    #if gagedata:
-        make_gagestations(output, HUC8, state, s, e, verbose = verbose)
 
     # extract climate data
 

@@ -19,7 +19,6 @@ from shapefile               import Reader, Writer
 from PIL                     import Image, ImageDraw
 
 from .merge_shapes       import format_shape
-from .combine_catchments import get_distance
 from .rasterutils        import get_pixel, get_raster
 from .rasterutils        import get_raster_in_poly
 from .rasterutils        import get_raster_on_poly
@@ -28,6 +27,26 @@ def is_number(s):
     try: float(s) 
     except ValueError: return False
     return True
+
+def get_distance(p1, p2):
+    """Approximates the distance in kilometers between two points on the 
+    Earth's surface designated in decimal degrees using an ellipsoidal 
+    projection. per CFR 73.208 it is applicable for up to 475 kilometers.
+    p1 and p2 are listed as (longitude, latitude).
+    """
+
+    deg_rad = math.pi / 180
+
+    dphi = p1[1] - p2[1]
+    phim = 0.5 * (p1[1] + p2[1])
+    dlam = p1[0] - p2[0]
+
+    k1 = (111.13209 - 0.56605 * math.cos(2 * phim * deg_rad) + 0.00120 * 
+          math.cos(4 * phim * deg_rad))
+    k2 = (111.41513 * math.cos(phim * deg_rad) - 0.09455 * 
+          math.cos(3 *phim * deg_rad) + 0.0012 * math.cos(5 * phim * deg_rad))
+
+    return np.sqrt(k1**2 * dphi**2 + k2**2 * dlam**2)
 
 def get_aggregate_map(aggregatefile):
     """Creates a dictionary that maps landuse codes to HSPF codes."""

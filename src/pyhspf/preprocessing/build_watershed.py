@@ -7,11 +7,11 @@ import os, csv, pickle, math
 from shapefile import Reader
 
 from pyhspf    import Watershed, Subbasin
-from .gisplots import get_aggregate_map, plot_mass_flow
+from .gisplots import plot_mass_flow
 
 def build_watershed(subbasinfile, flowfile, outletfile, damfile, gagefile,
-                    landfile, aggregatefile, VAAfile, years, HUC8, output, 
-                    plots = True, overwrite = False, format = 'png'):
+                    landfiles, VAAfile, years, HUC8, output, 
+                    plots = True, overwrite = False):
 
     # create a dictionary to store subbasin data
 
@@ -42,7 +42,7 @@ def build_watershed(subbasinfile, flowfile, outletfile, damfile, gagefile,
         elevation = record[elev_index]
 
         subbasin  = Subbasin(comid)
-        subbasin.add_flowplane(length, slope, 0, centroid, elevation)
+        subbasin.add_flowplane(length, slope, centroid, elevation)
 
         subbasins[comid] = subbasin
 
@@ -150,26 +150,36 @@ def build_watershed(subbasinfile, flowfile, outletfile, damfile, gagefile,
                              r[area_index]
                              )
 
-    # open up the aggregate file to get the landuse group map
+    # read in the landuse data from the csv files
 
-    m, landtypes, groups = get_aggregate_map(aggregatefile)
+    for year in years:
 
-    # convert to a list of landuse names
+        csvfile = '{}/{}landuse.csv'.format(landfiles, year)
 
-    names = [landtypes[group] for group in groups]
+        with open(csvfile, 'r') as f: 
 
-    # read the land use data for each year into the subbasins
+            reader = csv.reader(f)
+            rows = [r for r in reader]
 
-    with open(landfile, 'rb') as f: landyears, landuse = pickle.load(f)
+        # organize the data
 
-    for comid in subbasins:
+        comids     = [r[0] for r in rows[3:]]
+        categories = rows[2][2:]
+        emptys     = [r[1] for r in rows[3:]]
+        data       = [r[2:] for r in rows[3:]]
 
-        subbasin      = subbasins[comid]
-        subbasin_data = landuse[comid]
+        if any([e == '0' for e in emptys]): 
 
-        for year, data in zip(landyears, zip(*subbasin_data)):
+            print('warning, empty cells detected\n')
 
-            subbasin.add_landuse(year, names, data)
+        for comid, subbasin in subbasins.items():
+
+            i = comids.index(comid)
+
+            subbasin.add_landuse(year, categories, data[i])
+
+
+
 
     # create an instance of the watershed class
 
@@ -223,15 +233,13 @@ def build_watershed(subbasinfile, flowfile, outletfile, damfile, gagefile,
 
     watershed.add_mass_linkage(updown)
 
-    if output is None: 
-        filename = os.getcwd() + '/watershed'
-        plotname = os.getcwd() + '/masslink.%s' % format
-    else:              
-        filename = output + '/%s/watershed' % HUC8
-        plotname = output + '/%s/images/%smasslink.%s' % (HUC8, HUC8, format)
+    if output is None: output = os.getcwd()
+
+    filename = '{}/{}/watershed'.format(output, HUC8)
+    plotname = '{}/{}/masslink'.format(output, HUC8)
 
     if not os.path.isfile(filename) or overwrite:
         with open(filename, 'wb') as f: pickle.dump(watershed, f)
 
-    if not os.path.isfile(plotname) and plots or overwrite and plots: 
+    if not os.path.isfile(plotname + '.png') and plots or overwrite and plots: 
         plot_mass_flow(watershed, plotname)
