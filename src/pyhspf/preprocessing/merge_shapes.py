@@ -130,6 +130,7 @@ def combine_shapes(shapes, bboxes, skip = False, verbose = True):
     # "current" is current shape being traced (as list); "points" are the trace
  
     if verbose: print('tracing shape {}'.format(shape_index))
+
     shapes = [array_to_list(s) for s in shapes]
     current = shapes[shape_index]
     points = [current[i]]

@@ -15,10 +15,22 @@ Python extensions for geographic information systems (GIS) software).
 Alternatively, a series of preprocessing classes and routines were 
 developed for a number of databases including:
 
+<<<<<<< HEAD
 -National Hydrography Dataset Plus Version 2 (NHDPlus)
 -National Water Information System (NWIS)
 -National Inventory of Dams (NID)
 -Cropland Data Layer (CDL)
+=======
+-flowline and catchment data from the National Hydrography Dataset Plus 
+Version 2 (NHDPlus)
+-flow and water quality data from the National Water Information Service
+(NWIS)
+-dam data from the National Inventory of Dams (NID)
+-landuse data from the National Agricultural Statistics Service (NASS) 
+Cropland Data Layer (CDL)
+-climate data from several climate databases from the National Climate 
+Data Center (NCDC) including:
+>>>>>>> b7f92fe306e31f9c3c43a351a2b685ea22c460a8
 -National Solar Radiation Database (NSRDB)
 -Global Historical Climate Network Daily (GHCND)
 -Global Summary of the Day (GSOD)

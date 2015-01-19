@@ -1,7 +1,6 @@
 import shutil, os, time
 
 from shapefile import Reader, Writer
-
 from .dbfutils import read_dbf
 
 def get_boundaries(shapes, space = 0.1):
