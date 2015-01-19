@@ -74,4 +74,7 @@ Added example for CDLExtractor
 Version 0.1.10
 Added NID extractor example
 Expanded NWIS example to show how to work with the data files
-Cleaned up some file names
+Added HUC8Delineator example
+Cleaned up some file names and comments
+Removed some extraneous files
+Fixed error in HUC8Delineator
