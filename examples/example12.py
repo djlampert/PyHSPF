@@ -1,111 +1,119 @@
 # example12.py
-# 
+#
 # David J. Lampert (djlampert@gmail.com)
 #
-# illustrates how to use the preprocessing tools to download climate data.
+# last updated: 01/17/2015
 #
-# last updated: 01/10/2015
+# This example illustrates how to break up an 8-digit HUC watershed into 
+# subwatersheds that have outlets co-located with dams and flowgages and 
+# a maximal drainage area using the PyHSPF HUC8Delineator class. The source
+# data files come from NHDPlus V2, NWIS, and the NID as shown in previous
+# examples. If you have already downloaded these files, make sure to point
+# to the file paths otherwise they will be downloaded automatically (which
+# takes a while). The idea is to automate the construction of the data files 
+# needed to make the "Watershed" object for PyHSPF.
 
-from pyhspf.preprocessing import climateutils
+import os
 
-import os, pickle, datetime
+from pyhspf.preprocessing import HUC8Delineator
+from pyhspf.preprocessing import NHDPlusExtractor
+from pyhspf.preprocessing import NIDExtractor
+from pyhspf.preprocessing import NWISExtractor
 
-# bounding box of interest
+# let's work with the Patuxent watershed
 
-bbox = -94, 41.3, -91.3, 42.5 
+HUC8      = '02060006'
+state     = 'MD'
 
-# start and end dates
+# maximum drainage area for individual subbasins (km2)
 
-start = datetime.datetime(1980, 1, 1)
-end   = datetime.datetime(2011, 1, 1)
+drainmax = 400
 
-# this was (at the time of writing) the url to the NCDC database for the GHCND:
-#
-# GHCND = 'http://www1.ncdc.noaa.gov/pub/data/ghcn/daily'
-#
-# if the site changes this can be updated
+# the land use aggregation file
 
-# find the stations with evaporation data and make a list of GHCNDStation 
-# instances to use to download the data for the stations
+aggregate = 'data/patuxent/aggregate.csv'
 
-# GHCND variable to look for data ('EVAP' is pan evaporation--look at the
-# website if you are interested in other variables)
+# parallel aggregation flag (if you get errors try turning it off)
 
-var = 'EVAP'
+parallel = True
 
-# find the stations with EVAP data
+# make sure to set the path for the source data directories (the data will
+# be downloaded if it doesn't exist)
 
-stations = climateutils.find_ghcnd(bbox, var = var, dates = (start, end), 
-                                   verbose = True)
+source      = os.getcwd()
+destination = 'HSPF_data'
 
-# download the data to "output" location (here it's the current directory, ".")
-# each station will be saved as a binary file with its unique GHCND ID
+# make sure the metadata is set before starting the download
 
-output = '.'
+print('')
+print('preparing to delineate the subbasins for ', HUC8, '\n')
+print('if you have already downloaded the NHDPlus, NWIS, and NID source data ')
+print('make sure you set the directories, or they will be downloaded again')
+print('press "y" to continue...\n')
 
-for station in stations: station.download_data(output, start = start, end = end,
-                                               plot = False)
+s = 'n'
+while s != 'y':
+    s = input()
+    if s == 'n':  exit()
+    else: continue
 
-# there are 4 files in the bounding box (you wouldn't know this in advance); 
-# let's just look at Ames (Iowa State) and Iowa City (Iowa) since the other 
-# data sets are really limited.  
+# source data directory structure (ideally a data drive or server)
 
-names = ['USC00130200', 'USC00134101']
+NHDPlus = '{}/NHDPlus'.format(source)
+NWIS    = '{}/NWIS'.format(source)
+NID     = '{}/NID'.format(source)
 
-# the "GHCNDStation" class is used to download data to the binary files, 
-# but other classes exist to store and manipulate the data (generating a
-# timeseries, removing missing values, plotting, etc.)
+# download and extract the data using the PyHSPF data extractors (if needed)
+# these steps can/will be skipped if they are not needed
 
-from pyhspf.preprocessing.ncdcstations import EvapStation
+nhdplusextractor = NHDPlusExtractor(HUC8[:2], NHDPlus)
+nwisextractor    = NWISExtractor(NWIS)
+nidextractor     = NIDExtractor(NID)
 
-evapstations = []
-for n in names:
-    with open('{}/{}'.format(output, n), 'rb') as f: ghcnd = pickle.load(f)
+# extract the NHDPlus data
 
-    # make the EvapStation
+nhdplusextractor.download_data()
+nhdplusextractor.extract_HUC8(HUC8, destination)
 
-    evapstation = EvapStation()
+# this is the destination directory created for the NHDPlus data for the HUC8
 
-    # add the GHCND station metadata to the EvapStation
+output = '{}/{}'.format(destination, HUC8)
 
-    evapstation.add_ghcnd_data(ghcnd)
+# paths to the NHDPlus data files created above by the nhdplusextractor
 
-    # add the EvapStation to the dictionary
+bfile = '{}/{}/boundary'.format(destination, HUC8)     # watershed boundary
+cfile = '{}/{}/catchments'.format(destination, HUC8)   # individual catchments
+ffile = '{}/{}/flowlines'.format(destination, HUC8)    # individual flowlines
+VAAs  = '{}/{}/flowlineVAAs'.format(destination, HUC8) # value-added attributes
+efile = '{}/{}/elevations'.format(destination, HUC8)   # elevation geotiff
 
-    evapstations.append(evapstation)
+# extract the NWIS gages to a shapefile in the new HUC8 directory
 
-# now we can get the time series and make a plot of the data (or whatever you 
-# need to do); note there appear to be a few errors in the data set for Ames.
+nwisextractor.extract_HUC8(HUC8, output)
 
-from matplotlib import pyplot
+# path to the gage file created above
 
-fig = pyplot.figure()
-sub = fig.add_subplot(111)
+gfile = '{}/{}/gagestations'.format(destination, HUC8)
 
-t = ('GHCND {} data for bounding box '.format(var) + 
-     '({}, {}) to ({}, {})'.format(*bbox))
-sub.set_title(t)
-sub.set_xlabel('Time')
-sub.set_ylabel('Daily Evaporation')
-sub.set_ylim([0, 30])
+# extract the NID dams to a shapefile in the new HUC8 directory
 
-# times for a time series plot
+dfile = '{}/{}/dams'.format(destination, HUC8)
 
-times = [start + i * datetime.timedelta(days = 1) 
-         for i in range((end-start).days)]
+nidextractor.extract_shapefile(bfile, dfile)
 
-text = ''
-for s in evapstations:
-    total_evaporation = s.get_evaporation(start, end)
-    avg_evap = total_evaporation / (end-start).days * 365.25
-    values = s.make_timeseries(start, end)
-    sub.plot(times, values, label = s.name)
-    i = s.station, s.name, avg_evap
-    text+='\nStation {}, {}\nAnnual average evaporation = {:.0f} mm'.format(*i)
+# use the locations of the gages and dams, the NHDPlus data files, and
+# PyHSPF's HUC8Delineator to delineate subbasins subject to the criteria
+# into a new file in the HUC8 output directory
 
-sub.text(0.99, 1., text, ha = 'right', va = 'top', 
-         transform = sub.transAxes, size = 8)
+delineator = HUC8Delineator(HUC8, VAAs, ffile, cfile, efile, gfile, dfile)
 
-leg = sub.legend(loc = 'upper left', prop = {'size': 8})
+# delineate the watershed using the NHDPlus data and delineator
 
-pyplot.show()
+delineator.delineate(destination, drainmax = drainmax, parallel = parallel)
+
+# the delineation can be sped up by changing the parallel flag to True, and it
+# a list of extra outlets can be supplied using the "extra_outlets" keyword
+# argument if there are other points of interest in the HUC8 where subbasins 
+# should be split. this script should have generated a bunch of files in the
+# output directory including a few PNG images of the prelimary and delineated
+# flowlines and catchments.

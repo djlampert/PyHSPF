@@ -17,7 +17,7 @@ from .climateutils import find_ghcnd
 from .climateutils import find_gsod
 from .climateutils import find_precip3240
 from .climateutils import find_nsrdb
-from .ncdcstations import download_state_precip3240
+#from .ncdcstations import download_state_precip3240
 from .ncdcstations import decompress7z
 from .ncdcstations import decompresszcat
 

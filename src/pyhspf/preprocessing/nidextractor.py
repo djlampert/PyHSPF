@@ -126,7 +126,7 @@ class NIDExtractor:
         # iterate through the fields and determine which points are in the box
 
         if verbose: 
-            print('extracting dams in the watershed into new file\n')
+            print('extracting dams into new file\n')
 
         dam_indices = []
 
@@ -164,7 +164,7 @@ class NIDExtractor:
         w.save(output)
 
         if verbose: 
-            print('successfully extracted NID dam locations for watershed\n')
+            print('successfully extracted NID dam locations to new file\n')
 
     def extract_shapefile(self, shapefile, output):
         """Extracts the dams within the bounding box of the shapefile."""

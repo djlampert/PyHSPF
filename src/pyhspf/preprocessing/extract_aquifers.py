@@ -2,9 +2,42 @@ import shutil, os, time
 
 from shapefile import Reader, Writer
 
-from .raster   import inside_box
-from .gisplots import get_boundaries
-from .dbf      import read_dbf
+from .dbfutils import read_dbf
+
+def get_boundaries(shapes, space = 0.1):
+    """Gets the boundaries for the plot."""
+
+    boundaries = shapes[0].bbox
+    for shape in shapes[0:]:
+        b = shape.bbox
+        if b[0] < boundaries[0]: boundaries[0] = b[0]
+        if b[1] < boundaries[1]: boundaries[1] = b[1]
+        if b[2] > boundaries[2]: boundaries[2] = b[2]
+        if b[3] > boundaries[3]: boundaries[3] = b[3]
+
+    xmin = boundaries[0] - (boundaries[2] - boundaries[0]) * space
+    ymin = boundaries[1] - (boundaries[3] - boundaries[1]) * space
+    xmax = boundaries[2] + (boundaries[2] - boundaries[0]) * space
+    ymax = boundaries[3] + (boundaries[3] - boundaries[1]) * space
+
+    return xmin, ymin, xmax, ymax
+
+def inside_box(p1, p2, p3, space = 0):
+    """Checks if p3 is inside a box formed by p1 and p2."""
+
+    if p1[0] < p3[0] and p3[0] < p2[0] or p1[0] > p3[0] and p3[0] > p2[0]:
+
+        # x value is inside
+
+        if p1[1] < p3[1] and p3[1] < p2[1] or p1[1] > p3[1] and p3[1] > p2[1]:
+            
+            # y value is inside
+
+            return True
+
+        else: return False
+
+    else: return False
 
 def extract_aquifers(directory, HUC8, aquifers, pad = 0.2, verbose = True):
     """Extracts aquifers from the source datafile to the destination using

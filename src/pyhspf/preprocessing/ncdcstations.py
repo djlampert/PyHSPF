@@ -38,67 +38,6 @@ def decompresszcat(filename, directory):
                           stdout = subprocess.PIPE).stdout as s:
 
         with open(filename[:-2], 'wb') as f: f.write(s.read())
-
-def download_state_precip3240(state, 
-                              directory,
-                              NCDC = 'ftp://ftp.ncdc.noaa.gov/pub/data',
-                              verbose = True):
-    """Downloads the Precip 3240 data for a state."""
-
-    if not os.path.isdir(directory):
-        print('\nerror: directory "{}" does not exist\n'.format(directory))
-        raise
-
-    if verbose:
- 
-        print('downloading hourly precipitation data for state ' + 
-              '{}\n'.format(state))
-
-    # figure out which files are on the website
-
-    baseurl = '{0}/hourly_precip-3240/{1}'.format(NCDC, state)
-
-    req = request.Request(baseurl)
-
-    # read the state's web page and find all the compressed archives
-
-    try:
-
-        with io.StringIO(request.urlopen(req).read().decode()) as s:
-
-            archives = [a[-17:] for a in s.read().split('.tar.Z')]
-            
-        archives = [a for a in archives if is_integer(a[-4:])]
-
-    except: 
-
-        print('unable to connect to the hourly precipitation database')
-        print('make sure that you are online')
-        raise
-
-    for a in archives:
-
-        url        = '{0}/{1}.tar.Z'.format(baseurl, a)
-        compressed = '{}/{}.tar.Z'.format(directory, a)
-
-        if not os.path.isfile(compressed):
-
-            if verbose: print(url)
-
-            try: 
-
-                req = request.Request(url)
-
-                # write the compressed archive into the directory
-
-                with open(compressed, 'wb') as f: 
-                    
-                    f.write(request.urlopen(req).read())
-
-            except:
-
-                print('error: unable to connect to {}'.format(url))
-                raise   
     
 class GHCNDStation:
     """A class to store meteorology data from the Daily Global Historical 
@@ -374,7 +313,9 @@ class Precip3240Station:
     """A class to store meteorology data from the NCDC Hourly Precipitation
     Dataset."""
 
-    def __init__(self, coop, wban, desc, lat, lon, elev, st, code):
+    def __init__(self, coop, wban, desc, lat, lon, elev, st, code,
+                 NCDC = 'ftp://ftp.ncdc.noaa.gov/pub/data',
+                 ):
 
         self.coop        = coop
         self.wban        = wban
@@ -384,6 +325,10 @@ class Precip3240Station:
         self.elevation   = elev
         self.state       = st
         self.code        = code
+        
+        # ftp location for the NCDC data
+
+        self.NCDC = NCDC
  
         # precipitation events
 
@@ -507,6 +452,66 @@ class Precip3240Station:
 
             if self.events[-1][0] < end: 
                 self.events.append([end, None, ' ', ' ']) 
+
+    def download_state_precip3240(self,
+                                  directory,
+                                  verbose = True):
+        """Downloads the Precip 3240 data for a state."""
+
+        if not os.path.isdir(directory):
+            print('\nerror: directory "{}" does not exist\n'.format(directory))
+            raise
+
+        if verbose:
+ 
+            print('downloading hourly precipitation data for state ' + 
+                  '{}\n'.format(self.code))
+
+        # figure out which files are on the website
+
+        baseurl = '{0}/hourly_precip-3240/{1}'.format(self.NCDC, self.code)
+
+        req = request.Request(baseurl)
+
+        # read the state's web page and find all the compressed archives
+
+        try:
+
+            with io.StringIO(request.urlopen(req).read().decode()) as s:
+
+                archives = [a[-17:] for a in s.read().split('.tar.Z')]
+            
+            archives = [a for a in archives if is_integer(a[-4:])]
+
+        except: 
+
+            print('unable to connect to the hourly precipitation database')
+            print('make sure that you are online')
+            raise
+
+        for a in archives:
+
+            url        = '{0}/{1}.tar.Z'.format(baseurl, a)
+            compressed = '{}/{}.tar.Z'.format(directory, a)
+
+            if not os.path.isfile(compressed):
+
+                if verbose: print(url)
+
+                try: 
+
+                    req = request.Request(url)
+
+                    # write the compressed archive into the directory
+
+                    with open(compressed, 'wb') as f: 
+                    
+                        f.write(request.urlopen(req).read())
+
+                except:
+
+                    print('error: unable to connect to {}'.format(url))
+                    raise   
                         
     def download_data(self, directory, start, end, clean = True, plot = True,
                       path_to_7z = r'C:/Program Files/7-Zip/7z.exe'): 
@@ -524,7 +529,7 @@ class Precip3240Station:
             print('\nerror, working directory exists, cannot clean\n')
             raise
 
-        download_state_precip3240(self.code, precip3240)
+        self.download_state_precip3240(precip3240)
 
         # decompress the archives
 
