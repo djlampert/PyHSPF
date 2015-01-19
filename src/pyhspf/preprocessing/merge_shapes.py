@@ -112,8 +112,8 @@ def combine_shapes(shapes, bboxes, skip = False, verbose = True):
     # find the smallest value of x (which is an outside point) and start there
     # also use the shape with the max x as a check the trace made it around
 
-    xmin        = min([shape[:, 0].min() for shape in shapes])
-    xmax        = max([shape[:, 0].max() for shape in shapes])
+    xmin = min([shape[:, 0].min() for shape in shapes])
+    xmax = max([shape[:, 0].max() for shape in shapes])
 
     opposite_index = [shape[:, 0].max() for shape in shapes].index(xmax)
     shape_index = [shape[:, 0].min() for shape in shapes].index(xmin)
@@ -129,7 +129,7 @@ def combine_shapes(shapes, bboxes, skip = False, verbose = True):
 
     # "current" is current shape being traced (as list); "points" are the trace
  
-    if verbose: print('tracing shape %d' % shape_index)
+    if verbose: print('tracing shape {}'.format(shape_index))
     shapes = [array_to_list(s) for s in shapes]
     current = shapes[shape_index]
     points = [current[i]]
@@ -157,7 +157,7 @@ def combine_shapes(shapes, bboxes, skip = False, verbose = True):
         raise
 
     # trace the current shape until reaching a point common to the neighbors
- 
+
     while current[i] not in neighboring_points:
         points.append(current[i])
         i = next_index(current, i)
@@ -175,7 +175,8 @@ def combine_shapes(shapes, bboxes, skip = False, verbose = True):
     # repeat the process until reaching the first shape again, also check it
     # made it to the opposite side
 
-    opposite = False
+    opposite = start_index == opposite_index
+
     while shape_index != start_index or current[i] == points[0]:
 
         if shape_index == opposite_index: opposite = True
@@ -212,15 +213,16 @@ def combine_shapes(shapes, bboxes, skip = False, verbose = True):
 
     # add the last points from the first shape
 
-    if verbose: print('tracing shape %d' % shape_index)
+    if verbose: print('tracing shape {}'.format(shape_index))
 
     while current[i] != points[0]:
         points.append(current[i])
         i = next_index(current, i)
     points.append(points[0])
 
-    if verbose: print('\nfinished tracing catchments in %.1f seconds\n' 
-                      % (time.time() - start))
+    if verbose: 
+        v = time.time() - start
+        print('\nfinished tracing catchments in {:.1f} seconds\n'.format(v))
 
     if opposite: return points
     else: 

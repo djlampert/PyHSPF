@@ -195,7 +195,7 @@ def find_ghcnd(bbox,
 
 def find_gsod(bbox, 
               GSOD = 'ftp://ftp.ncdc.noaa.gov/pub/data/inventories',
-              filename = 'ISH-HISTORY.TXT', 
+              filename = 'ish-history.txt', 
               dates = None, 
               verbose = True, 
               vverbose = False

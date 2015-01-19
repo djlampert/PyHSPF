@@ -1529,6 +1529,10 @@ class HUC8Delineator(NHDPlusDelineator):
             except: combined = combine_shapes(shapes, bboxes, skip = True,
                                               verbose = vverbose)
 
+        if len(combined) == 0: 
+            print('error: combined shapes have no points')
+            raise
+
         # iterate through the catchments and get the elevation data from NED
         # then estimate the value of the overland flow plane length and slope
 
@@ -1582,7 +1586,7 @@ class HUC8Delineator(NHDPlusDelineator):
         # take the area weighted average of the slopes and flow lengths
 
         tot_area   = round(areas.sum(), 2)
-        avg_length = round(1000 * numpy.sum(areas * lengths) / tot_area, 1)
+        avg_length = round(numpy.sum(areas * lengths) / tot_area, 1)
         avg_slope  = round(numpy.sum(areas * slopes) / tot_area, 4)
 
         # get the centroid and the average elevation
@@ -1618,10 +1622,8 @@ class HUC8Delineator(NHDPlusDelineator):
 
         for field in fields:  w.field(*field)
     
-        w.record(*record)
-    
+        w.record(*record)    
         w.poly(shapeType = 5, parts = [combined])
-
         w.save(output)
 
         if vverbose: print('\ncompleted catchment combination in ' +
@@ -2413,7 +2415,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
         elif not os.path.isfile(self.subbasincatchments + '.shp'):
 
-            if verbose: print('attempting to combine subbasin catchments ' +
+            if verbose: print('attempting to combine subbasin catchments' +
                               ', this may take a while...\n')
 
             for subbasin in self.subbasins:
@@ -2445,9 +2447,9 @@ class HUC8Delineator(NHDPlusDelineator):
                         if verbose: 
 
                             print('warning: unable to combine catchments ' + 
-                                  'in {}\n'.format(path))
+                                  'in subbasin {}\n'.format(subbasin))
 
-            if verbose: print('successfully combined catchments in parallel ' +
+            if verbose: print('successfully combined catchments ' +
                               'in {:.1f} seconds \n'.format(time.time() -start))
 
         # put together the combined subbasins into a single file
@@ -2513,15 +2515,21 @@ class HUC8Delineator(NHDPlusDelineator):
                     fields = r.fields
                     for field in fields: w.field(*field)
 
-                shape = r.shape(0)
+                try:
+                    record = r.record(0)
+                    shape = r.shape(0)
+                except:
+                    print('error: {} appears to be empty\n'.format(filename))
+                    raise
 
                 # write the shape and record to the new file
 
                 w.poly(shapeType = 5, parts = [shape.points])
-                record = r.record(0)
                 w.record(*record)
 
-            elif verbose: print('unable to locate {}'.format(filename))
+            elif verbose: 
+                print('error: unable to locate {}'.format(filename))
+                raise
 
         if fields is not None: 
             w.save(self.subbasincatchments)
@@ -2628,7 +2636,6 @@ class HUC8Delineator(NHDPlusDelineator):
                                                 overwrite = True, 
                                                 verbose = vverbose
                                                 )
-                if verbose: print('')
 
             if verbose: 
 
