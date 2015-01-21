@@ -17,9 +17,6 @@ from .climateutils import find_ghcnd
 from .climateutils import find_gsod
 from .climateutils import find_precip3240
 from .climateutils import find_nsrdb
-#from .ncdcstations import download_state_precip3240
-from .ncdcstations import decompress7z
-from .ncdcstations import decompresszcat
 
 def is_integer(s):
     """Tests if string "s" is an integer."""
@@ -45,6 +42,22 @@ def get_boundaries(shapes, space = 0.1):
 
     return xmin, ymin, xmax, ymax
 
+def decompress7z(filename, directory,
+                 path_to_7z = r'C:/Program Files/7-Zip/7z.exe'):
+    """Decompresses a Unix-compressed archive on Windows using 7zip."""
+
+    c = '{0} e {1} -y -o{2}'.format(path_to_7z, filename, directory)
+
+    subprocess.call(c)
+
+def decompresszcat(filename, directory):
+    """Decompresses a Unix-compressed archive on Windows using 7zip."""
+
+    with subprocess.Popen(['zcat', filename], 
+                          stdout = subprocess.PIPE).stdout as s:
+
+        with open(filename[:-2], 'wb') as f: f.write(s.read())
+ 
 def extract_ghcnd(directory, HUC8, start, end, types = 'all', space = 0.1,
                   GHCND = 'http://www1.ncdc.noaa.gov/pub/data/ghcn/daily',
                   verbose = True):

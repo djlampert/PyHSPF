@@ -231,8 +231,8 @@ class CDLExtractor:
             its = year, state
             if not os.path.isfile(compressed):
 
-                print('downloading compressed file for {} {}\n'.format(*its))
-                print('from {}\n'.format(url))
+                print('downloading compressed file for {} {} '.format(*its) +
+                      'from {}\n'.format(url))
                 
                 try: 
 
@@ -249,6 +249,8 @@ class CDLExtractor:
 
                 print('compressed file for {} {} exists'.format(*its))
 
+            print('')
+
             # decompress the files
 
             its = self.destination, year, self.statecodes[state]
@@ -258,13 +260,10 @@ class CDLExtractor:
                 print('decompressing {} archive\n'.format(compressed))
                 f = zipfile.ZipFile(compressed)
                 f.extractall(self.destination)
-                print('')
 
             # keep track of all the years where the source files exist
 
             self.years.append(year)
-
-        print('')
 
     def extract_bbox(self,
                      bbox,

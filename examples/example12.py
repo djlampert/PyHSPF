@@ -2,13 +2,15 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# last updated: 01/17/2015
+# last updated: 01/20/2015
 #
 # This example illustrates how to break up an 8-digit HUC watershed into 
 # subwatersheds that have outlets co-located with dams and flowgages and 
 # a maximal drainage area using the PyHSPF HUC8Delineator class. The source
 # data files come from NHDPlus V2, NWIS, and the NID as shown in previous
-# examples. If you have already downloaded these files, make sure to point
+# examples. The catchments and flowlines from NHDPlus are aggregated together
+# to satisfy the criteria for the delineation. If you have already downloaded 
+# the source data files from NHDPlus, NWIS, and NID, make sure to point
 # to the file paths otherwise they will be downloaded automatically (which
 # takes a while). The idea is to automate the construction of the data files 
 # needed to make the "Watershed" object for PyHSPF.
@@ -22,16 +24,11 @@ from pyhspf.preprocessing import NWISExtractor
 
 # let's work with the Patuxent watershed
 
-HUC8      = '02060006'
-state     = 'MD'
+HUC8 = '02060006'
 
-# maximum drainage area for individual subbasins (km2)
+# maximum drainage area for individual subbasins (in km2)
 
 drainmax = 400
-
-# the land use aggregation file
-
-aggregate = 'data/patuxent/aggregate.csv'
 
 # parallel aggregation flag (if you get errors try turning it off)
 
@@ -43,77 +40,85 @@ parallel = True
 source      = os.getcwd()
 destination = 'HSPF_data'
 
-# make sure the metadata is set before starting the download
+# to use multiprocessing on Windows it is necessary to create a routine and
+# call it below
 
-print('')
-print('preparing to delineate the subbasins for ', HUC8, '\n')
-print('if you have already downloaded the NHDPlus, NWIS, and NID source data ')
-print('make sure you set the directories, or they will be downloaded again')
-print('press "y" to continue...\n')
+def main():
 
-s = 'n'
-while s != 'y':
-    s = input()
-    if s == 'n':  exit()
-    else: continue
+    # make sure the metadata is set before starting the download
 
-# source data directory structure (ideally a data drive or server)
+    print('')
+    print('preparing to delineate the subbasins for HUC {}\n'.format(HUC8))
+    print('if you have already downloaded the NHDPlus, NWIS, and NID source ' +
+          'data make sure you set the directory paths, or all the data will ' +
+          'be downloaded again.\n')
+    print('press "y" to continue or "n" to abort...\n')
 
-NHDPlus = '{}/NHDPlus'.format(source)
-NWIS    = '{}/NWIS'.format(source)
-NID     = '{}/NID'.format(source)
+    s = 'n'
+    while s != 'y':
+        s = input()
+        if s == 'n':  exit()
 
-# download and extract the data using the PyHSPF data extractors (if needed)
-# these steps can/will be skipped if they are not needed
+    # source data directory structure (ideally a data drive or server)
 
-nhdplusextractor = NHDPlusExtractor(HUC8[:2], NHDPlus)
-nwisextractor    = NWISExtractor(NWIS)
-nidextractor     = NIDExtractor(NID)
+    NHDPlus = '{}/NHDPlus'.format(source)
+    NWIS    = '{}/NWIS'.format(source)
+    NID     = '{}/NID'.format(source)
 
-# extract the NHDPlus data
+    # download and extract the data using the PyHSPF data extractors (if needed)
+    # these steps can/will be skipped if they are not needed
 
-nhdplusextractor.download_data()
-nhdplusextractor.extract_HUC8(HUC8, destination)
+    nhdplusextractor = NHDPlusExtractor(HUC8[:2], NHDPlus)
+    nwisextractor    = NWISExtractor(NWIS)
+    nidextractor     = NIDExtractor(NID)
 
-# this is the destination directory created for the NHDPlus data for the HUC8
+    # extract the NHDPlus data
 
-output = '{}/{}'.format(destination, HUC8)
+    nhdplusextractor.download_data()
+    nhdplusextractor.extract_HUC8(HUC8, destination)
 
-# paths to the NHDPlus data files created above by the nhdplusextractor
+    # the destination directory created for the NHDPlus data for the HUC8
 
-bfile = '{}/{}/boundary'.format(destination, HUC8)     # watershed boundary
-cfile = '{}/{}/catchments'.format(destination, HUC8)   # individual catchments
-ffile = '{}/{}/flowlines'.format(destination, HUC8)    # individual flowlines
-VAAs  = '{}/{}/flowlineVAAs'.format(destination, HUC8) # value-added attributes
-efile = '{}/{}/elevations'.format(destination, HUC8)   # elevation geotiff
+    output = '{}/{}'.format(destination, HUC8)
 
-# extract the NWIS gages to a shapefile in the new HUC8 directory
+    # paths to the NHDPlus data files created above by the nhdplusextractor
 
-nwisextractor.extract_HUC8(HUC8, output)
+    bfile = '{}/boundary'.format(output)     # watershed boundary
+    cfile = '{}/catchments'.format(output)   # individual catchments
+    ffile = '{}/flowlines'.format(output)    # individual flowlines
+    VAAs  = '{}/flowlineVAAs'.format(output) # value-added attributes
+    efile = '{}/elevations'.format(output)   # elevation geotiff
 
-# path to the gage file created above
+    # extract the NWIS gages to a shapefile in the new HUC8 directory
 
-gfile = '{}/{}/gagestations'.format(destination, HUC8)
+    nwisextractor.extract_HUC8(HUC8, output)
 
-# extract the NID dams to a shapefile in the new HUC8 directory
+    # path to the gage file created above
 
-dfile = '{}/{}/dams'.format(destination, HUC8)
+    gfile = '{}/{}/gagestations'.format(destination, HUC8)
 
-nidextractor.extract_shapefile(bfile, dfile)
+    # extract the NID dams to a shapefile in the new HUC8 directory
 
-# use the locations of the gages and dams, the NHDPlus data files, and
-# PyHSPF's HUC8Delineator to delineate subbasins subject to the criteria
-# into a new file in the HUC8 output directory
+    dfile = '{}/{}/dams'.format(destination, HUC8)
 
-delineator = HUC8Delineator(HUC8, VAAs, ffile, cfile, efile, gfile, dfile)
+    nidextractor.extract_shapefile(bfile, dfile)
 
-# delineate the watershed using the NHDPlus data and delineator
+    # use the locations of the gages and dams, the NHDPlus data files, and
+    # PyHSPF's HUC8Delineator to delineate subbasins subject to the criteria
+    # into a new file in the HUC8 output directory
 
-delineator.delineate(destination, drainmax = drainmax, parallel = parallel)
+    delineator = HUC8Delineator(HUC8, VAAs, ffile, cfile, efile, gfile, dfile)
 
-# the delineation can be sped up by changing the parallel flag to True, and it
+    # delineate the watershed using the NHDPlus data and delineator
+
+    delineator.delineate(destination, drainmax = drainmax, parallel = parallel)
+
+# the delineation process will take advantage of multiprocessing if the
+# parallel flag to "True," although this consumes memory and is less stable.
 # a list of extra outlets can be supplied using the "extra_outlets" keyword
-# argument if there are other points of interest in the HUC8 where subbasins 
-# should be split. this script should have generated a bunch of files in the
-# output directory including a few PNG images of the prelimary and delineated
-# flowlines and catchments.
+# argument to the delineate method if there are other points of interest 
+# in the HUC8 where you want to place subbasin outlets (besides dams and gages).
+# this script generates a bunch of files in the "output" directory including a 
+# few PNG images of the prelimary and delineated flowlines and catchments.
+
+if __name__ == '__main__': main()

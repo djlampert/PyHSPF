@@ -2,7 +2,7 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# illustrates how to use the preprocessing tools to download climate data.
+# illustrates how to use the preprocessing tools to download GHCND climate data.
 #
 # last updated: 01/17/2015
 
@@ -38,10 +38,10 @@ var = 'EVAP'
 stations = climateutils.find_ghcnd(bbox, var = var, dates = (start, end),
                                    verbose = True)
 
-# download the data to "output" location (here it's the current directory, ".")
+# download the data to "output" location (here it's the current directory)
 # each station will be saved as a binary file with its unique GHCND ID
 
-output = '.'
+output = os.getcwd()
 
 for station in stations: station.download_data(output, start = start, end = end,
                                                plot = False)
