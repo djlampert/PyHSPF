@@ -88,7 +88,7 @@ class NWISExtractor:
         self.NWIS = '{}/{}'.format(self.destination, sfile)
         if not os.path.isfile(self.NWIS + '.shp'):
             
-            print('extracting the gage shapefile from the archive\n')
+            print('extracting the gage shapefile from the archive')
 
             zf = zipfile.ZipFile(zfile)
             zf.extractall(self.destination)

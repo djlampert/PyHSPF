@@ -10,8 +10,9 @@
 
 import shutil, os, subprocess, pickle, io, gzip, datetime, tarfile
 
-from urllib   import request
-from calendar import monthrange
+from urllib     import request
+from calendar   import monthrange
+from matplotlib import pyplot, dates, ticker
 
 from .climateplots import plot_3240precip
 
@@ -23,22 +24,6 @@ def is_integer(n):
         return True
     except: return False
 
-def decompress7z(filename, directory,
-                 path_to_7z = r'C:/Program Files/7-Zip/7z.exe'):
-    """Decompresses a Unix-compressed archive on Windows using 7zip."""
-
-    c = '{0} e {1} -y -o{2}'.format(path_to_7z, filename, directory)
-
-    subprocess.call(c)
-
-def decompresszcat(filename, directory):
-    """Decompresses a Unix-compressed archive on Windows using 7zip."""
-
-    with subprocess.Popen(['zcat', filename], 
-                          stdout = subprocess.PIPE).stdout as s:
-
-        with open(filename[:-2], 'wb') as f: f.write(s.read())
-    
 class GHCNDStation:
     """A class to store meteorology data from the Daily Global Historical 
     Climatology Network."""
@@ -329,7 +314,7 @@ class Precip3240Station:
         # ftp location for the NCDC data
 
         self.NCDC = NCDC
- 
+
         # precipitation events
 
         self.events = []
@@ -440,6 +425,8 @@ class Precip3240Station:
                     print('failed to import data from {}'.format(f))
                     raise
 
+        if verbose: print('')
+
         # sort all the event data
 
         self.events.sort()
@@ -511,14 +498,79 @@ class Precip3240Station:
                 except:
 
                     print('error: unable to connect to {}'.format(url))
-                    raise   
+                    raise
+
+    def decompress7z(self, filename, directory,
+                     path_to_7z = r'C:/Program Files/7-Zip/7z.exe'):
+        """Decompresses a Unix-compressed archive on Windows using 7zip."""
+        
+        c = '{0} e {1} -y -o{2}'.format(path_to_7z, filename, directory)
+
+        subprocess.call(c)
+
+    def decompresszcat(self, filename, directory):
+        """Decompresses a Unix-compressed archive on Windows using 7zip."""
+
+        with subprocess.Popen(['zcat', filename], 
+                              stdout = subprocess.PIPE).stdout as s:
+
+            with open(filename[:-2], 'wb') as f: f.write(s.read())
+
+    def decompress(self, filepath, directory):
+        """Calls 7zip to decompress the files."""
+
+        if os.name == 'nt':
+            self.decompress7z(filepath, directory, path_to_7z = self.path_to_7z)
+        else:
+            self.decompresszcat(filepath, directory)
+
+    def check_filenames(self, directory, start, end):
+        """returns the names of the downloaded files for the state.
+        files are grouped by state and with all years prior to 1999 in one 
+        file and each year up to 2011 in individual files; after that the 
+        data are grouped by month (so data from 2012 - present cannot be 
+        downloaded)
+        """
+
+        # make a list of the end year for all the files needed
+
+        years = []
+
+        # check if pre-1999 data area needed
+
+        if start < datetime.datetime(1999, 1, 1): years.append(1998)
+
+        # check if other year data are needed
+
+        for year in range(1999, 2012):
+
+            if (start <= datetime.datetime(year, 1, 1) and
+                datetime.datetime(year, 1, 1) < end):
+                
+                years.append(year)
+
+        # make a list of the last 8 characters in the file string to check
+
+        needed = ['{:4d}.tar'.format(y) for y in years]
+
+        # make a list of the archives in the directory
+
+        existing = [f[-8:] for f in os.listdir(directory) if f[-3:] == 'tar']
+
+        # check if any of the needed files do not exist
+
+        return any([f not in existing for f in needed])
                         
-    def download_data(self, directory, start, end, clean = True, plot = True,
-                      path_to_7z = r'C:/Program Files/7-Zip/7z.exe'): 
+    def download_data(self, directory, start, end, clean = False, plot = True,
+                      path_to_7z = r'C:/Program Files/7-Zip/7z.exe',
+                      ):
         """Downloads and imports all the data for the station."""
 
-        if not os.path.isdir(directory):
+        # path to 7zip executable (only matters on Windows)
 
+        self.path_to_7z = path_to_7z
+
+        if not os.path.isdir(directory):
             print('\nerror: directory "{}" does not exist\n'.format(directory))
             raise
 
@@ -529,17 +581,23 @@ class Precip3240Station:
             print('\nerror, working directory exists, cannot clean\n')
             raise
 
-        self.download_state_precip3240(precip3240)
+        # figure out if the files are already available
 
-        # decompress the archives
+        needed = self.check_filenames(precip3240, start, end)
 
-        for a in os.listdir(precip3240):
-            if a[-6:] == '.tar.Z': 
-                p = '{}/{}'.format(precip3240, a)
-                if os.name == 'nt':
-                    decompress7z(p, precip3240, path_to_7z = path_to_7z)
-                else:
-                    decompresszcat(p, precip3240)
+        # if the files aren't available, then download and decompress them
+
+        if needed:
+
+            self.download_state_precip3240(precip3240)
+
+            # decompress the archives
+
+            for a in os.listdir(precip3240):
+                if a[-6:] == '.tar.Z': 
+                    p = '{}/{}'.format(precip3240, a)
+
+                    self.decompress(p, precip3240)
 
         # import the decompressed data
 
@@ -550,10 +608,10 @@ class Precip3240Station:
         destination = '{}/{}'.format(directory, self.coop)
         if plot and not os.path.isfile(destination + '.png'):
 
-            try: 
-                plot_3240precip(self, start = start, end = end,
-                                output = destination)
-            except: print('warning: unable to plot precipitation data')
+            #try: 
+            if 1==1:    
+                self.plot(start = start, end = end, output = destination)
+            #except: print('warning: unable to plot precipitation data')
 
         # save the import
 
@@ -570,7 +628,7 @@ class Precip3240Station:
         precip = self.make_timeseries(start = start, end = end, 
                                       tstep = 'hourly')
 
-        return len([p for p in precip if p is None]) / len(precip)
+        return len([p[1] for p in precip if p[1] is None]) / len(precip)
 
     def total_precipitation(self, start = None, end = None):
         """Determines the total precipitation across the time period."""
@@ -578,13 +636,13 @@ class Precip3240Station:
         precip = self.make_timeseries(start = start, end = end, 
                                       tstep = 'hourly')
 
-        return sum([p for p in precip if p is not None])
+        return sum([p for t,p in precip if p is not None])
 
     def make_timeseries(self, start = None, end = None, tstep = 'hourly'):
         """Makes a timeseries from the events."""
 
         if len(self.events) == 0: 
-            print('error no data present')
+            print('warning: station has no data')
             return
 
         if start is None: start = self.events[0][0]
@@ -618,7 +676,7 @@ class Precip3240Station:
 
         t = start
         while t < self.events[i][0]:
-            series.append(None)            
+            series.append((t, None))            
             t += datetime.timedelta(hours = 1)
         
         # iterate through to the end
@@ -627,14 +685,15 @@ class Precip3240Station:
 
             # append zeros until reaching an event
 
-            while t < self.events[i][0]:
-                series.append(0.)            
+            while t < self.events[i][0] and t < end:
+                series.append((t, 0.))            
                 t += datetime.timedelta(hours = 1)
 
             # collect as normal
 
-            if self.events[i][2] == ' ' or self.events[i][2] == 'E':
-                series.append(self.events[i][1])
+            if ((self.events[i][2] == ' ' or self.events[i][2] == 'E') and
+                t < end):
+                series.append((t, self.events[i][1]))
                 t += datetime.timedelta(hours = 1)
 
             # have to distribute volume
@@ -658,7 +717,7 @@ class Precip3240Station:
 
                 i = j
                 while t < self.events[i][0] and t < end:
-                    series.append(hourly)
+                    series.append((t, hourly))
                     t += datetime.timedelta(hours = 1)
 
             # missing period or record
@@ -669,7 +728,7 @@ class Precip3240Station:
                     i += 1
 
                 while t < self.events[i][0] and t < end:
-                    series.append(None)
+                    series.append((t, None))
                     t += datetime.timedelta(hours = 1)
 
             # incomplete period of record
@@ -677,18 +736,22 @@ class Precip3240Station:
             elif self.events[i][2] == 'I':
 
                 while t < self.events[i+1][0] and t < end:
-                    series.append(None)
+                    series.append((t, None))
                     t += datetime.timedelta(hours = 1)
                 
-            elif self.events[i][1] > 999: series.append(None)
-            else:
-                series.append(0)
+            elif self.events[i][1] > 999: 
+                
+                series.append((t, None))
+                t += datetime.timedelta(hours = 1)
+
+            elif t < end:
+                series.append((t, 0))
                 t += datetime.timedelta(hours = 1)
 
             i += 1
 
         while t < end:
-            series.append(0.)            
+            series.append((t, 0.))            
             t += datetime.timedelta(hours = 1)
 
         if   tstep == 'hourly': return series
@@ -697,8 +760,85 @@ class Precip3240Station:
                       for i in range(0, len(series), 24)]
             return series
         else: 
-            print('warning, unkown time step specified')
+            print('warning, unknown time step specified')
             return
+
+    def plot(self, start = None, end = None, tstep = 'daily', 
+             show = False, output = None, verbose = True):
+        """Generates a series of subplots of the time series of precipitation
+        data for a watershed."""
+
+        if verbose: print('plotting the precipitation data\n')
+
+        if len(self.events) == 0:
+            print('warning: station contains no data')
+            return
+
+        if start is None: start = self.events[0][0]
+        if end is None:   end   = self.events[-1][0]
+
+        # make the figure and subplots
+
+        fig = pyplot.figure()
+        sub = fig.add_subplot(111)
+
+        v = self.coop, self.desc
+        f = sub.set_title('Coop Station {}: {} Precipitation Data'.format(*v), 
+                          size = 14)
+
+        pct = self.pct_missing(start = start, end = end)
+        tot = self.total_precipitation(start = start, end = end)
+
+        avg = tot / (end - start).days * 365.25
+
+        ts = self.make_timeseries(start = start, end = end, 
+                                  tstep = 'hourly')
+
+        times  = [p[0] for p in ts]
+        precip = [p[1] for p in ts]
+
+        if tstep == 'hourly':
+            nones  = [-1 if p[1] is None else 0 for p in ts]
+            precip = [p[1] if p[1] is not None else 0 for p in ts]
+            l = 'hr'
+                
+        elif tstep == 'daily':
+            nones  = [-1 if all([p is None for p in precip[i:i+24]]) else 0 
+                       for i in range(0, len(precip), 24)]
+            precip = [p[1] if p[1] is not None else 0 for p in ts]
+            precip = [sum([p for p in precip[i:i+24]]) 
+                      for i in range(0, len(precip), 24)]
+            times = [start + i * datetime.timedelta(hours = 24) 
+                     for i in range(len(precip))]
+            l = 'd'
+
+        else:
+            print('error: unknown timestep specified')
+            raise
+
+        t = ('Average Precipitation = ' +
+             '{:.1f} in\n{:.1%} Missing Data'.format(avg, pct))
+
+        sub.fill_between(times, 0, precip, color = 'blue', alpha = 0.5)
+        sub.fill_between(times, 0, nones, color = 'red', alpha = 0.5)
+
+        sub.set_ylim([-1, sub.get_ylim()[1]])
+        sub.set_ylabel('Prec (in)')
+        sub.xaxis.set_major_locator(dates.YearLocator(3))
+        sub.yaxis.set_major_locator(ticker.MaxNLocator(4))
+        sub.text(0.98, 0.95, t, ha = 'right', va = 'top', size = 10, 
+                 transform = sub.transAxes)
+
+        #fig.autofmt_xdate()
+        sub.set_xlabel('Date')
+        for tick in sub.xaxis.get_major_ticks():
+            tick.label.set_fontsize(10)
+
+        if output is not None: pyplot.savefig(output)
+        if show: pyplot.show()
+
+        pyplot.clf()
+        pyplot.close()
 
 class NSRDBStation:
     """A class to store and retrieve data from the National Solar

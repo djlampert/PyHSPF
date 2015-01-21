@@ -292,10 +292,15 @@ def find_precip3240(bbox,
                     NCDC = 'http://www.ncdc.noaa.gov/', 
                     metafile = 'homr/file/coop-stations.txt',
                     dates = None, 
-                    verbose = True
+                    verbose = True,
                     ):
     """Finds stations meeting the requirements from the hourly precipitation
     online NCDC database."""
+
+    if verbose: 
+
+        print('\nsearching for hourly precipitation stations within ' +
+              '{}, {}, {}, {}...\n'.format(*bbox))
 
     # state codes
 
@@ -418,6 +423,8 @@ def find_precip3240(bbox,
 
                 if verbose: print('found hourly precipitation station ' +
                                   '{}, coop {}'.format(desc.strip(), coop))
+
+    if verbose: print('')
 
     return stations
 

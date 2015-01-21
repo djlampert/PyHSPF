@@ -2,7 +2,7 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# last updated: 01/10/2015
+# last updated: 01/20/2015
 #
 # This example illustrates how to extract NWIS data for HSPF using the 
 # NWISExtractor class. The extractor will download the source shapefile that
@@ -119,5 +119,27 @@ for n in datafiles:
 
     # if the flow values are missing, the function will fill the value for 
     # the data with a "None"
+
+    # any water quality data will be sporadic, so it is organized based on the
+    # type of data into a dictionary with keys corresponding to NWIS codes 
+    # and values that are a list of date/value pairs
+
+    # the code for total suspended solids is 00530; the following shows how
+    # to get the TSS data for a gage station
+
+    print('')
+
+    try:
+
+        TSS = station.waterquality['00530']
+        print('Number of suspended solids measurements:', len(TSS))
+        print('TSS concentration on {}: {} mg/L'.format(*TSS[0]))
+
+    except: 
+
+        print('no TSS data available for this station')
+
+    # a complete list of NWIS codes are available at
+    # http://help.waterdata.usgs.gov/codes-and-parameters/parameters
 
     print('')
