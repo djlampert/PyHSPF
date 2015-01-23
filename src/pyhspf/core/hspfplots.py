@@ -13,7 +13,7 @@ from calendar   import isleap
 from scipy      import stats, log10
 from itertools  import chain
 
-import numpy as np, os, math, datetime
+import numpy as np, os, datetime, math
 
 def average(l):
     if len(l) > 0: return sum(l) / len(l)

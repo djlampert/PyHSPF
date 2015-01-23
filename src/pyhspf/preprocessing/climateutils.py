@@ -194,8 +194,8 @@ def find_ghcnd(bbox,
     return stations
 
 def find_gsod(bbox, 
-              GSOD = 'ftp://ftp.ncdc.noaa.gov/pub/data/inventories',
-              filename = 'ish-history.txt', 
+              GSOD = 'ftp://ftp.ncdc.noaa.gov/pub/data/noaa',
+              filename = 'isd-history.txt', 
               dates = None, 
               verbose = True, 
               vverbose = False
@@ -203,6 +203,10 @@ def find_gsod(bbox,
     """finds Global Surface Observation Data Stations inside the given 
     bounding box. Optional keyword arguments can be used to find stations
     with data with the desired period of record."""
+
+    if verbose:
+ 
+        print('\nsearching for GSOD stations in {}, {}, {}, {}\n'.format(*bbox))
 
     xmin, ymin, xmax, ymax = bbox
 
@@ -218,11 +222,12 @@ def find_gsod(bbox,
 
             data = [r for r in s.read().split('\n') if len(r) > 0]
 
-        data = [[d[:6], d[7:12], d[13:43], d[43:48], d[49:51], d[52:56], 
-                 d[57:64], d[65:72], d[73:79], d[83:91], d[92:100]]
+        data = [[d[:6], d[7:12], d[13:43], d[43:48], d[49:51], d[51:55], 
+                 d[57:64], d[65:72], d[73:81], d[82:90], d[91:99]]
                  for d in data if is_integer(d[0][:6])]
 
     except:
+
         print('warning: unable to locate stations within the region')
         print('verify that you have internet access')
         raise Exception
@@ -233,8 +238,9 @@ def find_gsod(bbox,
     for usaf, wban, station, ctry, st, call, lat, lon, elev, s, e in data:
 
         if is_number(lon) and is_number(lat):
+
             if inside_box([xmin, ymin], [xmax, ymax], 
-                          [float(lon) / 1000, float(lat) / 1000]):
+                          [float(lon), float(lat)]):
 
                 if is_integer(s):
                     d1 = datetime.datetime(int(s[:4]),
@@ -251,11 +257,11 @@ def find_gsod(bbox,
                     stations.append(GSODStation(int(usaf), 
                                                 int(wban), 
                                                 station.strip(), 
-                                                float(lat) / 1000, 
-                                                float(lon) / 1000, 
-                                                float(elev) / 10,
+                                                float(lat), 
+                                                float(lon), 
+                                                float(elev),
                                                 d1,
-                                                d2
+                                                d2,
                                                 )
                                     )
                     if vverbose: 
@@ -275,13 +281,14 @@ def find_gsod(bbox,
                                 stations.append(GSODStation(int(usaf), 
                                                             int(wban), 
                                                             station.strip(), 
-                                                            float(lat) / 1000, 
-                                                            float(lon) / 1000, 
-                                                            float(elev) / 10,
+                                                            float(lat), 
+                                                            float(lon), 
+                                                            float(elev),
                                                             d1,
-                                                            d2
+                                                            d2,
                                                             )
                                                 )
+    if verbose: print('')
 
     if len(stations) == 0:
         print('\nwarning: unable to locate stations within the region')

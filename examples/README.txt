@@ -13,8 +13,9 @@ summary of the examples:
 10. Utilizing the NWISExtractor to download and work with NWIS flow and water quality data
 11. Utilizing the NIDExtractor to download and work with NID dam data
 12. Utilizing the HUC8Delineator and other classes to subdivide a HUC8 into subbasins
-13. Utilizing climateutils for Global Historical Climate Network Daily data
-14. Utilizing climateutils to download hourly precipitation data
+13. Utilizing climateutils for Global Historical Climate Network Daily (GHCND) data
+14. Utilizing climateutils to download hourly precipitation data (from NCDC dataset 3240)
+15. Utilizing climateutils for Global Summary of the Day (GSOD) data
 17. Utilizing PyHSPF's climateutils for all HSPF climate data needs
 
 The "hunting.py" example illustrates the many features of PyHSPF; the script downloads 

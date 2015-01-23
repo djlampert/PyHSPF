@@ -222,6 +222,15 @@ def plot_gsod(station, start = None, end = None, show = False, output = None,
               verbose = True):
     """Makes a plot of the data from a GSOD station."""
 
+    try:
+        if start is None: start = station.tmax[0][0]
+        if end is None:   end   = station.tmax[-1][0]
+    except:
+        print('warning: no data present')
+        return
+
+    if verbose: print('plotting GSOD data\n')
+
     # some error handling
 
     precipdata = [(t, p) for t, p in station.precip 
@@ -240,12 +249,6 @@ def plot_gsod(station, start = None, end = None, show = False, output = None,
         print('warning: no data present')
         return
 
-    try:
-        if start is None: start = station.tmax[0][0]
-        if end is None:   end   = station.tmax[-1][0]
-    except:
-        print('warning: no data present')
-        return
 
     if verbose: print('making a plot for {}'.format(station.name))
 

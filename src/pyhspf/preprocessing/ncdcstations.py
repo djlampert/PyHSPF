@@ -129,8 +129,16 @@ class GSODStation:
     """A class to store meteorology data from the Global Summary of the Day 
     Network."""
 
-    def __init__(self, airforce, wban, name, latitude, longitude, 
-                 elevation, start, end):
+    def __init__(self, 
+                 airforce, 
+                 wban, 
+                 name, 
+                 latitude, 
+                 longitude, 
+                 elevation, 
+                 start, 
+                 end,
+                 ):
         """info from the NCDC GSOD database."""
 
         self.airforce  = airforce   # Air Force Datsav3 Station Number
@@ -144,12 +152,12 @@ class GSODStation:
 
         # time series for the station -- lists of datetime.datetime/value pairs
 
-        # variable       list    pyhspf type           units   GSOD type/units
-        self.precip    =  []   # precipitation         (mm)       (in)
-        self.tmax      =  []   # daily max temperature (C)        (F)
-        self.tmin      =  []   # daily min temperature (C)        (F)
-        self.wind      =  []   # daily avg wind speed  (m/s)      (knots)
-        self.dewpoint  =  []   # daily avg dewpoint    (mm)       (F)
+        # variable       list    pyhspf type           units   GSOD units
+        self.precip    =  []   # precipitation         (mm)    (in)
+        self.tmax      =  []   # daily max temperature (C)     (F)
+        self.tmin      =  []   # daily min temperature (C)     (F)
+        self.wind      =  []   # daily avg wind speed  (m/s)   (knots)
+        self.dewpoint  =  []   # daily avg dewpoint    (mm)    (F)
 
     def is_integer(self, s):
         """Tests if string "s" is an integer."""
@@ -194,9 +202,8 @@ class GSODStation:
 
         # see if the data file is there, if not download it
 
-        temp = '{}/temp'.format(directory)
-        var = directory, self.airforce, self.wban
-        destination = '{0}/{1:06d}-{2:05d}'.format(*var)
+        var = directory, self.airforce
+        destination = '{0}/{1:06d}'.format(*var)
 
         if not os.path.isfile(destination):
             var = self.name, start.year, end.year
@@ -206,36 +213,50 @@ class GSODStation:
             # data are stored by year and then station
 
             for year in years:
+
                 var = GSOD, year, self.airforce, self.wban
                 url = '{0}/{1:04d}/{2:06d}-{3:05d}-{1:04d}.op.gz'.format(*var)
                 if verbose: print('attempting to download data from', url)
             
                 try:
                     r = request.Request(url)
-                    content = request.urlopen(r).read()
 
-                    with open(temp, 'wb') as f: f.write(content)
+                    # read the binary data
 
-                    with gzip.open(temp, 'rb') as f:
+                    with io.BytesIO(request.urlopen(r).read()) as b:
+
+                        # create a gGzipFile to work with the binary string
                
-                        lines = f.read().decode().split('\n')
+                        with gzip.GzipFile(fileobj = b, mode = 'rb') as zf:
 
-                        if len(lines) > 0:
-                            for l in lines[1:]:
-                                try: 
-                                    (s, w, d, T, h, D, h, slp, h, stp, 
-                                     h, v, h, W, h, m, g, Tmax, Tmin, 
-                                     P, s, f) = l.split()
-                                    self.add_daily(d, P, Tmax, Tmin, D, W)
-                                except: pass
+                            # read and decode the binary
 
-                except: 
+                            lines = zf.read().decode().split('\n')
+
+                    if len(lines) > 0:
+                        
+                        # parse the lines in the file and pull out the 
+                        # relevant data (date, pressure, max temp, min temp,
+                        # dewpoint, wind speed)
+
+                        for l in lines[1:]:
+
+                            try: 
+                                (s, w, d, T, h, D, h, slp, h, stp, h, v, h, W, 
+                                 h, m, g, Tmax, Tmin, P, s, f) = l.split()
+                                self.add_daily(d, P, Tmax, Tmin, D, W)
+                            except: pass
+
+                except:
+
                     print('unable to download data from', url)
                     print('listed record:', self.start, self.end)
         
-            # delete the temporary file
-
-            if os.path.isfile(temp): os.remove(temp)
+            self.precip.sort()
+            self.tmax.sort()
+            self.tmin.sort()
+            self.wind.sort()
+            self.dewpoint.sort()
 
             with open(destination, 'wb') as f: pickle.dump(self, f)
                     
@@ -268,31 +289,73 @@ class GSODStation:
             if float(wind) < 99:
                 self.wind.append((date, float(wind) * 0.5144))
 
-    def add_data(self, station):
-        """Adds the data from another station (when it's really the same data
-        under a different name)."""
+    def make_timeseries(self, tstype, start = None, end = None, verbose = True):
+        """Constructs time series of type "tstype" between times start and end 
+        (start and end are instances of datetime.datetime)."""
 
-        self.precip   += station.precip 
-        self.tmax     += station.tmax 
-        self.tmin     += station.tmin 
-        self.dewpoint += station.dewpoint 
-        self.wind     += station.wind 
+        if   tstype == 'dewpoint':      timeseries = self.dewpoint
+        elif tstype == 'tmax':          timeseries = self.tmax
+        elif tstype == 'tmin':          timeseries = self.tmin
+        elif tstype == 'wind':          timeseries = self.wind
+        elif tstype == 'precipitation': timeseries = self.precip
+        else:
 
-        self.precip.sort()
-        self.tmax.sort()
-        self.tmin.sort()
-        self.dewpoint.sort()
-        self.wind.sort()
+            print('error: unknown time series type specified')
+            print('options are dewpoint, tmax, tmin, wind, or precipitation\n')
+            raise
 
-    def plot(self, start, end, output = None, show = False):
+        if len(timeseries) == 0: 
+            print('warning: station contains no point data')
+            return
+        
+        if start is None: start = timeseries[0][0]
+        if end is None: end = timeseries[-1][0]
+
+        # make sure the function inputs are correct
+        
+        if start >= end:
+            print('start must be less than end')
+            return None
+
+        if (not isinstance(start, datetime.datetime) or 
+            not isinstance(end, datetime.datetime)):
+            print('start and end must be datetime.datetime instances')
+            return None
+
+        if start < timeseries[0][0] and timeseries[-1][0] < end:
+            if verbose:
+                print('warning: specified range (%s to %s) is outside of ' % 
+                      (start, end) + 'available dewpoint data')
+
+        data = []
+
+        dates = [start + i * datetime.timedelta(days = 1) 
+                 for i in range(int((end - start).total_seconds() / 86400))]
+
+        ts_dates, values = zip(*timeseries)
+       
+        for date in dates:
+            if date in ts_dates:
+                data.append(values[ts_dates.index(date)])
+            else: 
+                data.append(None)
+
+        if len(data) == 0:
+            print('warning: unable to generate time series')
+            return None
+
+        return data
+
+    def plot(self, start = None, end = None, output = None, show = False):
         """make a plot."""
 
-        from pyhspf.preprocessing.climateplots import plot_gsod
+        from .climateplots import plot_gsod
 
-        try: 
+        if 1==1:
+#        try: 
             plot_gsod(self, start = start, end = end, output = output,
                       show = show)
-        except: print('warning: unable to plot GSOD data')
+#        except: print('warning: unable to plot GSOD data')
 
 class Precip3240Station:
     """A class to store meteorology data from the NCDC Hourly Precipitation
@@ -1122,33 +1185,33 @@ class TempStation:
 
     def add_tmax(self, tmax): self.tmax = tmax
 
-    def make_timeseries(self, t1 = None, t2 = None, verbose = True):
+    def make_timeseries(self, start = None, end = None, verbose = True):
         """Constructs daily tmax and tmin time series between times t1 and t2 
         (t1 and t2 are instances of datetime.datetime)."""
 
-        if t1 is None: t1 = self.tmax[0][0]
-        if t2 is None: t2 = self.tmax[-1][0]
+        if start is None: start = self.tmax[0][0]
+        if end is None: end = self.tmax[-1][0]
 
         # make sure the function inputs are correct
         
-        if t1 >= t2:
-            print('t1 must be less than t2')
+        if start >= end:
+            print('start must be less than end')
             return None
 
-        if (not isinstance(t1, datetime.datetime) or 
-            not isinstance(t2, datetime.datetime)):
-            print('t1 and t2 must be datetime.datetime instances')
+        if (not isinstance(start, datetime.datetime) or 
+            not isinstance(end, datetime.datetime)):
+            print('start and end must be datetime.datetime instances')
             return None
 
-        if t1 < self.tmax[0][0] and self.tmax[-1][0] < t2:
+        if start < self.tmax[0][0] and self.tmax[-1][0] < end:
             print('warning: specified range (%s to %s) is outside of ' % 
-                  (t1, t2) + 'available gage data')
+                  (start, end) + 'available gage data')
 
         tmax = []
         tmin = []
 
-        dates = [t1 + i * datetime.timedelta(days = 1) 
-                 for i in range((t2 - t1).days)]
+        dates = [start + i * datetime.timedelta(days = 1) 
+                 for i in range((end - start).days)]
 
         tmax_dates, tmax_values = zip(*self.tmax)
         tmin_dates, tmin_values = zip(*self.tmin)
@@ -1426,9 +1489,9 @@ class WindStation:
         return wind
 
 class DewStation:
-    """A class to store data from an NCDC snowdepth station."""
+    """A class to store dewpoint data from a GSOD station."""
 
-    def add_location(self, station):
+    def add_station(self, station):
         """Get some basic info about the station."""
 
         try:                   self.name = station.name
@@ -1443,40 +1506,39 @@ class DewStation:
         try:    self.longitude = float(station.lon)
         except: self.longitude = -1
 
-        self.dewpoint = []
+        self.dewpoint = station.dewpoint
 
-    def add_data(self, data):
-        """Adds data to existing (useful if located in different files)."""
+    def make_timeseries(self, start = None, end = None, verbose = True):
+        """Constructs daily dewpoint time series between times start and end 
+        (start and end are instances of datetime.datetime)."""
 
-        self.dewpoint += data
-
-    def make_timeseries(self, t1 = None, t2 = None, verbose = True):
-        """Constructs daily dewpoint time series between times t1 and t2 
-        (t1 and t2 are instances of datetime.datetime)."""
-
-        if t1 is None: t1 = self.dewpoint[0][0]
-        if t2 is None: t2 = self.dewpoint[-1][0]
+        if len(self.dewpoint) == 0: 
+            print('warning: station contains no point data')
+            return
+        
+        if start is None: start = self.dewpoint[0][0]
+        if end is None: end = self.dewpoint[-1][0]
 
         # make sure the function inputs are correct
         
-        if t1 >= t2:
-            print('t1 must be less than t2')
+        if start >= end:
+            print('start must be less than end')
             return None
 
-        if (not isinstance(t1, datetime.datetime) or 
-            not isinstance(t2, datetime.datetime)):
-            print('t1 and t2 must be datetime.datetime instances')
+        if (not isinstance(start, datetime.datetime) or 
+            not isinstance(end, datetime.datetime)):
+            print('start and end must be datetime.datetime instances')
             return None
 
-        if t1 < self.dewpoint[0][0] and self.dewpoint[-1][0] < t2:
+        if start < self.dewpoint[0][0] and self.dewpoint[-1][0] < end:
             if verbose:
                 print('warning: specified range (%s to %s) is outside of ' % 
-                      (t1, t2) + 'available dewpoint data')
+                      (start, end) + 'available dewpoint data')
 
         dewpoint = []
 
-        dates = [t1 + i * datetime.timedelta(days = 1) 
-                 for i in range(int((t2 - t1).total_seconds() / 86400))]
+        dates = [start + i * datetime.timedelta(days = 1) 
+                 for i in range(int((end - start).total_seconds() / 86400))]
 
         dew_dates, values = zip(*self.dewpoint)
        
@@ -1521,7 +1583,7 @@ class SolarStation:
         # make sure the function inputs are correct
         
         if start >= end:
-            print('t1 must be less than t2')
+            print('start must be less than end')
             return None
 
         if start < self.solar[0][0] and self.solar[-1][0] < end:

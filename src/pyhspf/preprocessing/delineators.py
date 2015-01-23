@@ -2,7 +2,7 @@
 #                                                                             
 # David J. Lampert (djlampert@gmail.com)
 #                                                                             
-# last updated: 10/08/2014
+# last updated: 01/21/2014
 #                                                                              
 # Purpose: Contains the NHDPlusDelineator class to analyze the NHDPlus data 
 # for a watershed and subdivide it according to the criteria specified.
@@ -308,6 +308,31 @@ class NHDPlusDelineator:
 
         return flowlines.record(i)[comid_index]
 
+    def find_gagepoint(self, gageid):
+        """Finds the location of a gage in the gage file."""
+
+        # open the gage file
+
+        gagereader = Reader(self.gagefile, shapeType = 1)
+
+        # find the field index of the site number
+
+        site_index = gagereader.fields.index(['SITE_NO', 'C', 15, 0]) - 1
+        
+        # make a list of all the sites
+
+        sites = [r[site_index] for r in gagereader.records()] 
+
+        # find the index of the gage id
+
+        i = sites.index(gageid)
+
+        # get the longitude and latitude
+
+        p = gagereader.shape(i).points[0]
+
+        return p
+
     def find_gagecomid(self, 
                        gageid,
                        ):
@@ -333,25 +358,7 @@ class NHDPlusDelineator:
             print('error: no gage file specified\n')
             raise
 
-        # open the gage file
-
-        gagereader = Reader(self.gagefile, shapeType = 1)
-
-        # find the field index of the site number
-
-        site_index = gagereader.fields.index(['SITE_NO', 'C', 15, 0]) - 1
-        
-        # make a list of all the sites
-
-        sites = [r[site_index] for r in gagereader.records()] 
-
-        # find the index of the gage id
-
-        i = sites.index(gageid)
-
-        # get the longitude and latitude
-
-        p = gagereader.shape(i).points[0]
+        p = self.find_gagepoint(gageid)
 
         # find the comid
 
@@ -565,7 +572,7 @@ class NHDPlusDelineator:
 
         pfile = '{}/{}.png'.format(output, plotfile)
         if not os.path.isfile(pfile):
-            self.plot_gage_watershed(gageid, output = pfile)
+            self.plot_delineated_watershed(gageid = gageid, output = pfile)
 
     def delineate_watershed(self, 
                             lon,
@@ -1238,9 +1245,12 @@ class NHDPlusDelineator:
         while updown[comids[i]] in updown: i+=1
         gnis_name = f.record(all_comids.index(comids[i]))[4]
     
+        if gageid is not None: point = self.find_gagepoint(gageid)
+
         # show the point
 
-        subplot.scatter(point[0], point[1], marker = 'o', c = 'r', s = 60)
+        if point is not None:
+            subplot.scatter(point[0], point[1], marker = 'o', c = 'r', s = 60)
     
         subplot.set_xlabel('Longitude, Decimal Degrees', size = 13)
         subplot.set_ylabel('Latitude, Decimal Degrees',  size = 13)
@@ -1529,10 +1539,6 @@ class HUC8Delineator(NHDPlusDelineator):
             except: combined = combine_shapes(shapes, bboxes, skip = True,
                                               verbose = vverbose)
 
-        if len(combined) == 0: 
-            print('error: combined shapes have no points')
-            raise
-
         # iterate through the catchments and get the elevation data from NED
         # then estimate the value of the overland flow plane length and slope
 
@@ -1566,12 +1572,19 @@ class HUC8Delineator(NHDPlusDelineator):
                 closest.append(flowpoints[j])
 
             closest = numpy.array(closest)
+            #closest = numpy.empty((len(catchpoints), 3), dtype = 'float')
 
+            #for point, j in zip(catchpoints, range(len(catchpoints))):
+            #    closest[j] = flowpoints[numpy.dot(flowpoints[:, :2], 
+            #                                      point[:2]).argmin()]
+
+            #print(closest.shape)
+            #exit()
             # estimate the slope and overland flow plane length
 
             length, slope = self.get_overland(catchpoints, closest)
 
-            if vverbose: 
+            if verbose: 
                 print('avg slope and length =', slope.mean(), length.mean())
 
             lengths[i], slopes[i] = length.mean(), slope.mean()
@@ -1586,7 +1599,7 @@ class HUC8Delineator(NHDPlusDelineator):
         # take the area weighted average of the slopes and flow lengths
 
         tot_area   = round(areas.sum(), 2)
-        avg_length = round(numpy.sum(areas * lengths) / tot_area, 1)
+        avg_length = round(1000 * numpy.sum(areas * lengths) / tot_area, 1)
         avg_slope  = round(numpy.sum(areas * slopes) / tot_area, 4)
 
         # get the centroid and the average elevation
@@ -1622,8 +1635,10 @@ class HUC8Delineator(NHDPlusDelineator):
 
         for field in fields:  w.field(*field)
     
-        w.record(*record)    
+        w.record(*record)
+    
         w.poly(shapeType = 5, parts = [combined])
+
         w.save(output)
 
         if vverbose: print('\ncompleted catchment combination in ' +
@@ -2415,7 +2430,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
         elif not os.path.isfile(self.subbasincatchments + '.shp'):
 
-            if verbose: print('attempting to combine subbasin catchments' +
+            if verbose: print('attempting to combine subbasin catchments ' +
                               ', this may take a while...\n')
 
             for subbasin in self.subbasins:
@@ -2447,9 +2462,9 @@ class HUC8Delineator(NHDPlusDelineator):
                         if verbose: 
 
                             print('warning: unable to combine catchments ' + 
-                                  'in subbasin {}\n'.format(subbasin))
+                                  'in {}\n'.format(path))
 
-            if verbose: print('successfully combined catchments ' +
+            if verbose: print('successfully combined catchments in parallel ' +
                               'in {:.1f} seconds \n'.format(time.time() -start))
 
         # put together the combined subbasins into a single file
@@ -2515,21 +2530,15 @@ class HUC8Delineator(NHDPlusDelineator):
                     fields = r.fields
                     for field in fields: w.field(*field)
 
-                try:
-                    record = r.record(0)
-                    shape = r.shape(0)
-                except:
-                    print('error: {} appears to be empty\n'.format(filename))
-                    raise
+                shape = r.shape(0)
 
                 # write the shape and record to the new file
 
                 w.poly(shapeType = 5, parts = [shape.points])
+                record = r.record(0)
                 w.record(*record)
 
-            elif verbose: 
-                print('error: unable to locate {}'.format(filename))
-                raise
+            elif verbose: print('unable to locate {}'.format(filename))
 
         if fields is not None: 
             w.save(self.subbasincatchments)
@@ -2636,6 +2645,7 @@ class HUC8Delineator(NHDPlusDelineator):
                                                 overwrite = True, 
                                                 verbose = vverbose
                                                 )
+                if verbose: print('')
 
             if verbose: 
 
