@@ -21,29 +21,41 @@ from pyhspf.core          import HSPFModel
 from pyhspf.core          import Postprocessor
 from pyhspf.calibration   import AutoCalibrator
 
-# working directories to use for file extraction and processing
+# source directory for NHDPlus and NWIS data (I use a network mapped to Z:)
 
-NWIS      = 'NWIS'                        # NWIS metadata files
-NHDPlus   = 'NHDPlus'                     # NHDPlus source files
-output    = 'HSPF_data'                   # output for the HUC8
+source = 'Z:'
+
+# destination for extracted files for various HUC8 watershed data and models
+
+destination = 'HSPF_data'
+
+if not os.path.isdir(destination): os.mkdir(destination)
 
 # NHDPlus info for the Mid-Atlantic Region and the Patuxent River Basin
 
-drainid   = 'MA'                          # NHDPlus Drainage Area ID
-VPU       = '02'                          # NHDPlus Vector Processing Unit
-HUC8      = '02060006'                    # 8-digit HUC
-gageid    = '01594670'                    # USGS Gage Site ID number
+VPU       = '02'        # NHDPlus Vector Processing Unit
+HUC8      = '02060006'  # 8-digit HUC
+gageid    = '01594670'  # USGS Gage Site ID number
+
+# path to the working directory for th HUC8
+
+output = '{}/{}'.format(destination, HUC8)
+
+# working directories to use for file extraction and processing
+
+NWIS    = '{}/NWIS'.format(source)      # NWIS metadata files
+NHDPlus = '{}/NHDPlus'.format(source)   # NHDPlus source files
 
 # names for extracted files for the watershed for HUC 02060006 (Patuxent River)
 
-gagefile  = '{}/gagestations'.format(output)   # HUC8 gage station shapefile
-flowfile  = '{}/flowlines'.format(output)      # HUC8 flowline shapefile
-catchfile = '{}/catchments'.format(output)     # HUC8 catchment shapefile
-bfile     = '{}/boundary'.format(output)       # HUC8 boundary shapefile
-VAAfile   = '{}/flowlineVAAs'.format(output)   # NHDPlus value added attributes
-elevfile  = '{}/elevations.tif'.format(output) # NED raster file
-waterplot = '{}/NHDPlus.png'.format(output)    # plot of the HUC8 data
-gagefiles = '{}/gagedata'.format(output)       # HUC8 NWIS flow data
+gagefile  = '{}/gagestations'.format(output)    # gage station shapefile
+flowfile  = '{}/flowlines'.format(output)       # flowline shapefile
+catchfile = '{}/catchments'.format(output)      # catchment shapefile
+bfile     = '{}/boundary'.format(output)        # boundary shapefile
+VAAfile   = '{}/flowlineVAAs'.format(output)    # VAA file
+elevfile  = '{}/elevations.tif'.format(output)  # NED raster file
+waterplot = '{}/NHDPlus.png'.format(output)     # plot of the HUC8 data
+gagefiles = '{}/gagedata'.format(output)        # HUC8 NWIS flow data
 
 # names for extracted files for the gage watershed (Hunting Creek)
 
@@ -64,12 +76,20 @@ calibrated = '{}/hspfmodel'.format(hspf)    # file path for the calibrated model
 
 # HSPF calibration methodology
     
-variables     = {'LZSN':   0.70,  # starting value relative to PyHSPF default
-                 'UZSN':   6.1,   # starting value relative to PyHSPF default
-                 'LZETP':  0.4,   # starting value relative to PyHSPF default
-                 'INFILT': 0.90,  # starting value relative to PyHSPF default
+#variables     = {'LZSN':   0.70,  # starting value relative to PyHSPF default
+#                 'UZSN':   6.1,   # starting value relative to PyHSPF default
+#                 'LZETP':  0.4,   # starting value relative to PyHSPF default
+#                 'INFILT': 0.90,  # starting value relative to PyHSPF default
+#                 'INTFW':  0.20,  # starting value relative to PyHSPF default
+#                 'AGWRC':  1.01,  # starting value relative to PyHSPF default
+#                 'IRC':     0.5,  # starting value relative to PyHSPF default
+#                 }
+variables     = {'LZSN':   0.725,  # starting value relative to PyHSPF default
+                 'UZSN':   6.75,   # starting value relative to PyHSPF default
+                 'LZETP':  0.22,   # starting value relative to PyHSPF default
+                 'INFILT': 1.34,  # starting value relative to PyHSPF default
                  'INTFW':  0.20,  # starting value relative to PyHSPF default
-                 'AGWRC':  1.01,  # starting value relative to PyHSPF default
+                 'AGWRC':  1.004,  # starting value relative to PyHSPF default
                  'IRC':     0.5,  # starting value relative to PyHSPF default
                  }
 optimization  = 'Nash-Sutcliffe Product'  # optimization parameter
@@ -84,7 +104,7 @@ landuse = {'Developed':      119,
            'Agriculture':    642
            }
 
-def main():
+def preprocess():
 
     # create an instance of the NWIS extractor
 
@@ -98,13 +118,9 @@ def main():
 
     nwisextractor.extract_HUC8(HUC8, output)
 
-    # tell the extractor to use the metadata file above to find gage data
-
-    nwisextractor.set_metadata(gagefile)
-
     # create an instance of the NHDPlus extractor
 
-    nhdplusextractor = NHDPlusExtractor(drainid, VPU, NHDPlus)
+    nhdplusextractor = NHDPlusExtractor(VPU, NHDPlus)
 
     # download and decompress the source data for the Mid Atlantic Region
 
@@ -112,7 +128,7 @@ def main():
 
     # extract the HUC8 data for the Patuxent watershed
 
-    nhdplusextractor.extract_HUC8(HUC8, output)
+    nhdplusextractor.extract_HUC8(HUC8, destination)
 
     # create an instance of the NHDPlusDelineator to use to build the Watershed
 
@@ -219,6 +235,12 @@ def main():
 
     hunting.evap_multiplier = 0.75
 
+    with open(calibrated, 'wb') as f: pickle.dump(hunting, f)
+
+def calibrate():
+
+    with open(calibrated, 'rb') as f: hunting = pickle.load(f)
+
     calibrator = AutoCalibrator(hunting, start, end, hspf)
 
     calibrator.autocalibrate(calibrated,
@@ -312,7 +334,8 @@ if __name__ == '__main__':
 
     st = time.time()
 
-    main()
+    #preprocess()
+    #calibrate()
     postprocess()
     
     tot = time.time() - st

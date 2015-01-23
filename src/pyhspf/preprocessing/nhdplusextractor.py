@@ -11,7 +11,7 @@
 
 from urllib import request
 
-import shutil, os, io, time, pickle, subprocess, gdal, numpy
+import shutil, os, time, pickle, subprocess, gdal, numpy
 
 from gdalconst               import GA_ReadOnly
 from shapefile               import Reader, Writer
