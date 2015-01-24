@@ -68,7 +68,7 @@ for station in stations:
 
     # make a plot showing the data across the whole period
 
-    #gsodstation.plot(output = '{}'.format(gsodstation.airforce))
+    gsodstation.plot(output = '{}'.format(gsodstation.airforce))
 
     # let's look at the data between 2001 and 2005
 
