@@ -16,6 +16,7 @@ summary of the examples:
 13. Utilizing climateutils for Global Historical Climate Network Daily (GHCND) data
 14. Utilizing climateutils to download hourly precipitation data (from NCDC dataset 3240)
 15. Utilizing climateutils for Global Summary of the Day (GSOD) data
+16. Utilizing climateutils for National Solar Radiation Database (NSRDB) data
 17. Utilizing PyHSPF's climateutils for all HSPF climate data needs
 
 The "hunting.py" example illustrates the many features of PyHSPF; the script downloads 

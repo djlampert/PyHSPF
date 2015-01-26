@@ -1,12 +1,11 @@
-#!/usr/bin/env python3
+# climateutils.py
 #
-# File: extract_NCDC.py
-#
-# by David J. Lampert, PhD, PE (djlampert@gmail.com)
+# David J. Lampert, PhD, PE (djlampert@gmail.com)
 #
 # Last updated: 06/12/2014
 #
-# Purpose: imports climate data files to Python classes
+# Purpose: contains a variety of utility functions to download and import
+# climate data files to Python classes 
 
 import os, io, datetime
 
@@ -438,14 +437,18 @@ def find_precip3240(bbox,
 def find_nsrdb(bbox, 
                NSRDB    = 'http://rredc.nrel.gov/solar',
                metafile = 'old_data/nsrdb/1991-2010/NSRDB_StationsMeta.csv',
-               NCDC     = 'http://www1.ncdc.noaa.gov/pub/data',
-               NCDCmeta = 'ish/ish-history.txt',
+               NCDC     = 'ftp://ftp.ncdc.noaa.gov/pub/data/noaa',
+               NCDCmeta = 'isd-history.txt',
                dates = None, 
                verbose = True
                ):
     """finds National Solar Radiation Database Stations inside the given 
     bounding box. Optional keyword arguments can be used to find stations
     with data with the desired period of record."""
+
+    if verbose: 
+
+        print('searching for NSRDB stations in {}, {}, {}, {}\n'.format(*bbox))
 
     xmin, ymin, xmax, ymax = bbox
 
@@ -476,7 +479,7 @@ def find_nsrdb(bbox,
         except:
 
             print('warning: unable to open the WBAN metadata')
-            print('make sure you are online')
+            print('make sure you are online and that the pyhspf url is right')
             raise
 
         # make a dictionary of the station numbers to identify the old data;
@@ -505,7 +508,7 @@ def find_nsrdb(bbox,
         except:
 
             print('warning: unable to open the WBAN metadata')
-            print('make sure you are online')
+            print('make sure you are online and the pyhspf url is correct')
             raise
 
     else: wbans = {}
@@ -526,6 +529,7 @@ def find_nsrdb(bbox,
                         if len(l.split(',')) == 12]
 
     except:
+
         print('warning: unable to locate stations within the region')
         print('verify that you have internet access\n')
         raise Exception
@@ -546,6 +550,7 @@ def find_nsrdb(bbox,
                 if usaf in wbans: wban = wbans[usaf]
                 else:                    wban = None
 
+                print(station, usaf, wban)
                 stations.append(NSRDBStation(usaf,
                                              wban,
                                              int(cl), 
@@ -568,4 +573,3 @@ def find_nsrdb(bbox,
               'period of interest\n')
 
     return stations
-

@@ -1,10 +1,8 @@
-#!/usr/bin/env python3
-#
 # File: ncdcstations.py
 #
 # by David J. Lampert, PhD, PE (djlampert@gmail.com)
 #
-# Last updated: 11/16/2013
+# Last updated: 01/25/2015
 #
 # Purpose: classes to import climate data files to Python
 
@@ -15,14 +13,6 @@ from calendar   import monthrange
 from matplotlib import pyplot, dates, ticker
 
 from .climateplots import plot_3240precip
-
-def is_integer(n):
-    """Tests if n is an integer."""
-
-    try:
-        int(n)
-        return True
-    except: return False
 
 class GHCNDStation:
     """A class to store meteorology data from the Daily Global Historical 
@@ -351,11 +341,10 @@ class GSODStation:
 
         from .climateplots import plot_gsod
 
-        if 1==1:
-#        try: 
+        try: 
             plot_gsod(self, start = start, end = end, output = output,
                       show = show)
-#        except: print('warning: unable to plot GSOD data')
+        except: print('warning: unable to plot GSOD data')
 
 class Precip3240Station:
     """A class to store meteorology data from the NCDC Hourly Precipitation
@@ -531,7 +520,7 @@ class Precip3240Station:
 
                 archives = [a[-17:] for a in s.read().split('.tar.Z')]
             
-            archives = [a for a in archives if is_integer(a[-4:])]
+            archives = [a for a in archives if self.is_integer(a[-4:])]
 
         except: 
 
@@ -715,16 +704,16 @@ class Precip3240Station:
         
         if start >= end:
             print('start date must be less than end date')
-            return
+            raise
 
         if start < self.events[0][0] or self.events[-1][0] < end:
-            print('specified range (%s to %s) is outside of ' % 
+            print('warning: specified range (%s to %s) is outside of ' % 
                   (start, end) + 'available gage data\n')
 
         if (not isinstance(start, datetime.datetime) or 
             not isinstance(end, datetime.datetime)):
             print('start and end must be datetime.datetime instances')
-            return
+            raise
 
         # keep the timeseries in a list
 
@@ -1062,6 +1051,267 @@ class NSRDBStation:
 
         with open('{}/{}'.format(destination, self.usaf), 'wb') as f: 
             pickle.dump(self, f)
+
+    def aggregate_daily_monthly(self, daily, start, end, option = 'average'):
+        """Aggregates a daily timeseries into a monthly one."""
+
+        dates = [start + i * datetime.timedelta(days = 1)
+                 for i in range((end-start).days)]
+
+        if len(dates) < 30:
+            print('warning: insufficiently short time series')
+            return
+
+        if len(dates) != len(daily):
+            print('error: dates and data length must be the same')
+            raise
+
+        months, monthly = [dates[0]], [daily[0]]
+
+        # iterate through the data
+
+        for t, v in zip(dates[1:], daily[1:]):
+
+            # check if it's a new month
+
+            if months[-1].month != t.month:
+
+                # start a new month
+
+                months.append(t)
+                monthly.append(v)
+
+            # otherwise add the value to the monthly total
+
+            elif v is not None and monthly[-1] is not None: monthly[-1] += v
+
+            else: monthly[-1] = None
+
+        # change from total to average if needed
+
+        if option == 'average': 
+        
+            for i in range(len(months)):
+
+                # get the number of days in the last month
+
+                day, ndays = monthrange(months[i].year, months[i].month)
+
+                # and divide to get the average
+
+                if monthly[i] is not None:
+                    monthly[i] = monthly[i] / ndays
+                else: 
+                    monthly[i] = None
+
+        elif option != 'total':
+
+            print('Warning: unknown option specified')
+            raise
+
+        return months, monthly
+
+    def make_timeseries(self,
+                        dataset = 'metstat',
+                        start = None, 
+                        end = None, 
+                        tstep = 'hourly', 
+                        option = 'average',
+                        verbose = False,
+                        ):
+        """Returns a time series of values for the station."""
+
+        if   dataset == 'metstat':  solar = self.metstat
+        elif dataset == 'suny':     solar = self.suny
+        elif dataset == 'observed': solar = self.observed
+
+        self.solar = [(d, v) for d, v in self.legacy + solar if v >= 0]
+
+        if start is None: start = self.solar[0][0]
+        if end is None:   end = self.solar[-1][0]
+
+        # make sure the function inputs are correct
+        
+        if start >= end:
+            print('error: start must be less than end\n')
+            raise
+
+        if start < self.solar[0][0] or self.solar[-1][0] < end:
+            print('warning: specified range (%s to %s) is outside of ' % 
+                  (start, end) + 'available gage data')
+            return
+
+        if (not isinstance(start, datetime.datetime) or 
+            not isinstance(end, datetime.datetime)):
+            print('start and end must be datetime.datetime instances')
+            raise
+
+        hourly = []
+
+        # find the first event after start
+
+        i = 0
+        while self.solar[i][0] < start: i+=1
+
+        # fill in Nones until reaching the first event
+
+        t = start
+        while t < self.solar[i][0]:
+            hourly.append(None)            
+            t += datetime.timedelta(hours = 1)
+
+        # iterate through to the end
+
+        while t < end and t < self.solar[-1][0]:
+
+            # append zeros until reaching an event
+
+            while t < self.solar[i][0] and t < end:
+                hourly.append(0.)            
+                t += datetime.timedelta(hours = 1)
+
+            # collect as normal
+
+            if t < end:
+                hourly.append(self.solar[i][1])
+                t += datetime.timedelta(hours = 1)
+
+            i += 1
+
+        # collect to the end if data aren't present
+
+        while t < end:
+            hourly.append(None)   
+            t += datetime.timedelta(hours = 1)
+
+        if   tstep == 'hourly': return hourly
+
+        elif tstep == 'daily':  
+
+            # do a simple aggregation of every 24 hours
+
+            series = [sum([v for v in hourly[i:i+24] if v is not None])
+                      for i in range(0, len(hourly), 24)]
+
+            return series
+
+        elif tstep == 'monthly':
+
+            # aggregate to the daily level first
+
+            series = [sum([v for v in hourly[i:i+24] if v is not None])
+                      for i in range(0, len(hourly), 24)]
+
+            # now aggregate the daily values to monthly (returns both dates 
+            # and values)
+            
+            times, values = self.aggregate_daily_monthly(series, start, end,
+                                                         option = 'average')
+
+            # returns only values (needed for consistency but perhaps not ideal)
+
+            return values
+
+        else: 
+
+            print('error: unknown time step specified')
+            raise
+
+    def plot(self,
+             start = None,
+             end = None,
+             tstep = 'hourly',
+             verbose = True,
+             output = None,
+             ):
+
+        if verbose: print('plotting NSRDB data\n')
+        if output is None: output = 'solar'
+
+        # make the figure and subplots
+
+        fig = pyplot.figure()
+        sub = fig.add_subplot(111)
+
+        # title
+
+        t = 'NSRDB Solar Radiation Data for {}'.format(self.station)
+        sub.set_title(t)
+
+        if tstep == 'hourly': 
+
+            times = [start + i * datetime.timedelta(hours = 1)
+                     for i in range((end-start).days * 24)]
+
+        if tstep == 'daily':  
+
+            times = [start + i * datetime.timedelta(days = 1)
+                     for i in range((end-start).days)]
+
+        if tstep == 'monthly':
+
+            times = [start]
+
+            # iterate through the data
+
+            t = start
+            while t < end:
+
+                # see if it's a new month
+
+                if t.month != times[-1].month: times.append(t)
+
+                # move along
+
+                t += datetime.timedelta(days = 1)
+
+        metstat = self.make_timeseries(dataset = 'metstat', start = start, 
+                                       end = end, tstep = tstep)
+
+        # convert units
+
+        if tstep == 'daily' or tstep == 'monthly':   
+
+            metstat = [v / 1000 for v in metstat]
+
+        sub.plot_date(times, metstat, color = 'yellow', lw = 1, fmt = '-',
+                      label = 'metstat')
+
+        suny = self.make_timeseries(dataset = 'suny', start = start, 
+                                    end = end, tstep = tstep)
+
+        # convert units
+
+        if tstep == 'daily' or tstep == 'monthly': 
+
+            suny = [v / 1000 for v in suny]
+
+        sub.plot_date(times, suny, color = 'green', fmt = '-', lw = 1,
+                      label = 'suny')
+
+        # units
+
+        if   tstep == 'hourly':  
+            l = 'Solar Radiation\n(W/m\u00B2)'
+        elif tstep == 'daily':   
+            l = 'Solar Radiation\n(kWhr/m\u00B2/day)'
+        elif tstep == 'monthly': 
+            l = 'Average Solar Radiation\n(kWhr/m\u00B2/day)'
+
+        # labels 
+
+        sub.set_xlabel('Date', size = 12)
+        sub.set_ylabel(l)
+        sub.yaxis.set_major_locator(ticker.MaxNLocator(8))
+
+        pyplot.legend()
+
+        fig.autofmt_xdate()
+        for tick in sub.xaxis.get_major_ticks():
+            tick.label.set_fontsize(10)
+            
+        pyplot.savefig(output)
+
 
 class PrecipStation:
     """A class to store data from an NCDC hourly precipitation gage station."""
