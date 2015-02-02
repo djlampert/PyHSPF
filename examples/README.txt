@@ -25,6 +25,9 @@ hydrography data for the watershed of the gage in the HUC8, builds an instance o
 Watershed class from the data, builds the HSPFModel, and uses the autocalibration
 routines to calibrate the hydrology process parameters including the initial values.
 
+The "hbnexample.py" script reads data from an HSPF binary output file using the PyHSPF
+HBNReader class.
+
 The "hspexp.py" script runs the files in the data/calibrated directory. These files were
 calibrated with HSPEXP. The script then analyzes and plots the results.
 

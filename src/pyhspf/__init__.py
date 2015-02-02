@@ -13,3 +13,4 @@ from .core.hspfmodel     import HSPFModel
 from .core.wdmutil       import WDMUtil
 from .core.postprocessor import Postprocessor
 from .core.watershed     import Watershed, Subbasin, Dam
+from .core.hbnreader     import HBNReader
