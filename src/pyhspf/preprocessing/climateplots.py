@@ -222,6 +222,7 @@ def plot_gsod(station, start = None, end = None, show = False, output = None,
               verbose = True):
     """Makes a plot of the data from a GSOD station."""
 
+    print(station.tmax[0], station.tmax[-1])
     try:
         if start is None: start = station.tmax[0][0]
         if end is None:   end   = station.tmax[-1][0]

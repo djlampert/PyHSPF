@@ -82,3 +82,7 @@ Updated GSOD extraction tools
 Updated NSRDB extraction tools
 Added NSRDB extractor example
 Added HBNReader class and example
+
+Version 0.1.11
+Updated some details in climateutils
+added new ClimateProcessor class plus example

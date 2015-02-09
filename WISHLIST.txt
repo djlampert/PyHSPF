@@ -7,10 +7,10 @@ interested in contributing to development/extension of these or other applicatio
 03. Examples of sediment transport simulations
 04. Examples of Upper Mississippi HydrologyCalibrator application
 05. More Special Actions added to existing functions
-06. Additional PyHSPF temperature modules for the HSPFModel and associated classes
-07. Additional PyHSPF utility modules to improve memory allocation (COPY)
-08. Additional PyHSPF quality modules for the HSPFModel and associated classes
-09. Add PyHSPF nitrogen, phosphorous, and pesticide modules
+06. Additional HSPF temperature modules
+07. Additional utility modules to improve memory allocation (HSPF COPY)
+08. Additional HSPF quality modules for the HSPFModel and associated classes
+09. Additional HSPF nitrogen, phosphorous, and pesticide modules
 10. Integration with other watershed delineation tools (e.g., TauDEM)
 11. Variable land use with time
 12. Open Source GIS Integration

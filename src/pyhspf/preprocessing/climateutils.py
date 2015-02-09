@@ -48,7 +48,7 @@ def find_ghcnd(bbox,
                dates = None, 
                var   = None, 
                types = 'all', 
-               verbose = False
+               verbose = True,
                ):
     """Finds stations meeting the requirements from the Global Historical 
     Climate Network Daily online database."""
@@ -58,7 +58,10 @@ def find_ghcnd(bbox,
     stations = []
     if var is None: 
 
-        if verbose: print('looking for GHCND stations\n')
+        if verbose: 
+
+            print('looking for GHCND stations in ' +
+                  '{}, {}, {}, {}...\n'.format(*bbox))
 
         filename = 'ghcnd-stations.txt'
 
@@ -166,6 +169,7 @@ def find_ghcnd(bbox,
                         for r in s.read().split('\n') if len(r.strip()) > 0]
                 
         except: 
+
             print('unable to connect to the GHCND database')
             print('make sure that you are online')
             raise
@@ -205,7 +209,8 @@ def find_gsod(bbox,
 
     if verbose:
  
-        print('\nsearching for GSOD stations in {}, {}, {}, {}\n'.format(*bbox))
+        i = bbox
+        print('\nsearching for GSOD stations in {}, {}, {}, {}...'.format(*i))
 
     xmin, ymin, xmax, ymax = bbox
 
@@ -238,8 +243,8 @@ def find_gsod(bbox,
 
         if is_number(lon) and is_number(lat):
 
-            if inside_box([xmin, ymin], [xmax, ymax], 
-                          [float(lon), float(lat)]):
+            if (inside_box([xmin,ymin], [xmax,ymax], [float(lon), float(lat)])
+                and int(usaf) != 999999):
 
                 if is_integer(s):
                     d1 = datetime.datetime(int(s[:4]),
@@ -253,6 +258,7 @@ def find_gsod(bbox,
                 else: d2 = None
 
                 if dates is None:
+
                     stations.append(GSODStation(int(usaf), 
                                                 int(wban), 
                                                 station.strip(), 
@@ -267,26 +273,26 @@ def find_gsod(bbox,
                         print('found GSOD station ' +
                               '{}, {}, "{}"'.format(usaf,wban,station.strip())) 
 
-                else:
+                elif d1 is not None and d2 is not None:
                     
                     # include only stations with data over period of record
 
-                    if d1 is not None and d2 is not None:
-                        if d1 <= dates[0] and dates[1] <= d2:
-                            v = usaf, wban, station.strip(), d1.year, d2.year
-                            if verbose:
-                                print('found GSOD station ' +
-                                      '{}, {}, "{}" {} to {}'.format(*v))
-                                stations.append(GSODStation(int(usaf), 
-                                                            int(wban), 
-                                                            station.strip(), 
-                                                            float(lat), 
-                                                            float(lon), 
-                                                            float(elev),
-                                                            d1,
-                                                            d2,
-                                                            )
-                                                )
+                    if d1 <= dates[0] and dates[1] <= d2:
+                        v = usaf, wban, station.strip(), d1.year, d2.year
+                        if verbose:
+                            print('found GSOD station ' +
+                                  '{}, {}, "{}" {} to {}'.format(*v))
+                            stations.append(GSODStation(int(usaf), 
+                                                        int(wban), 
+                                                        station.strip(), 
+                                                        float(lat), 
+                                                        float(lon), 
+                                                        float(elev),
+                                                        d1,
+                                                        d2,
+                                                    )
+                                            )
+
     if verbose: print('')
 
     if len(stations) == 0:
@@ -448,7 +454,8 @@ def find_nsrdb(bbox,
 
     if verbose: 
 
-        print('searching for NSRDB stations in {}, {}, {}, {}\n'.format(*bbox))
+        i = bbox
+        print('searching for NSRDB stations in {}, {}, {}, {}...\n'.format(*i))
 
     xmin, ymin, xmax, ymax = bbox
 
@@ -550,7 +557,6 @@ def find_nsrdb(bbox,
                 if usaf in wbans: wban = wbans[usaf]
                 else:                    wban = None
 
-                print(station, usaf, wban)
                 stations.append(NSRDBStation(usaf,
                                              wban,
                                              int(cl), 

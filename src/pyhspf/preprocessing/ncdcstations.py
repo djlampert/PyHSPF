@@ -12,8 +12,6 @@ from urllib     import request
 from calendar   import monthrange
 from matplotlib import pyplot, dates, ticker
 
-from .climateplots import plot_3240precip
-
 class GHCNDStation:
     """A class to store meteorology data from the Daily Global Historical 
     Climatology Network."""
@@ -115,6 +113,101 @@ class GHCNDStation:
             if   q != 'X': l.append((d, v / m))
             else:          l.append((d, -9999))
 
+    def get_series(self, tstype):
+        """Private method to return the pointer to the right time series."""
+
+        if   tstype == 'precipitation': events = self.precip
+        elif tstype == 'tmax':          events = self.tmax
+        elif tstype == 'tmin':          events = self.tmin
+        elif tstype == 'snowdepth':     events = self.snowdepth
+        elif tstype == 'snowfall':      events = self.snowfall
+        elif tstype == 'wind':          events = self.wind
+        elif tstype == 'evaporation':   events = self.evap
+        else:
+            print('error: unknown time series type {}\n'.format(tstype))
+            print('options are precipitation, tmax, tmin, snowdepth, snowfall')
+            print('wind, or evaporation.\n')
+            raise
+            
+        return events
+
+    def get_total(self, tstype, start = None, end = None):
+        """Returns the total of variable "tstype" at the station between 
+        times start and end (datetime.datetime instances) if supplied; otherwise
+        returns the whole period of record.
+        """
+
+        events = self.get_series(tstype)
+
+        if start is None: start = events[0][0]
+        if end is None: end = events[-1][0]
+        
+        # make sure the function inputs are correct
+        
+        if start >= end:
+            print('start must be less than end')
+            return
+
+        if (not isinstance(start, datetime.datetime) or 
+              not isinstance(end, datetime.datetime)):
+            print('start and end must be datetime.datetime instances')
+            return
+
+        total = 0
+
+        # find the first event after start
+
+        i = 0
+        while events[i][0] < start: i+=1
+
+        # add all the events 
+
+        while events[i][0] < end:
+            if events[i][1] > 0: total += events[i][1]
+            i += 1
+
+        return total
+
+    def make_timeseries(self, tstype, start = None, end = None):
+        """Constructs a daily time series between times start and end 
+        (start and end should be instances of datetime.datetime).
+        """
+
+        events = self.get_series(tstype)
+
+        if start is None: start = events[0][0]
+        if end is None: end = events[-1][0]
+
+        # make sure the function inputs are correct
+        
+        if start >= end:
+            print('start must be less than end')
+            return
+
+        dates, values = zip(*events)
+
+        series = []
+        t = start
+
+        # go through time period and fill values as available; nones otherwise
+
+        while t < events[0][0] and t < end:  
+            series.append(None)
+            t += datetime.timedelta(days = 1)
+
+        while t < end:
+
+            if t in dates:
+
+                i = dates.index(t)
+                series.append(values[i])
+
+            else: series.append(None)
+
+            t += datetime.timedelta(days = 1)
+
+        return series
+
 class GSODStation:
     """A class to store meteorology data from the Global Summary of the Day 
     Network."""
@@ -174,21 +267,32 @@ class GSODStation:
 
         # figure out what files are available and needed
 
-        if self.start is None or self.end is None:    
+        if self.start is None or self.end is None:
             years = []
             return
+
         else:
-            if self.start is not None: # figure out the start date
+
+            if self.start is not None: 
+
+                # figure out the start date
+
                 if start is not None:
                     start = max(start, self.start)
                 else:
                     start = self.start
+
             if self.end is not None:
                 if end is not None:
                     end = min(end, self.end)
                 else:            
                     end = self.end
-            years = [start.year + i for i in range(end.year - start.year)]
+
+            if start < end:
+                years = [start.year + i for i in range(end.year - start.year)]
+            else:
+                years = []
+                return
 
         # see if the data file is there, if not download it
 
@@ -197,8 +301,8 @@ class GSODStation:
 
         if not os.path.isfile(destination):
             var = self.name, start.year, end.year
-            print('attempting to download data from ' +
-                  '{} for {} to {}'.format(*var))
+            print('attempting to download data for ' +
+                  '{} from {} to {}'.format(*var))
             
             # data are stored by year and then station
 
@@ -336,15 +440,116 @@ class GSODStation:
 
         return data
 
-    def plot(self, start = None, end = None, output = None, show = False):
+    def plot(self, 
+             start = None, 
+             end = None, 
+             output = None, 
+             show = False,
+             verbose = True,
+             ):
         """make a plot."""
 
-        from .climateplots import plot_gsod
+        # set the dates if not provided
 
-        try: 
-            plot_gsod(self, start = start, end = end, output = output,
-                      show = show)
-        except: print('warning: unable to plot GSOD data')
+        try:
+            if start is None: start = self.tmax[0][0]
+            if end is None:   end   = self.tmax[-1][0]
+        except:
+            print('warning: no data present\n')
+            return
+
+        if verbose: print('plotting GSOD data for {}\n'.format(self.name))
+
+        # some error handling
+
+        precipdata = [(t, p) for t, p in self.precip 
+                      if p >= 0 and start <= t and t <= end]
+        tmaxdata = [(t, T) for t, T in self.tmax
+                    if -50 < T and start <= t and t <= end]
+        tmindata = [(t, T) for t, T in self.tmin
+                    if -50 < T and start <= t and t <= end ]
+        dewtdata = [(t, T) for t, T in self.dewpoint
+                    if -50 < T and start <= t and t <= end ]
+        winddata = [(t, w) for t, w in self.wind
+                    if 0 <= w and start <= t and t <= end]
+
+        # make the plot
+
+        fig, subs = pyplot.subplots(3, 1, sharex = True, figsize = (8, 8))
+
+        var = self.name, start, end
+        fig.suptitle('{} Climate Data {:%m-%d-%Y} to {:%m-%d-%Y}'.format(*var), 
+                     size = 14)
+
+        i = 0
+
+        if len(precipdata) > 0: 
+            times, precip = zip(*precipdata)
+        else:
+            times = [start, start + datetime.timedelta(days = 1), 
+                     end - datetime.timedelta(days = 1), end]
+            precip = [0, None, None, 1]
+
+        subs[i].plot_date(times, precip, fmt = '-', color = 'cyan', lw = 0.5, 
+                          label = 'precipitation')
+
+        subs[i].set_ylabel('Precipitation (mm)', color = 'cyan')
+
+        i = 1
+
+        if len(tmaxdata) > 0: 
+            times, temp = zip(*tmaxdata)
+        else:
+            times = [start, start + datetime.timedelta(days = 1), 
+                     end - datetime.timedelta(days = 1), end]
+            temp = [0, None, None, 1]
+
+        subs[i].plot_date(times, temp, fmt = '-', color = 'red', lw = 0.5, 
+                          label = 'max temperature')
+
+        if len(tmindata) > 0: 
+            times, temp = zip(*tmindata)
+        else:
+            times = [start, start + datetime.timedelta(days = 1), 
+                     end - datetime.timedelta(days = 1), end]
+            temp = [0, None, None, 1]
+
+        subs[i].plot_date(times, temp, fmt = '-', color = 'blue', lw = 0.5, 
+                          label = 'min temperature')
+        subs[i].set_ylabel('Temperature (\u00B0C)', color = 'red')
+
+        if len(dewtdata) > 0: 
+            times, temp = zip(*dewtdata)
+        else:
+            times = [start, start + datetime.timedelta(days = 1), 
+                     end - datetime.timedelta(days = 1), end]
+            temp = [0, None, None, 1]
+
+        subs[i].plot_date(times, temp, fmt = '-', color = 'green', lw = 0.5, 
+                          label = 'dewpoint')
+        subs[i].set_ylabel('Temperature (\u00B0C)', color = 'red')
+
+        subs[i].legend(fontsize = 10, loc = 'lower left')
+
+        i = 2
+    
+        if len(winddata) > 0: 
+            times, wind = zip(*winddata)
+        else:
+            times = [start, start + datetime.timedelta(days = 1), 
+                     end - datetime.timedelta(days = 1), end]
+            wind = [0, None, None, 1]
+
+        subs[i].plot_date(times, wind, fmt = '-', color = 'purple', lw = 0.5, 
+                          label = 'wind')
+        subs[i].set_ylabel('Wind Speed (m/s)', color = 'purple')
+
+        if output is not None: pyplot.savefig(output)
+
+        if show: pyplot.show()
+
+        pyplot.clf()
+        pyplot.close()
 
 class Precip3240Station:
     """A class to store meteorology data from the NCDC Hourly Precipitation
@@ -452,7 +657,7 @@ class Precip3240Station:
             raise
 
         if verbose: 
-            print('attempting to import data for {}\n'.format(self.coop))
+            print('attempting to import data for {}'.format(self.coop))
 
         # find and sort all the tarfiles in the directory
 
@@ -658,16 +863,21 @@ class Precip3240Station:
         # save the results to this destination
 
         destination = '{}/{}'.format(directory, self.coop)
-        if plot and not os.path.isfile(destination + '.png'):
+        if (plot and not os.path.isfile(destination + '.png') and 
+            len(self.events) > 0):
 
-            #try: 
-            if 1==1:    
-                self.plot(start = start, end = end, output = destination)
-            #except: print('warning: unable to plot precipitation data')
+            try: self.plot(start = start, end = end, output = destination)
+            except: print('warning: unable to plot precipitation data')
 
         # save the import
 
-        with open(destination, 'wb') as f: pickle.dump(self, f)
+        if len(self.events) > 0:
+            
+            with open(destination, 'wb') as f: pickle.dump(self, f)
+
+        else:
+
+            print('station {} contains no data, ignoring\n'.format(self.coop))
 
         # remove the intermediate files if desired
 
@@ -1137,9 +1347,8 @@ class NSRDBStation:
             raise
 
         if start < self.solar[0][0] or self.solar[-1][0] < end:
-            print('warning: specified range (%s to %s) is outside of ' % 
-                  (start, end) + 'available gage data')
-            return
+            print('warning: specified range ({} to {}) '.format(start, end) + 
+                  'is outside of available gage data')
 
         if (not isinstance(start, datetime.datetime) or 
             not isinstance(end, datetime.datetime)):
@@ -1226,7 +1435,6 @@ class NSRDBStation:
              ):
 
         if verbose: print('plotting NSRDB data\n')
-        if output is None: output = 'solar'
 
         # make the figure and subplots
 
@@ -1270,21 +1478,23 @@ class NSRDBStation:
 
         # convert units
 
-        if tstep == 'daily' or tstep == 'monthly':   
+        if tstep == 'daily' or tstep == 'monthly' and metstat is not None:   
 
-            metstat = [v / 1000 for v in metstat]
+            metstat = [v / 1000 if v is not None else None for v in metstat]
 
-        sub.plot_date(times, metstat, color = 'yellow', lw = 1, fmt = '-',
-                      label = 'metstat')
+        if metstat is not None:
+
+            sub.plot_date(times, metstat, color = 'yellow', lw = 1, fmt = '-',
+                          label = 'metstat')
 
         suny = self.make_timeseries(dataset = 'suny', start = start, 
                                     end = end, tstep = tstep)
 
         # convert units
 
-        if tstep == 'daily' or tstep == 'monthly': 
+        if tstep == 'daily' or tstep == 'monthly' and suny is not None: 
 
-            suny = [v / 1000 for v in suny]
+            suny = [v / 1000 if v is not None else None for v in suny]
 
         sub.plot_date(times, suny, color = 'green', fmt = '-', lw = 1,
                       label = 'suny')
@@ -1310,7 +1520,11 @@ class NSRDBStation:
         for tick in sub.xaxis.get_major_ticks():
             tick.label.set_fontsize(10)
             
-        pyplot.savefig(output)
+        if output is not None: pyplot.savefig(output)
+
+        pyplot.clf()
+        pyplot.close()
+
 
 
 class PrecipStation:
@@ -1378,8 +1592,8 @@ class PrecipStation:
             return None
 
     def make_timeseries(self, start = None, end = None, tstep = 'hourly'):
-        """Constructs an hourly time series between times t1 and t2 
-        (t1 and t2 are instances of datetime.datetime)."""
+        """Constructs an hourly time series between times start and end 
+        (start and end must be instances of datetime.datetime)."""
 
         if start is None: start = self.precip[0][0]
         if end is None:   end = self.precip[-1][0]
@@ -1387,12 +1601,12 @@ class PrecipStation:
         # make sure the function inputs are correct
         
         if start >= end:
-            print('t1 must be less than t2')
+            print('start must be less than end')
             return
 
         if (not isinstance(start, datetime.datetime) or 
               not isinstance(end, datetime.datetime)):
-            print('t1 and t2 must be datetime.datetime instances')
+            print('start and end must be datetime.datetime instances')
             return
 
         ts = [p for t, p in self.precip if start <= t and t <= end]

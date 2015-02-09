@@ -4,7 +4,7 @@
 #
 # illustrates how to use the preprocessing tools to download climate data
 # needed to estimate the potential evapotranspiration and perform a snow 
-# simulation. similar to the last example but shows other climate data
+# simulation. similar to the last examples but shows other climate data
 # extraction tools that are available.
 
 from pyhspf.preprocessing import climateutils
@@ -26,7 +26,7 @@ dates = start, end
 
 stations = climateutils.find_ghcnd(bbox, dates = dates, verbose = True)
 
-# download the data to "output" location
+# download the GHCND data to "output" location
 
 output = 'GHCND'
 if not os.path.isdir(output): os.mkdir(output)
@@ -60,7 +60,7 @@ for station in stations:
 
 
 
-# download all the hourly precipitation data from NCDC Prec3240 dataset
+# download all the hourly precipitation data from NCDC Precipn 3240 dataset
 
 stations = climateutils.find_precip3240(bbox, dates = dates, verbose = True)
 
@@ -69,44 +69,19 @@ stations = climateutils.find_precip3240(bbox, dates = dates, verbose = True)
 output = 'hourlyprecip'
 if not os.path.isdir(output): os.mkdir(output)
 
-# the hourly precipiation data are stored by state using Unix-style 
-# compression, so have to download these files then process them (requires
-# 7-zip on Windows, Python can't do this on Windoze as of now)
-
-# the path to 7zip 
+# the path to 7zip to decompress the archives
 
 path_to_7z = r'C:/Program Files/7-Zip/7z.exe'
 
-# make a list of all the states since that's how the NCDC data are stored
+# download/import the data for each station; the data on the web are grouped
+# by state and by year, so the same files are used for each station
 
-states = list(set([s.code for s in stations]))
+for station in stations:
 
-# download the state data for each year
-    
-for state in states: climateutils.download_state_precip3240(state, output)
-
-# find all the compressed files we just downloaded
-
-archives = ['{}/{}'.format(output, a) for a in os.listdir(output)
-            if a[-6:] == '.tar.Z']
-    
-for a in archives:
-
-    # decompress the archive
-
-    if not os.path.isfile(a[:-2]): 
-            
-        print(a)
-        if os.name == 'nt':
-            climateutils.decompress7z(a, output, path_to_7z = path_to_7z)
-        else:
-            climateutils.decompresszcat(compressed, output)
-
-        print('')
-            
-# import the data into Precip3240Station objects (they are saved automatically)
-
-for station in stations: station.import_data(output, start, end)
+    if not os.path.isfile('{}/{}'.format(output, station.coop)):
+        
+        station.download_data(output, start, end, path_to_7z = path_to_7z,
+                              clean = False, plot = True)
 
 
 

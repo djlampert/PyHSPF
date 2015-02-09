@@ -4,7 +4,7 @@
 #
 # illustrates how to use the preprocessing tools to download GHCND climate data.
 #
-# last updated: 01/17/2015
+# last updated: 02/05/2015
 
 from pyhspf.preprocessing import climateutils
 
@@ -23,57 +23,39 @@ end   = datetime.datetime(2011, 1, 1)
 #
 # GHCND = 'http://www1.ncdc.noaa.gov/pub/data/ghcn/daily'
 #
-# if the site changes this can be updated
+# if the site changes this can be updated (and this utility won't work)
 
-# find the stations with evaporation data and make a list of GHCNDStation
-# instances to use to download the data for the stations
-
-# GHCND variable to look for data ('EVAP' is pan evaporation--look at the
-# website if you are interested in other variables)
+# let's find the stations with evaporation data and make a list of 
+# GHCNDStation instances to use to download the data. the GHCND variable 
+# 'EVAP' is pan evaporation--look at the website if you are interested in 
+# other variables. if the "var" keyword isn't used, it will download all
+# data (as of writing this was max and min temp, snowfall, snowdepth, 
+# evaporation, and wind speed).
 
 var = 'EVAP'
 
-# find the stations with EVAP data
+# the "find_ghcnd" method will return a list of stations in the bounding box 
+# and time span with "EVAP" data
 
-stations = climateutils.find_ghcnd(bbox, var = var, dates = (start, end),
-                                   verbose = True)
+stations = climateutils.find_ghcnd(bbox, var = var, dates = (start, end))
+#                                   verbose = True)
 
 # download the data to "output" location (here it's the current directory)
 # each station will be saved as a binary file with its unique GHCND ID
 
 output = os.getcwd()
 
-for station in stations: station.download_data(output, start = start, end = end,
-                                               plot = False)
+for s in stations: s.download_data(output, start = start, end = end)
 
-# there are 4 files in the bounding box (you wouldn't know this in advance);
-# let's just look at Ames (Iowa State) and Iowa City (Iowa) since the other
-# data sets are really limited. 
+# there should be 4 files in the bounding box (you wouldn't know this in 
+# advance); let's just look at Ames (Iowa State) and Iowa City (Iowa) since 
+# the other two data sets are really limited. 
 
 names = ['USC00130200', 'USC00134101']
 
 # the "GHCNDStation" class is used to download data to the binary files,
-# but other classes exist to store and manipulate the data (generating a
-# timeseries, removing missing values, plotting, etc.)
-
-from pyhspf.preprocessing.ncdcstations import EvapStation
-
-evapstations = []
-for n in names:
-    with open('{}/{}'.format(output, n), 'rb') as f: ghcnd = pickle.load(f)
-
-    # make the EvapStation
-
-    evapstation = EvapStation()
-
-    # add the GHCND station metadata to the EvapStation
-
-    evapstation.add_ghcnd_data(ghcnd)
-
-    # add the EvapStation to the dictionary
-
-    evapstations.append(evapstation)
-
+# and it has some public methods available to store and manipulate the data 
+# (generating timeseries, removing missing values, get the total, etc.)
 # now we can get the time series and make a plot of the data (or whatever you
 # need to do); note there appear to be a few errors in the data set for Ames.
 
@@ -95,13 +77,28 @@ times = [start + i * datetime.timedelta(days = 1)
          for i in range((end-start).days)]
 
 text = ''
-for s in evapstations:
-    total_evaporation = s.get_evaporation(start, end)
+for n in names:
+
+    # open up the file and get the "GHCNDStation" instance we downloaded
+
+    with open('{}/{}'.format(output, n), 'rb') as f: ghcnd = pickle.load(f)
+
+    # get the total evaporation between "start" and "end" and convert to average
+
+    total_evaporation = ghcnd.get_total('evaporation', start = start, end = end)
     avg_evap = total_evaporation / (end-start).days * 365.25
-    values = s.make_timeseries(start, end)
-    sub.plot(times, values, label = s.name)
-    i = s.station, s.name, avg_evap
+
+    # get all the values as a list between start and end
+
+    values = ghcnd.make_timeseries('evaporation', start, end)
+
+    # add to the plot
+
+    sub.plot(times, values, label = ghcnd.name)
+    i = ghcnd.station, ghcnd.name, avg_evap
     text+='\nStation {}, {}\nAnnual average evaporation = {:.0f} mm'.format(*i)
+
+# add the label to the plot
 
 sub.text(0.99, 1., text, ha = 'right', va = 'top',
          transform = sub.transAxes, size = 8)

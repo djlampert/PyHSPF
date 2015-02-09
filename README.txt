@@ -1,5 +1,5 @@
-PyHSPF, Version 0.1.10
-last updated: 01/10/2015
+PyHSPF, Version 0.1.11
+last updated: 02/08/2015
 Developed by David J. Lampert and May M. Wu, Argonne National Laboratory
 
 Summary: PyHSPF contains a library of subroutines to run the Hydrological 
