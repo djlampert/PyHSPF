@@ -2,7 +2,7 @@
 #
 # by David J. Lampert, PhD, PE (djlampert@gmail.com)
 #
-# Last updated: 01/25/2015
+# Last updated: 02/15/2015
 #
 # Purpose: classes to import climate data files to Python
 
@@ -12,18 +12,111 @@ from urllib     import request
 from calendar   import monthrange
 from matplotlib import pyplot, dates, ticker
 
+class ClimateMetadata:
+    """
+    A class to store metadata from the various climate databases for a
+    given geographical area.
+    """
+
+    def __init__(self):
+        """
+        Create data structures to store the important information about each
+        of the climate data types.
+        """
+
+        self.ghcndstations      = {}
+        self.gsodstations       = {}
+        self.precip3240stations = {}
+        self.nsrdbstations      = {}
+
+    def add_ghcndstation(self, 
+                         filename, 
+                         ghcndstation,
+                         ):
+        """Adds the metadata for the GHCNDStation class instance."""
+
+        self.ghcndstations[filename] = {
+            'name':      ghcndstation.name,
+            'latitude':  ghcndstation.latitude,
+            'longitude': ghcndstation.longitude,
+            'elevation': ghcndstation.elevation,
+            'precip':    len(ghcndstation.precip),
+            'tmax':      len(ghcndstation.tmax),
+            'tmin':      len(ghcndstation.tmin),
+            'snowdepth': len(ghcndstation.snowdepth),
+            'snowfall':  len(ghcndstation.snowfall),
+            'wind':      len(ghcndstation.wind),
+            'evap':      len(ghcndstation.evap),
+            }
+
+    def add_gsodstation(self,
+                        filename,
+                        gsodstation,
+                        ):
+        """Adds the metadata for the GSODStation class instance."""
+
+        self.gsodstations[filename] = {
+            'name':      gsodstation.name,
+            'latitude':  gsodstation.latitude,
+            'longitude': gsodstation.longitude,
+            'elevation': gsodstation.elevation,
+            'precip':    len(gsodstation.precip),
+            'tmax':      len(gsodstation.tmax),
+            'tmin':      len(gsodstation.tmin),
+            'wind':      len(gsodstation.wind),
+            'dewpoint':  len(gsodstation.dewpoint),
+            }
+
+    def add_precip3240station(self,
+                              filename,
+                              precip3240station,
+                              ):
+        """Adds the metadata for the Precip3240Station class instance."""
+
+        self.precip3240stations[filename] = {
+            'name':      precip3240station.desc,
+            'latitude':  precip3240station.latitude,
+            'longitude': precip3240station.longitude,
+            'elevation': precip3240station.elevation,
+            'precip':    len(precip3240station.events),
+            }
+
+    def add_nsrdbstation(self,
+                         filename,
+                         nsrdbstation,
+                         ):
+        """Adds the metadata for the NSRDBStation class instance."""
+
+        self.nsrdbstations[filename] = {
+            'name':      nsrdbstation.station,
+            'latitude':  nsrdbstation.latitude,
+            'longitude': nsrdbstation.longitude,
+            'elevation': nsrdbstation.elevation,
+            'suny':      len(nsrdbstation.suny),
+            'metstat':   len(nsrdbstation.metstat),
+            'observed':  len(nsrdbstation.observed),
+            'legacy':    len(nsrdbstation.legacy),
+            }
+
 class GHCNDStation:
     """A class to store meteorology data from the Daily Global Historical 
     Climatology Network."""
 
-    def __init__(self, station, name, lat, lon, elev, dtype = None):
+    def __init__(self, 
+                 station, 
+                 name, 
+                 lat, 
+                 lon, 
+                 elev, 
+                 dtype = None,
+                 ):
 
-        self.station = station
-        self.name    = name
-        self.lat     = lat
-        self.lon     = lon
-        self.elev    = elev
-        self.dtype   = dtype
+        self.station   = station
+        self.name      = name
+        self.latitude  = lat
+        self.longitude = lon
+        self.elevation = elev
+        self.dtype     = dtype
     
         # time series -- lists of datetime.datetime/value pairs
 
@@ -37,9 +130,15 @@ class GHCNDStation:
         self.wind      =  []   # daily avg wind speed (m/s)  AWND (m/s/10)
         self.evap      =  []   # pan evaporation (mm)        EVAP (mm/10)
 
-    def download_data(self, directory, types = 'all', start = None, end = None,
+    def download_data(self, 
+                      directory, 
+                      types = 'all', 
+                      start = None, 
+                      end = None,
                       GHCND = 'ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/daily',
-                      plot = True, verbose = True):
+                      plot = True, 
+                      verbose = True,
+                      ):
         """Downloads the data for the desired time period from the GHCND."""
 
         if not os.path.isdir(directory):
@@ -82,13 +181,16 @@ class GHCNDStation:
                 
         if plot and not os.path.isfile(destination + '.png'):
 
-            from pyhspf.preprocessing.climateplots import plot_ghcnd
-
-            try: plot_ghcnd(self, start = start, end = end, 
-                            output = destination)
+            try: 
+                self.plot_ghcnd(start = start, end = end, output = destination)
             except: print('warning: unable to plot GHCND data')
 
-    def add_monthly(self, year, month, element, data):
+    def add_monthly(self, 
+                    year, 
+                    month, 
+                    element, 
+                    data,
+                    ):
         """Adds the monthly data of type "element" to a timeseries."""
 
         # figure out which list to append
@@ -113,7 +215,9 @@ class GHCNDStation:
             if   q != 'X': l.append((d, v / m))
             else:          l.append((d, -9999))
 
-    def get_series(self, tstype):
+    def get_series(self, 
+                   tstype,
+                   ):
         """Private method to return the pointer to the right time series."""
 
         if   tstype == 'precipitation': events = self.precip
@@ -131,9 +235,14 @@ class GHCNDStation:
             
         return events
 
-    def get_total(self, tstype, start = None, end = None):
-        """Returns the total of variable "tstype" at the station between 
-        times start and end (datetime.datetime instances) if supplied; otherwise
+    def get_total(self, 
+                  tstype, 
+                  start = None, 
+                  end = None,
+                  ):
+        """
+        Returns the total of variable "tstype" at the station between times
+        start and end (datetime.datetime instances) if supplied; otherwise
         returns the whole period of record.
         """
 
@@ -149,7 +258,7 @@ class GHCNDStation:
             return
 
         if (not isinstance(start, datetime.datetime) or 
-              not isinstance(end, datetime.datetime)):
+            not isinstance(end, datetime.datetime)):
             print('start and end must be datetime.datetime instances')
             return
 
@@ -168,12 +277,18 @@ class GHCNDStation:
 
         return total
 
-    def make_timeseries(self, tstype, start = None, end = None):
+    def make_timeseries(self, 
+                        tstype, 
+                        start = None, 
+                        end = None,
+                        ):
         """Constructs a daily time series between times start and end 
         (start and end should be instances of datetime.datetime).
         """
 
         events = self.get_series(tstype)
+
+        if len(events) == 0: return
 
         if start is None: start = events[0][0]
         if end is None: end = events[-1][0]
@@ -199,14 +314,150 @@ class GHCNDStation:
 
             if t in dates:
 
+                # missing values are -999
+
                 i = dates.index(t)
-                series.append(values[i])
+                if values[i] > -900: series.append(values[i])
+                else:                series.append(None)
 
             else: series.append(None)
 
             t += datetime.timedelta(days = 1)
 
         return series
+
+    def plot_ghcnd(self,
+                   start = None, 
+                   end = None, 
+                   show = False, 
+                   output = None,
+                   verbose = True,
+                   ):
+        """
+        Makes a plot of the data from a GHCND station.
+        """
+
+        # some error handling
+
+        precipdata = [(t, p) for t, p in self.precip 
+                      if p >= 0 and start <= t and t <= end]
+        tmaxdata = [(t, T) for t, T in self.tmax
+                    if -50 < T and start <= t and t <= end]
+        tmindata = [(t, T) for t, T in self.tmin
+                    if -50 < T and start <= t and t <= end ]
+        winddata = [(t, w) for t, w in self.wind
+                    if 0 <= w and start <= t and t <= end]
+        snowdata = [(t, s) for t, s in self.snowdepth
+                    if 0 <= s and start <= t and t <= end]
+        evapdata = [(t, e) for t, e in self.evap
+                    if 0 <= e and start <= t and t <= end]
+
+        if (len(precipdata) == 0 and len(tmaxdata) == 0 and 
+            len(tmindata) == 0   and len(winddata) == 0 and 
+            len(snowdata) == 0   and len(evapdata) == 0): 
+            return
+
+        if len(precipdata) > 0: 
+            times, precip = zip(*precipdata)
+        else:
+            times = [start, start + datetime.timedelta(days = 1), 
+                     end - datetime.timedelta(days = 1), end]
+            precip = [0, None, None, 1]
+
+        try:
+            if start is None: start = self.precip[0][0]
+            if end is None:   end   = self.precip[-1][0]
+        except:
+            print('warning: no data present')
+            return
+
+        if verbose: print('making a plot for {}'.format(self.name))
+
+        # make the plot
+
+        fig, subs = pyplot.subplots(5, 1, sharex = True, figsize = (8, 10))
+
+        its = self.name, start, end
+        fig.suptitle('{} Climate Data {:%m-%d-%Y} to {:%m-%d-%Y}'.format(*its), 
+                     size = 14)
+
+        i = 0
+
+        subs[i].plot_date(times, precip, color = 'cyan', fmt = '-',
+                          label = 'precipitation')
+        subs[i].set_ylabel('Precipitation (mm)', color = 'cyan')
+
+        i = 1
+
+        if len(tmaxdata) > 0: 
+            times, temp = zip(*tmaxdata)
+        else:
+            times = [start, start + datetime.timedelta(days = 1), 
+                     end - datetime.timedelta(days = 1), end]
+            temp = [0, None, None, 1]
+
+        subs[i].plot_date(times, temp, fmt = '-', color = 'red', lw = 0.5, 
+                          label = 'max temperature')
+
+        if len(tmindata) > 0: 
+            times, temp = zip(*tmindata)
+        else:
+            times = [start, start + datetime.timedelta(days = 1), 
+                     end - datetime.timedelta(days = 1), end]
+            temp = [0, None, None, 1]
+
+        subs[i].plot_date(times, temp, fmt = '-', color = 'blue', lw = 0.5, 
+                          label = 'min temperature')
+        subs[i].set_ylabel('Temperature (\u00B0C)', color = 'red')
+
+        i = 2
+    
+        if len(winddata) > 0: 
+            times, wind = zip(*winddata)
+        else:
+            times = [start, start + datetime.timedelta(days = 1), 
+                     end - datetime.timedelta(days = 1), end]
+            wind = [0, None, None, 1]
+
+        subs[i].plot_date(times, wind, fmt = '-', color = 'purple', lw = 0.5, 
+                          label = 'wind')
+        subs[i].set_ylabel('Wind Speed (m/s)', color = 'purple')
+
+        i = 3
+    
+        if len(snowdata) > 0: 
+            times, snow = zip(*snowdata)
+        else:
+            times = [start, start + datetime.timedelta(days = 1), 
+                     end - datetime.timedelta(days = 1), end]
+            snow = [0, None, None, 1]
+        subs[i].plot_date(times, snow, color = 'gray', lw = 0.5, fmt = '-', 
+                          label = 'snowdepth')
+
+        subs[i].set_ylabel('Snow Depth (mm)', color = 'gray')
+
+        i = 4
+
+        if len(evapdata) > 0:
+            times, evap = zip(*evapdata)
+        else:
+            times = [start, start + datetime.timedelta(days = 1), 
+                     end - datetime.timedelta(days = 1), end]
+            evap = [0, None, None, 1]
+        subs[i].plot_date(times, evap, label = 'evaporation', color = 'green', 
+                          fmt = '-')
+
+        subs[i].set_ylabel('Pan Evaporation (mm)', color = 'green')
+
+        subs[-1].set_xlabel('Date', size = 12)
+        subs[0].xaxis.set_major_locator(ticker.MaxNLocator(10))
+
+        if output is not None: pyplot.savefig(output)
+
+        if show: pyplot.show()
+
+        pyplot.clf()
+        pyplot.close()
 
 class GSODStation:
     """A class to store meteorology data from the Global Summary of the Day 
@@ -259,9 +510,14 @@ class GSODStation:
 
         return 5 / 9 * (T - 32)
 
-    def download_data(self, directory, start = None, end = None, plot = True,
+    def download_data(self, 
+                      directory, 
+                      start = None, 
+                      end = None, 
+                      plot = True,
                       GSOD = 'ftp://ftp.ncdc.noaa.gov/pub/data/gsod',
-                      verbose = False):
+                      verbose = False,
+                      ):
         """Dowloads the GSOD data and saves this instance to the directory 
         provided and (optionally) plots it."""
 
@@ -354,7 +610,14 @@ class GSODStation:
 
             with open(destination, 'wb') as f: pickle.dump(self, f)
                     
-    def add_daily(self, d, prec, tmax, tmin, dewt, wind):
+    def add_daily(self, 
+                  d, 
+                  prec, 
+                  tmax, 
+                  tmin, 
+                  dewt, 
+                  wind,
+                  ):
         """Adds daily observations of precipitation, max temperature, min
         temperature, dew point, and avg wind speed."""
 
@@ -383,7 +646,12 @@ class GSODStation:
             if float(wind) < 99:
                 self.wind.append((date, float(wind) * 0.5144))
 
-    def make_timeseries(self, tstype, start = None, end = None, verbose = True):
+    def make_timeseries(self, 
+                        tstype, 
+                        start = None, 
+                        end = None, 
+                        verbose = True,
+                        ):
         """Constructs time series of type "tstype" between times start and end 
         (start and end are instances of datetime.datetime)."""
 
@@ -555,7 +823,15 @@ class Precip3240Station:
     """A class to store meteorology data from the NCDC Hourly Precipitation
     Dataset."""
 
-    def __init__(self, coop, wban, desc, lat, lon, elev, st, code,
+    def __init__(self, 
+                 coop, 
+                 wban, 
+                 desc, 
+                 lat, 
+                 lon, 
+                 elev, 
+                 st, 
+                 code,
                  NCDC = 'ftp://ftp.ncdc.noaa.gov/pub/data',
                  ):
 
@@ -583,7 +859,10 @@ class Precip3240Station:
         except ValueError: return False
         return True
 
-    def import_tar(self, f, verbose = True):
+    def import_tar(self, 
+                   f, 
+                   verbose = True,
+                   ):
         """Imports the hourly precipitation events in the tarfile "f." """
         
         with tarfile.open(f, mode= 'r') as tar:
@@ -649,7 +928,12 @@ class Precip3240Station:
 
                 self.events += events
 
-    def import_data(self, directory, start, end, verbose = True):
+    def import_data(self, 
+                    directory, 
+                    start, 
+                    end, 
+                    verbose = True,
+                    ):
         """Downloads the data for the desired time period from the NCDC."""
 
         if not os.path.isdir(directory):
@@ -699,7 +983,8 @@ class Precip3240Station:
 
     def download_state_precip3240(self,
                                   directory,
-                                  verbose = True):
+                                  verbose = True,
+                                  ):
         """Downloads the Precip 3240 data for a state."""
 
         if not os.path.isdir(directory):
@@ -757,15 +1042,21 @@ class Precip3240Station:
                     print('error: unable to connect to {}'.format(url))
                     raise
 
-    def decompress7z(self, filename, directory,
-                     path_to_7z = r'C:/Program Files/7-Zip/7z.exe'):
+    def decompress7z(self, 
+                     filename, 
+                     directory,
+                     path_to_7z = r'C:/Program Files/7-Zip/7z.exe',
+                     ):
         """Decompresses a Unix-compressed archive on Windows using 7zip."""
         
         c = '{0} e {1} -y -o{2}'.format(path_to_7z, filename, directory)
 
         subprocess.call(c)
 
-    def decompresszcat(self, filename, directory):
+    def decompresszcat(self, 
+                       filename, 
+                       directory,
+                       ):
         """Decompresses a Unix-compressed archive on Windows using 7zip."""
 
         with subprocess.Popen(['zcat', filename], 
@@ -773,7 +1064,10 @@ class Precip3240Station:
 
             with open(filename[:-2], 'wb') as f: f.write(s.read())
 
-    def decompress(self, filepath, directory):
+    def decompress(self, 
+                   filepath, 
+                   directory,
+                   ):
         """Calls 7zip to decompress the files."""
 
         if os.name == 'nt':
@@ -781,7 +1075,11 @@ class Precip3240Station:
         else:
             self.decompresszcat(filepath, directory)
 
-    def check_filenames(self, directory, start, end):
+    def check_filenames(self, 
+                        directory, 
+                        start, 
+                        end,
+                        ):
         """returns the names of the downloaded files for the state.
         files are grouped by state and with all years prior to 1999 in one 
         file and each year up to 2011 in individual files; after that the 
@@ -818,7 +1116,12 @@ class Precip3240Station:
 
         return any([f not in existing for f in needed])
                         
-    def download_data(self, directory, start, end, clean = False, plot = True,
+    def download_data(self, 
+                      directory, 
+                      start, 
+                      end, 
+                      clean = False, 
+                      plot = True,
                       path_to_7z = r'C:/Program Files/7-Zip/7z.exe',
                       ):
         """Downloads and imports all the data for the station."""
@@ -883,7 +1186,10 @@ class Precip3240Station:
 
         if clean: shutil.rmtree('{}/precip3240'.format(directory))
 
-    def pct_missing(self, start = None, end = None):
+    def pct_missing(self,
+                    start = None, 
+                    end = None,
+                    ):
         """Determines the percentage of missing data across the specified
         period."""
 
@@ -892,7 +1198,10 @@ class Precip3240Station:
 
         return len([p[1] for p in precip if p[1] is None]) / len(precip)
 
-    def total_precipitation(self, start = None, end = None):
+    def total_precipitation(self, 
+                            start = None, 
+                            end = None,
+                            ):
         """Determines the total precipitation across the time period."""
 
         precip = self.make_timeseries(start = start, end = end, 
@@ -900,7 +1209,11 @@ class Precip3240Station:
 
         return sum([p for t,p in precip if p is not None])
 
-    def make_timeseries(self, start = None, end = None, tstep = 'hourly'):
+    def make_timeseries(self, 
+                        start = None, 
+                        end = None, 
+                        tstep = 'hourly',
+                        ):
         """Makes a timeseries from the events."""
 
         if len(self.events) == 0: 
@@ -1025,8 +1338,14 @@ class Precip3240Station:
             print('warning, unknown time step specified')
             return
 
-    def plot(self, start = None, end = None, tstep = 'daily', 
-             show = False, output = None, verbose = True):
+    def plot(self, 
+             start = None, 
+             end = None, 
+             tstep = 'daily', 
+             show = False, 
+             output = None, 
+             verbose = True,
+             ):
         """Generates a series of subplots of the time series of precipitation
         data for a watershed."""
 
@@ -1106,7 +1425,16 @@ class NSRDBStation:
     """A class to store and retrieve data from the National Solar
     Radiation Database."""
 
-    def __init__(self, usaf, wban, cl, mflag, station, lat, lon, elev):
+    def __init__(self, 
+                 usaf, 
+                 wban, 
+                 cl, 
+                 mflag, 
+                 station, 
+                 lat, 
+                 lon, 
+                 elev,
+                 ):
 
         self.usaf      = usaf    # United States Air Force number
         self.wban      = wban    # Weather Bureau Army Navy number
@@ -1124,14 +1452,19 @@ class NSRDBStation:
         self.observed = []  # Measured (W/m2)
         self.legacy   = []  # Legacy data (may not exist)
 
-    def is_integer(self, s):
+    def is_integer(self, 
+                   s,
+                   ):
         """Tests if string "s" is an integer."""
         try: int(s) 
         except ValueError: return False
         return True
 
-    def download_data(self, destination, dates = None,
-                      NSRDB = 'http://rredc.nrel.gov/solar/old_data/nsrdb'):
+    def download_data(self, 
+                      destination, 
+                      dates = None,
+                      NSRDB = 'http://rredc.nrel.gov/solar/old_data/nsrdb',
+                      ):
         """Downloads the data and pickles it to the destination directory."""
 
         # figure out if the old and new data sources are needed
@@ -1262,7 +1595,12 @@ class NSRDBStation:
         with open('{}/{}'.format(destination, self.usaf), 'wb') as f: 
             pickle.dump(self, f)
 
-    def aggregate_daily_monthly(self, daily, start, end, option = 'average'):
+    def aggregate_daily_monthly(self, 
+                                daily, 
+                                start, 
+                                end, 
+                                option = 'average',
+                                ):
         """Aggregates a daily timeseries into a monthly one."""
 
         dates = [start + i * datetime.timedelta(days = 1)
@@ -1527,667 +1865,668 @@ class NSRDBStation:
 
 
 
-class PrecipStation:
-    """A class to store data from an NCDC hourly precipitation gage station."""
-
-    def add_precip3240(self, station):
-        """Get some basic info about the station."""
-
-        self.station   = station.coop
-        self.name      = station.desc
-        self.elevation = station.elevation
-        self.latitude  = station.latitude
-        self.longitude = station.longitude
-
-        precip = station.make_timeseries(tstep = 'hourly')
-
-        start = station.events[0][0]
-        end   = station.events[-1][0]
-
-        times = [start + i * datetime.timedelta(hours = 1) 
-                 for i in range((end - start).days * 24)]
-
-        self.precip = [v for v in zip(times, precip)]
-        
-    def add_location(self, station):
-        """Get some basic info about the station."""
-
-        self.station = station.coop
-        self.name    = station.desc
-
-        self.elevation = station.elevation
-        self.latitude  = station.latitude
-        self.longitude = station.longitude
-
-        self.precip = []
-
-    def add_timeseries(self, data):
-        """Add a timeseries (including missing data) to the station."""
-
-        self.precip += data
-        
-    def pct_missing(self, start = None, end = None):
-        """Determines the percentage of missing data across the specified
-        period."""
-
-        if start is None: start = self.precip[0][0]
-        if end is None:   end = self.precip[-1][0]
-
-        precip = [(t, p) for t, p in self.precip if start <= t and t <= end]
-
-        return len([p for t, p in precip if p is None]) / len(precip)
-
-    def total_precipitation(self, start = None, end = None):
-        """Determines the total precipitation across the time period."""
-
-        if start is None: start = self.precip[0][0]
-        if end is None:   end = self.precip[-1][0]
-
-        precip = self.make_timeseries(start = start, end = end, 
-                                      tstep = 'hourly')
-
-        if precip is not None:
-            return sum([p for p in precip if p is not None])
-        else: 
-            return None
-
-    def make_timeseries(self, start = None, end = None, tstep = 'hourly'):
-        """Constructs an hourly time series between times start and end 
-        (start and end must be instances of datetime.datetime)."""
-
-        if start is None: start = self.precip[0][0]
-        if end is None:   end = self.precip[-1][0]
-
-        # make sure the function inputs are correct
-        
-        if start >= end:
-            print('start must be less than end')
-            return
-
-        if (not isinstance(start, datetime.datetime) or 
-              not isinstance(end, datetime.datetime)):
-            print('start and end must be datetime.datetime instances')
-            return
-
-        ts = [p for t, p in self.precip if start <= t and t <= end]
-
-        if start < self.precip[0][0] or self.precip[-1][0] < end:
-            print('warning: specified range ({} to {}) is '.format(start, end) +
-                  'outside of available gage data ' +
-                  '({} to {})\n'.format(self.precip[0][0], self.precip[-1][0]))
-        
-            t = start
-            while t < self.precip[0][0]: 
-                ts.insert(0, None)
-                t += datetime.timedelta(hours = 1)
-            t = self.precip[-1][0]
-            while t < end: 
-                ts.append(None)
-                t += datetime.timedelta(hours = 1)
-
-        return ts
-
-class TempStation:
-    """A class to store data from an NCDC temperature station."""
-
-    def add_location(self, station):
-        """Copy some basic info about the station."""
-
-        self.station = station.station
-        self.name    = station.name
-
-        try:    self.elevation = float(station.elev)
-        except: self.elevation = -1
-
-        try:    self.latitude  = float(station.lat)
-        except: self.latitude = -1
-
-        try:    self.longitude = float(station.lon)
-        except: self.longitude = -1
-
-    def add_tmin(self, tmin): self.tmin = tmin
-
-    def add_tmax(self, tmax): self.tmax = tmax
-
-    def make_timeseries(self, start = None, end = None, verbose = True):
-        """Constructs daily tmax and tmin time series between times t1 and t2 
-        (t1 and t2 are instances of datetime.datetime)."""
-
-        if start is None: start = self.tmax[0][0]
-        if end is None: end = self.tmax[-1][0]
-
-        # make sure the function inputs are correct
-        
-        if start >= end:
-            print('start must be less than end')
-            return None
-
-        if (not isinstance(start, datetime.datetime) or 
-            not isinstance(end, datetime.datetime)):
-            print('start and end must be datetime.datetime instances')
-            return None
-
-        if start < self.tmax[0][0] and self.tmax[-1][0] < end:
-            print('warning: specified range (%s to %s) is outside of ' % 
-                  (start, end) + 'available gage data')
-
-        tmax = []
-        tmin = []
-
-        dates = [start + i * datetime.timedelta(days = 1) 
-                 for i in range((end - start).days)]
-
-        tmax_dates, tmax_values = zip(*self.tmax)
-        tmin_dates, tmin_values = zip(*self.tmin)
-        
-        for date in dates:
-            if date in tmax_dates:
-                if tmax_values[tmax_dates.index(date)] < 100:
-                    tmax.append(tmax_values[tmax_dates.index(date)])
-                else: tmax.append(None)
-            else: tmax.append(None)
-
-            if date in tmin_dates:
-                if tmin_values[tmin_dates.index(date)] < 100:
-                    tmin.append(tmin_values[tmin_dates.index(date)])
-                else: tmin.append(None)
-            else: tmin.append(None)
-
-        return tmax, tmin        
-
-class SnowStation:
-    """A class to store data from an NCDC snowdepth station."""
-
-    def add_location(self, station):
-        """Get some basic info about the station."""
-
-        self.station = station.station
-        self.name    = station.name
-
-        try:    self.elevation = float(station.elev)
-        except: self.elevation = -1
-
-        try:    self.latitude  = float(station.lat)
-        except: self.latitude = -1
-
-        try:    self.longitude = float(station.lon)
-        except: self.longitude = -1
-
-    def add_snowdepth(self, snowdepth): self.snowdepth = snowdepth
-
-    def add_snowfall(self, snowfall): self.snowfall = snowfall
-
-    def make_timeseries(self, t1 = None, t2 = None, tstype = 'depth', 
-                        verbose = True):
-        """Constructs daily tmax and tmin time series between times t1 and t2 
-        (t1 and t2 are instances of datetime.datetime)."""
-
-        if   tstype == 'depth': ts = self.snowdepth
-        elif tstype == 'fall':  ts = self.snowfall
-
-        if t1 is None: t1 = ts[0][0]
-        if t2 is None: t2 = ts[-1][0]
-
-        # make sure the function inputs are correct
-        
-        if t1 >= t2:
-            print('t1 must be less than t2')
-            return None
-
-        if (not isinstance(t1, datetime.datetime) or 
-            not isinstance(t2, datetime.datetime)):
-            print('t1 and t2 must be datetime.datetime instances')
-            return None
-
-        if t1 < ts[0][0] and ts[-1][0] < t2:
-            if verbose: 
-                print('warning: specified range ' +
-                      '(%s to %s) is outside of '.format(t1, t2) + 
-                      'available snowdepth data')
-
-        snow = []
-
-        dates = [t1 + i * datetime.timedelta(days = 1) 
-                 for i in range(int((t2 - t1).total_seconds() / 86400))]
-
-        snow_dates, values = zip(*ts)
-       
-        for date in dates:
-            if date in snow_dates:
-                snow.append(values[snow_dates.index(date)])
-            else: snow.append(None)
-
-        return snow
-
-    def get_depth(self, t):
-        """Returns the depth at a given time (interpolates if needed)."""
-
-        if not isinstance(t, datetime.datetime):
-            print('time must be datetime.datetime instance')
-            return None
-
-        if self.snowdepth[0][0] <= t and t <= self.snowdepth[-1][0]:
-
-            times = [d[0] for d in zip(*self.snowdepth)]
-            if t not in times:
-                i = 0
-                while self.snowdepth[i][0] < t: i+=1
-                depth = (self.snowdepth[i-1][1] + self.snowdepth[i][1]) / 2.
-            else: depth = self.snowdepth[times.index(t)][1]
-
-            return depth
-
-        else: return None
-
-class EvapStation:
-    """A class to store data from an NCDC pan evaporation station."""
-
-    def add_ghcnd_data(self, station):
-        """Get some basic info about the station."""
-
-        self.station = station.station
-        self.name    = station.name
-
-        try:    self.elevation = float(station.elevation)
-        except: self.elevation = -1
-
-        try:    self.latitude  = float(station.latitude)
-        except: self.latitude = -1
-
-        try:    self.longitude = float(station.longitude)
-        except: self.longitude = -1
-
-        self.events = [(d, e) for d, e in station.evap if e >= 0]
-
-    def add_location(self, station):
-        """Get some basic info about the station."""
-
-        self.station = station.station
-        self.name    = station.name
-
-        try:    self.elevation = float(station.elevation)
-        except: self.elevation = -1
-
-        try:    self.latitude  = float(station.latitude)
-        except: self.latitude = -1
-
-        try:    self.longitude = float(station.longitude)
-        except: self.longitude = -1
-
-        self.events = []
-    
-    def add_data(self, data): self.events = [(d, e) for d, e in data
-                                             if e >= 0]
-
-    def get_evaporation(self, t1 = None, t2 = None):
-        """Returns the total evaporation at the station between times t1 and t2
-        (datetime.datetime instances).
-        """
-
-        if t1 is None: t1 = self.events[0][0]
-        if t2 is None: t2 = self.events[-1][0]
-        
-        # make sure the function inputs are correct
-        
-        if t1 >= t2:
-            print('t1 must be less than t2')
-            return
-
-        if (not isinstance(t1, datetime.datetime) or 
-              not isinstance(t2, datetime.datetime)):
-            print('t1 and t2 must be datetime.datetime instances')
-            return
-
-        total = 0
-
-        # find the first event after t1
-
-        i = 0
-        while self.events[i][0] < t1: i+=1
-
-        # add all the events 
-
-        while self.events[i][0] < t2:
-            total += self.events[i][1]
-            i += 1
-
-        return total
-
-    def make_timeseries(self, t1, t2):
-        """Constructs a daily time series between times t1 and t2 
-        (t1 and t2 are instances of datetime.datetime)."""
-
-        # make sure the function inputs are correct
-        
-        if t1 >= t2:
-            print('t1 must be less than t2')
-            return
-
-        dates, values = zip(*self.events)
-
-        series = []
-        t = t1
-
-        # go through time period and fill values as available; nones otherwise
-
-        while t < self.events[0][0] and t < t2:  
-            series.append(None)
-            t += datetime.timedelta(days = 1)
-
-        while t < t2:
-
-            if t in dates:
-
-                i = dates.index(t)
-                series.append(values[i])
-
-            else: series.append(None)
-
-            t += datetime.timedelta(days = 1)
-
-        return series
-
-class WindStation:
-    """A class to store data from an NCDC snowdepth station."""
-
-    def add_location(self, station):
-        """Get some basic info about the station."""
-
-        try:                   self.name = station.name
-        except AttributeError: self.name = ''
-
-        try:    self.elevation = float(station.elev)
-        except: self.elevation = -1
-
-        try:    self.latitude  = float(station.lat)
-        except: self.latitude = -1
-
-        try:    self.longitude = float(station.lon)
-        except: self.longitude = -1
-
-        self.wind = []
-
-    def add_data(self, data):
-        """Adds data to existing (useful if located in different files)."""
-
-        self.wind += data
-
-    def make_timeseries(self, t1 = None, t2 = None, verbose = True):
-        """Constructs daily avg wind time series between times t1 and t2 
-        (t1 and t2 are instances of datetime.datetime)."""
-
-        if t1 is None: t1 = self.wind[0][0]
-        if t2 is None: t2 = self.wind[-1][0]
-
-        # make sure the function inputs are correct
-        
-        if t1 >= t2:
-            print('t1 must be less than t2')
-            return None
-
-        if (not isinstance(t1, datetime.datetime) or 
-            not isinstance(t2, datetime.datetime)):
-            print('t1 and t2 must be datetime.datetime instances')
-            return None
-
-        if t1 < self.wind[0][0] and self.wind[-1][0] < t2:
-            if verbose:
-                print('warning: specified range (%s to %s) is outside of ' % 
-                      (t1, t2) + 'available wind data')
-
-        wind = []
-
-        dates = [t1 + i * datetime.timedelta(days = 1) 
-                 for i in range(int((t2 - t1).total_seconds() / 86400))]
-
-        wind_dates, values = zip(*self.wind)
-       
-        for date in dates:
-            if date in wind_dates:
-                wind.append(values[wind_dates.index(date)])
-            else: wind.append(None)
-
-        if len(wind) == 0:
-            print('warning: unable to generate time series')
-            return None
-        return wind
-
-class DewStation:
-    """A class to store dewpoint data from a GSOD station."""
-
-    def add_station(self, station):
-        """Get some basic info about the station."""
-
-        try:                   self.name = station.name
-        except AttributeError: self.name = ''
-
-        try:    self.elevation = float(station.elev)
-        except: self.elevation = -1
-
-        try:    self.latitude  = float(station.lat)
-        except: self.latitude = -1
-
-        try:    self.longitude = float(station.lon)
-        except: self.longitude = -1
-
-        self.dewpoint = station.dewpoint
-
-    def make_timeseries(self, start = None, end = None, verbose = True):
-        """Constructs daily dewpoint time series between times start and end 
-        (start and end are instances of datetime.datetime)."""
-
-        if len(self.dewpoint) == 0: 
-            print('warning: station contains no point data')
-            return
-        
-        if start is None: start = self.dewpoint[0][0]
-        if end is None: end = self.dewpoint[-1][0]
-
-        # make sure the function inputs are correct
-        
-        if start >= end:
-            print('start must be less than end')
-            return None
-
-        if (not isinstance(start, datetime.datetime) or 
-            not isinstance(end, datetime.datetime)):
-            print('start and end must be datetime.datetime instances')
-            return None
-
-        if start < self.dewpoint[0][0] and self.dewpoint[-1][0] < end:
-            if verbose:
-                print('warning: specified range (%s to %s) is outside of ' % 
-                      (start, end) + 'available dewpoint data')
-
-        dewpoint = []
-
-        dates = [start + i * datetime.timedelta(days = 1) 
-                 for i in range(int((end - start).total_seconds() / 86400))]
-
-        dew_dates, values = zip(*self.dewpoint)
-       
-        for date in dates:
-            if date in dew_dates:
-                dewpoint.append(values[dew_dates.index(date)])
-            else: dewpoint.append(None)
-
-        if len(dewpoint) == 0:
-            print('warning: unable to generate time series')
-            return None
-
-        return dewpoint
-
-class SolarStation:
-
-    def __init__(self, station):
-        """Creates a solar station based on the METSTAT data from the NSRDB."""
-
-        self.station = station.usaf
-        self.name    = station.station
-
-        try:    self.elevation = float(station.elevation)
-        except: self.elevation = -1
-
-        try:    self.latitude  = float(station.latitude)
-        except: self.latitude = -1
-
-        try:    self.longitude = float(station.longitude)
-        except: self.longitude = -1
-
-        station.metstat.sort()
-        station.legacy.sort()
-
-        self.solar = [(d, v) for d, v in station.legacy + station.metstat
-                      if v >= 0]
-
-    def make_timeseries(self, start, end, tstep = 'hourly', function = 'sum',
-                        verbose = False):
-        """Returns a time series of values for the station."""
-
-        # make sure the function inputs are correct
-        
-        if start >= end:
-            print('start must be less than end')
-            return None
-
-        if start < self.solar[0][0] and self.solar[-1][0] < end:
-            print('warning: specified range (%s to %s) is outside of ' % 
-                  (start, end) + 'available gage data')
-
-        if (not isinstance(start, datetime.datetime) or 
-            not isinstance(end, datetime.datetime)):
-            print('start and end must be datetime.datetime instances')
-            return None
-
-        times = [start + i * datetime.timedelta(hours = 1)
-                 for i in range((end - start).days * 24)]
-
-        dataset = [(t, v) for t, v in self.solar if start <= t and t < end]
- 
-        if all([v is None for d, v in dataset]): return None
-        else:                 hourly, values = zip(*dataset)
-
-        if len(times) == len(hourly):
-            
-            # make an hourly time series
-        
-            if tstep == 'hourly': return values
-
-            else:
-
-                daily   = [start + i * datetime.timedelta(days = 1)
-                           for i in range((end - start).days + 1)]
-
-                if function == 'sum':
-                    dvalues = [sum(values[i:i+24]) 
-                               if all([v is not None for v in values[i:i+24]])
-                               else None
-                               for i in range(0, len(values), 24)]
-
-                if function == 'average':
-                    dvalues = [sum(values[i:i+24]) / 24 
-                               if all([v is not None for v in values[i:i+24]])
-                               else None
-                               for i in range(0, len(values), 24)]
-
-                if tstep == 'daily': return dvalues
-
-                days  =  monthrange(daily[0].year, daily[0].month)[1]
-                delta =  datetime.timedelta(days = days)
-                monthly = [daily[0]]
-
-                if function == 'sum':
-                    mvalues = [sum(dvalues[:delta.days])]
-
-                if function == 'average':
-                    mvalues = [sum(dvalues[:delta.days])/ 
-                               len(dvalues[:delta.days])]
-
-                while monthly[-1] + delta < daily[-1]:
-                    i = daily.index(monthly[-1])
-                    j = daily.index(monthly[-1] + delta)
-
-                    monthly.append(monthly[-1] + delta)
-
-                    if function == 'sum':
-                        mvalues.append(sum(dvalues[i:j]))
-
-                    if function == 'average':
-                        mvalues.append(sum(dvalues[i:j]) / len(dvalues[i:j]))
-
-                    days  = monthrange(monthly[-1].year, monthly[-1].month)[1]
-                    delta = datetime.timedelta(days = days)
-         
-                return mvalues
-
-        else:
-            print('warning: missing data, filling with Nones')
-
-            delta = datetime.timedelta(hours = 1)
-
-            # see if the first value if in the timeseries
-
-            if times[0] < hourly[0]: dataset, i = [[times[0], None]], 0
-            else:                    dataset, i = [[times[0], values[0]]], 1
-
-            # iterate through the times and fill with Nones until 
-            # reaching an observation
-
-            t = dataset[-1][0]
-            while t < times[-1]:
-                while t < hourly[i]:
-                    dataset.append([t, None])
-                    t += delta
-                dataset.append([t, values[i]])
-                t += delta
-                i += 1
-            
-            times, values = zip(*dataset)
-
-            if tstep == 'hourly': return values
-
-            else:
-                daily   = [start + i * datetime.timedelta(days = 1)
-                           for i in range((end - start).days + 1)]
-
-                if function == 'sum':
-                    dvalues = [sum(values[i:i+24]) 
-                               if all([v is not None for v in values[i:i+24]])
-                               else None
-                               for i in range(0, len(values), 24)]
-
-                if function == 'average':
-                    dvalues = [sum(values[i:i+24]) / 24 
-                               if all([v is not None for v in values[i:i+24]])
-                               else None
-                               for i in range(0, len(values), 24)]
-
-                if tstep == 'daily': return dvalues
-
-                days  =  monthrange(daily[0].year, daily[0].month)[1]
-                delta =  datetime.timedelta(days = days)
-                monthly = [daily[0]]
-
-                if function == 'sum':
-                    mvalues = [sum(dvalues[:delta.days])]
-
-                if function == 'average':
-                    mvalues = [sum(dvalues[:delta.days])/ 
-                               len(dvalues[:delta.days])]
-
-                while monthly[-1] + delta < daily[-1]:
-                    i = daily.index(monthly[-1])
-                    j = daily.index(monthly[-1] + delta)
-
-                    monthly.append(monthly[-1] + delta)
-
-                    if function == 'sum':
-                        mvalues.append(sum(dvalues[i:j]))
-
-                    if function == 'average':
-                        mvalues.append(sum(dvalues[i:j]) / len(dvalues[i:j]))
-
-                    days  = monthrange(monthly[-1].year, monthly[-1].month)[1]
-                    delta = datetime.timedelta(days = days)
-         
-                return mvalues
+#class PrecipStation:
+#    """A class to store data from an NCDC hourly precipitation gage station."""
+#
+#    def add_precip3240(self, station):
+#        """Get some basic info about the station."""
+#
+#        self.station   = station.coop
+#        self.name      = station.desc
+#        self.elevation = station.elevation
+#        self.latitude  = station.latitude
+#        self.longitude = station.longitude
+#
+#        precip = station.make_timeseries(tstep = 'hourly')
+#
+#        start = station.events[0][0]
+#        end   = station.events[-1][0]
+#
+#        times = [start + i * datetime.timedelta(hours = 1) 
+#                 for i in range((end - start).days * 24)]
+#
+#        self.precip = [v for v in zip(times, precip)]
+#        
+#    def add_location(self, station):
+#        """Get some basic info about the station."""
+#
+#        self.station = station.coop
+#        self.name    = station.desc
+#
+#        self.elevation = station.elevation
+#        self.latitude  = station.latitude
+#        self.longitude = station.longitude
+#
+#        self.precip = []
+#
+#    def add_timeseries(self, data):
+#        """Add a timeseries (including missing data) to the station."""
+#
+#        self.precip += data
+#        
+#    def pct_missing(self, start = None, end = None):
+#        """Determines the percentage of missing data across the specified
+#        period."""
+#
+#        if start is None: start = self.precip[0][0]
+#        if end is None:   end = self.precip[-1][0]
+#
+#        precip = [(t, p) for t, p in self.precip if start <= t and t <= end]
+#
+#        return len([p for t, p in precip if p is None]) / len(precip)
+#
+#    def total_precipitation(self, start = None, end = None):
+#        """Determines the total precipitation across the time period."""
+#
+#        if start is None: start = self.precip[0][0]
+#        if end is None:   end = self.precip[-1][0]
+#
+#        precip = self.make_timeseries(start = start, end = end, 
+#                                      tstep = 'hourly')
+#
+#        if precip is not None:
+#            return sum([p for p in precip if p is not None])
+#        else: 
+#            return None
+#
+#    def make_timeseries(self, start = None, end = None, tstep = 'hourly'):
+#        """Constructs an hourly time series between times start and end 
+#        (start and end must be instances of datetime.datetime)."""
+#
+#        if start is None: start = self.precip[0][0]
+#        if end is None:   end = self.precip[-1][0]
+#
+#        # make sure the function inputs are correct
+#        
+#        if start >= end:
+#            print('start must be less than end')
+#            return
+#
+#        if (not isinstance(start, datetime.datetime) or 
+#              not isinstance(end, datetime.datetime)):
+#            print('start and end must be datetime.datetime instances')
+#            return
+#
+#        ts = [p for t, p in self.precip if start <= t and t <= end]
+#
+#        if start < self.precip[0][0] or self.precip[-1][0] < end:
+#            print('warning: specified range ({} to {}) is '.format(start, end) +
+#                  'outside of available gage data ' +
+#                  '({} to {})\n'.format(self.precip[0][0], self.precip[-1][0]))
+#        
+#            t = start
+#            while t < self.precip[0][0]: 
+#                ts.insert(0, None)
+#                t += datetime.timedelta(hours = 1)
+#            t = self.precip[-1][0]
+#            while t < end: 
+#                ts.append(None)
+#                t += datetime.timedelta(hours = 1)
+#
+#        return ts
+#
+#class TempStation:
+#    """A class to store data from an NCDC temperature station."""
+#
+#    def add_location(self, station):
+#        """Copy some basic info about the station."""
+#
+#        self.station = station.station
+#        self.name    = station.name
+#
+#        try:    self.elevation = float(station.elev)
+#        except: self.elevation = -1
+#
+#        try:    self.latitude  = float(station.lat)
+#        except: self.latitude = -1
+#
+#        try:    self.longitude = float(station.lon)
+#        except: self.longitude = -1
+#
+#    def add_tmin(self, tmin): self.tmin = tmin
+#
+#    def add_tmax(self, tmax): self.tmax = tmax
+#
+#    def make_timeseries(self, start = None, end = None, verbose = True):
+#        """Constructs daily tmax and tmin time series between times t1 and t2 
+#        (t1 and t2 are instances of datetime.datetime)."""
+#
+#        if start is None: start = self.tmax[0][0]
+#        if end is None: end = self.tmax[-1][0]
+#
+#        # make sure the function inputs are correct
+#        
+#        if start >= end:
+#            print('start must be less than end')
+#            return None
+#
+#        if (not isinstance(start, datetime.datetime) or 
+#            not isinstance(end, datetime.datetime)):
+#            print('start and end must be datetime.datetime instances')
+#            return None
+#
+#        if start < self.tmax[0][0] and self.tmax[-1][0] < end:
+#            print('warning: specified range (%s to %s) is outside of ' % 
+#                  (start, end) + 'available gage data')
+#
+#        tmax = []
+#        tmin = []
+#
+#        dates = [start + i * datetime.timedelta(days = 1) 
+#                 for i in range((end - start).days)]
+#
+#        tmax_dates, tmax_values = zip(*self.tmax)
+#        tmin_dates, tmin_values = zip(*self.tmin)
+#        
+#        for date in dates:
+#            if date in tmax_dates:
+#                if tmax_values[tmax_dates.index(date)] < 100:
+#                    tmax.append(tmax_values[tmax_dates.index(date)])
+#                else: tmax.append(None)
+#            else: tmax.append(None)
+#
+#            if date in tmin_dates:
+#                if tmin_values[tmin_dates.index(date)] < 100:
+#                    tmin.append(tmin_values[tmin_dates.index(date)])
+#                else: tmin.append(None)
+#            else: tmin.append(None)
+#
+#        return tmax, tmin        
+#
+#class SnowStation:
+#    """A class to store data from an NCDC snowdepth station."""
+#
+#    def add_location(self, station):
+#        """Get some basic info about the station."""
+#
+#        self.station = station.station
+#        self.name    = station.name
+#
+#        try:    self.elevation = float(station.elev)
+#        except: self.elevation = -1
+#
+#        try:    self.latitude  = float(station.lat)
+#        except: self.latitude = -1
+#
+#        try:    self.longitude = float(station.lon)
+#        except: self.longitude = -1
+#
+#    def add_snowdepth(self, snowdepth): self.snowdepth = snowdepth
+#
+#    def add_snowfall(self, snowfall): self.snowfall = snowfall
+#
+#    def make_timeseries(self, t1 = None, t2 = None, tstype = 'depth', 
+#                        verbose = True):
+#        """Constructs daily tmax and tmin time series between times t1 and t2 
+#        (t1 and t2 are instances of datetime.datetime)."""
+#
+#        if   tstype == 'depth': ts = self.snowdepth
+#        elif tstype == 'fall':  ts = self.snowfall
+#
+#        if t1 is None: t1 = ts[0][0]
+#        if t2 is None: t2 = ts[-1][0]
+#
+#        # make sure the function inputs are correct
+#        
+#        if t1 >= t2:
+#            print('t1 must be less than t2')
+#            return None
+#
+#        if (not isinstance(t1, datetime.datetime) or 
+#            not isinstance(t2, datetime.datetime)):
+#            print('t1 and t2 must be datetime.datetime instances')
+#            return None
+#
+#        if t1 < ts[0][0] and ts[-1][0] < t2:
+#            if verbose: 
+#                print('warning: specified range ' +
+#                      '(%s to %s) is outside of '.format(t1, t2) + 
+#                      'available snowdepth data')
+#
+#        snow = []
+#
+#        dates = [t1 + i * datetime.timedelta(days = 1) 
+#                 for i in range(int((t2 - t1).total_seconds() / 86400))]
+#
+#        snow_dates, values = zip(*ts)
+#       
+#        for date in dates:
+#            if date in snow_dates:
+#                snow.append(values[snow_dates.index(date)])
+#            else: snow.append(None)
+#
+#        return snow
+#
+#    def get_depth(self, t):
+#        """Returns the depth at a given time (interpolates if needed)."""
+#
+#        if not isinstance(t, datetime.datetime):
+#            print('time must be datetime.datetime instance')
+#            return None
+#
+#        if self.snowdepth[0][0] <= t and t <= self.snowdepth[-1][0]:
+#
+#            times = [d[0] for d in zip(*self.snowdepth)]
+#            if t not in times:
+#                i = 0
+#                while self.snowdepth[i][0] < t: i+=1
+#                depth = (self.snowdepth[i-1][1] + self.snowdepth[i][1]) / 2.
+#            else: depth = self.snowdepth[times.index(t)][1]
+#
+#            return depth
+#
+#        else: return None
+#
+#class EvapStation:
+#    """A class to store data from an NCDC pan evaporation station."""
+#
+#    def add_ghcnd_data(self, station):
+#        """Get some basic info about the station."""
+#
+#        self.station = station.station
+#        self.name    = station.name
+#
+#        try:    self.elevation = float(station.elevation)
+#        except: self.elevation = -1
+#
+#        try:    self.latitude  = float(station.latitude)
+#        except: self.latitude = -1
+#
+#        try:    self.longitude = float(station.longitude)
+#        except: self.longitude = -1
+#
+#        self.events = [(d, e) for d, e in station.evap if e >= 0]
+#
+#    def add_location(self, station):
+#        """Get some basic info about the station."""
+#
+#        self.station = station.station
+#        self.name    = station.name
+#
+#        try:    self.elevation = float(station.elevation)
+#        except: self.elevation = -1
+#
+#        try:    self.latitude  = float(station.latitude)
+#        except: self.latitude = -1
+#
+#        try:    self.longitude = float(station.longitude)
+#        except: self.longitude = -1
+#
+#        self.events = []
+#    
+#    def add_data(self, data): self.events = [(d, e) for d, e in data
+#                                             if e >= 0]
+#
+#    def get_evaporation(self, t1 = None, t2 = None):
+#        """Returns the total evaporation at the station between times t1 and t2
+#        (datetime.datetime instances).
+#        """
+#
+#        if t1 is None: t1 = self.events[0][0]
+#        if t2 is None: t2 = self.events[-1][0]
+#        
+#        # make sure the function inputs are correct
+#        
+#        if t1 >= t2:
+#            print('t1 must be less than t2')
+#            return
+#
+#        if (not isinstance(t1, datetime.datetime) or 
+#              not isinstance(t2, datetime.datetime)):
+#            print('t1 and t2 must be datetime.datetime instances')
+#            return
+#
+#        total = 0
+#
+#        # find the first event after t1
+#
+#        i = 0
+#        while self.events[i][0] < t1: i+=1
+#
+#        # add all the events 
+#
+#        while self.events[i][0] < t2:
+#            total += self.events[i][1]
+#            i += 1
+#
+#        return total
+#
+#    def make_timeseries(self, t1, t2):
+#        """Constructs a daily time series between times t1 and t2 
+#        (t1 and t2 are instances of datetime.datetime)."""
+#
+#        # make sure the function inputs are correct
+#        
+#        if t1 >= t2:
+#            print('t1 must be less than t2')
+#            return
+#
+#        dates, values = zip(*self.events)
+#
+#        series = []
+#        t = t1
+#
+#        # go through time period and fill values as available; nones otherwise
+#
+#        while t < self.events[0][0] and t < t2:  
+#            series.append(None)
+#            t += datetime.timedelta(days = 1)
+#
+#        while t < t2:
+#
+#            if t in dates:
+#
+#                i = dates.index(t)
+#                series.append(values[i])
+#
+#            else: series.append(None)
+#
+#            t += datetime.timedelta(days = 1)
+#
+#        return series
+#
+#class WindStation:
+#    """A class to store data from an NCDC snowdepth station."""
+#
+#    def add_location(self, station):
+#        """Get some basic info about the station."""
+#
+#        try:                   self.name = station.name
+#        except AttributeError: self.name = ''
+#
+#        try:    self.elevation = float(station.elev)
+#        except: self.elevation = -1
+#
+#        try:    self.latitude  = float(station.lat)
+#        except: self.latitude = -1
+#
+#        try:    self.longitude = float(station.lon)
+#        except: self.longitude = -1
+#
+#        self.wind = []
+#
+#    def add_data(self, data):
+#        """Adds data to existing (useful if located in different files)."""
+#
+#        self.wind += data
+#
+#    def make_timeseries(self, t1 = None, t2 = None, verbose = True):
+#        """Constructs daily avg wind time series between times t1 and t2 
+#        (t1 and t2 are instances of datetime.datetime)."""
+#
+#        if t1 is None: t1 = self.wind[0][0]
+#        if t2 is None: t2 = self.wind[-1][0]
+#
+#        # make sure the function inputs are correct
+#        
+#        if t1 >= t2:
+#            print('t1 must be less than t2')
+#            return None
+#
+#        if (not isinstance(t1, datetime.datetime) or 
+#            not isinstance(t2, datetime.datetime)):
+#            print('t1 and t2 must be datetime.datetime instances')
+#            return None
+#
+#        if t1 < self.wind[0][0] and self.wind[-1][0] < t2:
+#            if verbose:
+#                print('warning: specified range (%s to %s) is outside of ' % 
+#                      (t1, t2) + 'available wind data')
+#
+#        wind = []
+#
+#        dates = [t1 + i * datetime.timedelta(days = 1) 
+#                 for i in range(int((t2 - t1).total_seconds() / 86400))]
+#
+#        wind_dates, values = zip(*self.wind)
+#       
+#        for date in dates:
+#            if date in wind_dates:
+#                wind.append(values[wind_dates.index(date)])
+#            else: wind.append(None)
+#
+#        if len(wind) == 0:
+#            print('warning: unable to generate time series')
+#            return None
+#        return wind
+#
+#class DewStation:
+#    """A class to store dewpoint data from a GSOD station."""
+#
+#    def add_station(self, station):
+#        """Get some basic info about the station."""
+#
+#        try:                   self.name = station.name
+#        except AttributeError: self.name = ''
+#
+#        try:    self.elevation = float(station.elev)
+#        except: self.elevation = -1
+#
+#        try:    self.latitude  = float(station.lat)
+#        except: self.latitude = -1
+#
+#        try:    self.longitude = float(station.lon)
+#        except: self.longitude = -1
+#
+#        self.dewpoint = station.dewpoint
+#
+#    def make_timeseries(self, start = None, end = None, verbose = True):
+#        """Constructs daily dewpoint time series between times start and end 
+#        (start and end are instances of datetime.datetime)."""
+#
+#        if len(self.dewpoint) == 0: 
+#            print('warning: station contains no point data')
+#            return
+#        
+#        if start is None: start = self.dewpoint[0][0]
+#        if end is None: end = self.dewpoint[-1][0]
+#
+#        # make sure the function inputs are correct
+#        
+#        if start >= end:
+#            print('start must be less than end')
+#            return None
+#
+#        if (not isinstance(start, datetime.datetime) or 
+#            not isinstance(end, datetime.datetime)):
+#            print('start and end must be datetime.datetime instances')
+#            return None
+#
+#        if start < self.dewpoint[0][0] and self.dewpoint[-1][0] < end:
+#            if verbose:
+#                print('warning: specified range (%s to %s) is outside of ' % 
+#                      (start, end) + 'available dewpoint data')
+#
+#        dewpoint = []
+#
+#        dates = [start + i * datetime.timedelta(days = 1) 
+#                 for i in range(int((end - start).total_seconds() / 86400))]
+#
+#        dew_dates, values = zip(*self.dewpoint)
+#       
+#        for date in dates:
+#            if date in dew_dates:
+#                dewpoint.append(values[dew_dates.index(date)])
+#            else: dewpoint.append(None)
+#
+#        if len(dewpoint) == 0:
+#            print('warning: unable to generate time series')
+#            return None
+#
+#        return dewpoint
+#
+#class SolarStation:
+#
+#    def __init__(self, station):
+#        """Creates a solar station based on the METSTAT data from the NSRDB."""
+#
+#        self.station = station.usaf
+#        self.name    = station.station
+#
+#        try:    self.elevation = float(station.elevation)
+#        except: self.elevation = -1
+#
+#        try:    self.latitude  = float(station.latitude)
+#        except: self.latitude = -1
+#
+#        try:    self.longitude = float(station.longitude)
+#        except: self.longitude = -1
+#
+#        station.metstat.sort()
+#        station.legacy.sort()
+#
+#        self.solar = [(d, v) for d, v in station.legacy + station.metstat
+#                      if v >= 0]
+#
+#    def make_timeseries(self, start, end, tstep = 'hourly', function = 'sum',
+#                        verbose = False):
+#        """Returns a time series of values for the station."""
+#
+#        # make sure the function inputs are correct
+#        
+#        if start >= end:
+#            print('start must be less than end')
+#            return None
+#
+#        if start < self.solar[0][0] and self.solar[-1][0] < end:
+#            print('warning: specified range (%s to %s) is outside of ' % 
+#                  (start, end) + 'available gage data')
+#
+#        if (not isinstance(start, datetime.datetime) or 
+#            not isinstance(end, datetime.datetime)):
+#            print('start and end must be datetime.datetime instances')
+#            return None
+#
+#        times = [start + i * datetime.timedelta(hours = 1)
+#                 for i in range((end - start).days * 24)]
+#
+#        dataset = [(t, v) for t, v in self.solar if start <= t and t < end]
+# 
+#        if all([v is None for d, v in dataset]): return None
+#        else:                 hourly, values = zip(*dataset)
+#
+#        if len(times) == len(hourly):
+#            
+#            # make an hourly time series
+#        
+#            if tstep == 'hourly': return values
+#
+#            else:
+#
+#                daily   = [start + i * datetime.timedelta(days = 1)
+#                           for i in range((end - start).days + 1)]
+#
+#                if function == 'sum':
+#                    dvalues = [sum(values[i:i+24]) 
+#                               if all([v is not None for v in values[i:i+24]])
+#                               else None
+#                               for i in range(0, len(values), 24)]
+#
+#                if function == 'average':
+#                    dvalues = [sum(values[i:i+24]) / 24 
+#                               if all([v is not None for v in values[i:i+24]])
+#                               else None
+#                               for i in range(0, len(values), 24)]
+#
+#                if tstep == 'daily': return dvalues
+#
+#                days  =  monthrange(daily[0].year, daily[0].month)[1]
+#                delta =  datetime.timedelta(days = days)
+#                monthly = [daily[0]]
+#
+#                if function == 'sum':
+#                    mvalues = [sum(dvalues[:delta.days])]
+#
+#                if function == 'average':
+#                    mvalues = [sum(dvalues[:delta.days])/ 
+#                               len(dvalues[:delta.days])]
+#
+#                while monthly[-1] + delta < daily[-1]:
+#                    i = daily.index(monthly[-1])
+#                    j = daily.index(monthly[-1] + delta)
+#
+#                    monthly.append(monthly[-1] + delta)
+#
+#                    if function == 'sum':
+#                        mvalues.append(sum(dvalues[i:j]))
+#
+#                    if function == 'average':
+#                        mvalues.append(sum(dvalues[i:j]) / len(dvalues[i:j]))
+#
+#                    days  = monthrange(monthly[-1].year, monthly[-1].month)[1]
+#                    delta = datetime.timedelta(days = days)
+#         
+#                return mvalues
+#
+#        else:
+#            print('warning: missing data, filling with Nones')
+#
+#            delta = datetime.timedelta(hours = 1)
+#
+#            # see if the first value if in the timeseries
+#
+#            if times[0] < hourly[0]: dataset, i = [[times[0], None]], 0
+#            else:                    dataset, i = [[times[0], values[0]]], 1
+#
+#            # iterate through the times and fill with Nones until 
+#            # reaching an observation
+#
+#            t = dataset[-1][0]
+#            while t < times[-1]:
+#                while t < hourly[i]:
+#                    dataset.append([t, None])
+#                    t += delta
+#                dataset.append([t, values[i]])
+#                t += delta
+#                i += 1
+#            
+#            times, values = zip(*dataset)
+#
+#            if tstep == 'hourly': return values
+#
+#            else:
+#                daily   = [start + i * datetime.timedelta(days = 1)
+#                           for i in range((end - start).days + 1)]
+#
+#                if function == 'sum':
+#                    dvalues = [sum(values[i:i+24]) 
+#                               if all([v is not None for v in values[i:i+24]])
+#                               else None
+#                               for i in range(0, len(values), 24)]
+#
+#                if function == 'average':
+#                    dvalues = [sum(values[i:i+24]) / 24 
+#                               if all([v is not None for v in values[i:i+24]])
+#                               else None
+#                               for i in range(0, len(values), 24)]
+#
+#                if tstep == 'daily': return dvalues
+#
+#                days  =  monthrange(daily[0].year, daily[0].month)[1]
+#                delta =  datetime.timedelta(days = days)
+#                monthly = [daily[0]]
+#
+#                if function == 'sum':
+#                    mvalues = [sum(dvalues[:delta.days])]
+#
+#                if function == 'average':
+#                    mvalues = [sum(dvalues[:delta.days])/ 
+#                               len(dvalues[:delta.days])]
+#
+#                while monthly[-1] + delta < daily[-1]:
+#                    i = daily.index(monthly[-1])
+#                    j = daily.index(monthly[-1] + delta)
+#
+#                    monthly.append(monthly[-1] + delta)
+#
+#                    if function == 'sum':
+#                        mvalues.append(sum(dvalues[i:j]))
+#
+#                    if function == 'average':
+#                        mvalues.append(sum(dvalues[i:j]) / len(dvalues[i:j]))
+#
+#                    days  = monthrange(monthly[-1].year, monthly[-1].month)[1]
+#                    delta = datetime.timedelta(days = days)
+#         
+#                return mvalues
+#

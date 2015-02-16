@@ -5,7 +5,7 @@
 # contains the HBNReader class to read data from an HSPF binary output 
 # file (.hbn extension)
 #
-# last updated: 02/01/2015
+# last updated: 02/10/2015
 
 import os, struct, datetime
 
@@ -18,20 +18,20 @@ class HBNReader:
         string "s".
         """
 
-        index = 0
+        i = 0
         while True:
-            perlnd = s.find(b'PERLND', index)
-            implnd = s.find(b'IMPLND', index)
-            rchres = s.find(b'RCHRES', index)
+            perlnd = s.find(b'PERLND', i)
+            implnd = s.find(b'IMPLND', i)
+            rchres = s.find(b'RCHRES', i)
             if all([perlnd == -1, implnd == -1, rchres == -1]): 
                 return
             else:
                 if perlnd == -1: perlnd = len(s)
                 if implnd == -1: implnd = len(s)
                 if rchres == -1: rchres = len(s)
-                index = min(perlnd, implnd, rchres)
-                yield index
-                index += 6
+                i = min(perlnd, implnd, rchres)
+                yield i - 8
+                i += 6
 
     def read(self, binfilename):
         """
@@ -50,7 +50,7 @@ class HBNReader:
         results = hbnreader.read(file)
         data = results['PERLND'][101]['PWATER']['PERO']
 
-        the data are packaged as a list of (time, value) pairs.
+        the data are packaged asx a list of (time, value) pairs.
         """
         
         # read the file into memory (if the files were huge this might not be
@@ -68,65 +68,61 @@ class HBNReader:
 
         for i in self.all_occurences(data):
 
+            # read the length of the record
+
+            r1, r2, r3, r4 = struct.unpack('4B', data[i:i+4])
+
+            # calculate the length
+
+            reclen = r1 // 4 + r2 * 2**6 + r3 * 2**14 + r4 * 2**22
+
             # unpack information about the data set
 
-            s = data[i-4:i+20]
-            rectype, operation, number, section = struct.unpack('I8sI8s', s)
+            rectype, op, no, sec = struct.unpack('I8sI8s', data[i+4:i+28])
 
-            operation = operation.strip().decode()
-            section = section.strip().decode()
+            op = op.strip().decode()
+            sec = sec.strip().decode()
 
             # add an operation type dictionary to the data dictionary
 
-            if operation not in results: 
-                results[operation]   = {}
-                variables[operation] = {}
+            if op not in results: 
+                results[op]   = {}
+                variables[op] = {}
 
             # add operation number dictionary to the operation type dictionary
 
-            if number not in results[operation]: 
-                results[operation][number]   = {}
-                variables[operation][number] = {}
+            if no not in results[op]: 
+                results[op][no]   = {}
+                variables[op][no] = {}
 
             # add the operation module to the operation number dictionary
 
-            if section not in results[operation][number]: 
-                results[operation][number][section]   = {}
-                variables[operation][number][section] = []
+            if sec not in results[op][no]: 
+                results[op][no][sec]   = {}
+                variables[op][no][sec] = []
 
             # rectype = 0 mean a list of the variables
 
             if rectype == 0:
 
-                # read the length of the record
-
-                s = data[i-8:i-4]
-                r1, r2, r3, r4 = struct.unpack('4B', s)
-
-                # calculate the length
-
-                reclen = r1 // 4 + r2 * 2**6 + r3 * 2**14 + r4 * 2**22
-
                 # loop through the variable names for the section
 
-                j = i + 20
+                j = i + 32
 
-                while j < i + 20 + reclen - 28:
+                while j + 4 < i + reclen:
 
                     # get the length of the variable name
 
-                    s = data[j:j+4]
-                    l = struct.unpack('I', s)[0]
+                    l = struct.unpack('I', data[j-4:j])[0]
 
                     # read the variable name
 
-                    s = data[j + 4:j + 4 + l]
-                    v = struct.unpack('{}s'.format(l), s)[0].decode()
+                    v = struct.unpack('{}s'.format(l),data[j:j+l])[0].decode()
 
                     # add the variable name in the data structures
 
-                    variables[operation][number][section].append(v)
-                    results[operation][number][section][v] = []
+                    variables[op][no][sec].append(v)
+                    results[op][no][sec][v] = []
 
                     j += 4 + l
 
@@ -136,78 +132,26 @@ class HBNReader:
 
                 # read the date
 
-                s = data[i + 20:i + 48]
-                units, l, yr, mo, da, hr, mi = struct.unpack('7I', s)
+                u, l, yr, mo, da, hr, mi = struct.unpack('7I', data[i+28:i+56])
 
                 # Data record
 
-                n = len(variables[operation][number][section])
+                n = len(variables[op][no][sec])
 
                 # adjust the HSPF time to real time
 
-                if hr == 24:
-                    t = (datetime.datetime(yr, mo, da, 0, mi) +
-                         datetime.timedelta(days = 1))
-                else:
-                    t = datetime.datetime(yr, mo, da, hr, mi)
+                t = (datetime.datetime(yr, mo, da, 0, mi) +
+                     datetime.timedelta(hours = hr))
 
                 # read the data
 
-                s = data[i + 48:i + 48 + 4 * n]
-                values = struct.unpack('{}f'.format(n), s)
+                values = struct.unpack('{}f'.format(n), data[i+56:i+56+4*n])
 
                 # package up the data in the output dictionary
 
-                for n, v in zip(variables[operation][number][section], values):
+                for n, v in zip(variables[op][no][sec], values):
 
-                    results[operation][number][section][n].append((t, v))
+                    results[op][no][sec][n].append((t, v))
 
         return results
 
-if __name__ == '__main__':
-
-    # the base.hbn file is distributed with BASINS
-
-    filename = 'base.hbn'
-
-    if not os.path.isfile(filename):
-        print('\nError: hbn file {} does not exist!\n'.format(filename))
-        raise
-
-    # create an instance of the HBN reader
-
-    reader = HBNReader()
-
-    # read it
-
-    results = reader.read(filename)
-
-    # the data are packaged in a series of dictionaries in the following order:
-    #
-    #     -operation type (e.g., PERLND, IMPLND, RCHRES)
-    #     -operation number (e.g., 101, 102)
-    #     -operation section (e.g., PWATER, SEDMNT, HYDR)
-    #     -section variable name (e.g., PERO, SURO, SURS)
-    #     -list of (date, value) pairs (e.g., 10/01/2001, 3.4)
-    #
-    # so for example, to get the values of PERO from PERLND 101:
-
-    var  = 'PERO'
-    data = results['PERLND'][101]['PWATER'][var]
-
-    # the data are packaged as (time, value) pairs
-
-    for t, v in data: 
-
-        i = t.year, t.month, t.day, var, v
-        print('On {:04d}-{:02d}-{:02d}, the value of {} was {:.2f}'.format(*i))
-
-    # the data can easily be regrouped into lists of dates and values using zip
-
-    times, values = zip(*data)
-
-    # get the average
-
-    ave = sum(values) / len(values)
-
-    print('the average value of {} was {:.2f}'.format(var, ave))

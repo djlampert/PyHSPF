@@ -28,7 +28,11 @@ def is_integer(s):
     except ValueError: return False
     return True
 
-def inside_box(p1, p2, p3, space = 0):
+def inside_box(p1, 
+               p2, 
+               p3, 
+               space = 0,
+               ):
     """Checks if p3 is inside a box formed by p1 and p2."""
 
     if p1[0] < p3[0] and p3[0] < p2[0] or p1[0] > p3[0] and p3[0] > p2[0]:
@@ -80,8 +84,9 @@ def find_ghcnd(bbox,
                         for r in s.read().split('\n') if len(r.strip()) > 0]
                 
         except: 
-            print('unable to connect to the GHCND database')
-            print('make sure that you are online')
+
+            print('unable to connect to the GHCND database\n' +
+                  'make sure that you are online')
             raise
 
         # parse through the GSN and HCN stations and see if they're in the box
@@ -148,8 +153,10 @@ def find_ghcnd(bbox,
 
                     if int(yr1) < end.year and start.year < int(yr2):
 
-                        if verbose: print('found {} station {}'.format(var,
-                                                                       station))
+                        if verbose: 
+
+                            print('found {} station {}'.format(var, station))
+
                         names.append(station)
 
         filename = 'ghcnd-stations.txt'
@@ -179,12 +186,13 @@ def find_ghcnd(bbox,
         for station, lat, lon, elev, y, name, gsn, hcn, c in data:
                     
             if station in names:
+
                     stations.append(GHCNDStation(station, 
                                                  name.strip(), 
                                                  float(lat),
                                                  float(lon), 
                                                  float(elev), 
-                                                 dtype = types
+                                                 dtype = types,
                                                  )
                                     )
 
@@ -201,7 +209,7 @@ def find_gsod(bbox,
               filename = 'isd-history.txt', 
               dates = None, 
               verbose = True, 
-              vverbose = False
+              vverbose = False,
               ):
     """finds Global Surface Observation Data Stations inside the given 
     bounding box. Optional keyword arguments can be used to find stations

@@ -3,8 +3,7 @@
 # David J. Lampert (djlampert@gmail.com)
 #
 # illustrates how to use the ClimateProcessor class to download climate data
-# and estimate the potential evapotranspiration using the Penman-Monteith
-# Equation, in hourly form consistent with the ASCE model.
+# and how to view the metadata for the various databases available in PyHSPF.
 
 import os, datetime
 
@@ -38,7 +37,7 @@ sf = 'data/patuxent/boundary'
 
 if not os.path.isfile(sf + '.shp'):
 
-    print('error: you seem to be missing the shapefile {}'.format(sf))
+    print('\nerror: you seem to be missing the {} shapefile\n'.format(sf))
     raise
 
 from shapefile import Reader
@@ -47,7 +46,7 @@ f = Reader(sf)
 
 bbox = f.bbox
 
-# start and end dates
+# start and end dates for time series extraction
 
 start = datetime.datetime(1980, 1, 1)
 end   = datetime.datetime(2011, 1, 1)
@@ -58,9 +57,42 @@ end   = datetime.datetime(2011, 1, 1)
 processor.path_to_7z = r'C:/Program Files/7-Zip/7z.exe'
 
 # download the data--worth noting there are some issues with the databases
-# so there will be warnings, but this will give you ALL the data available
-# so it will take a while and further processing will be needed.
+# sometimes. these are handled with warnings, but this will give you ALL the 
+# data available so it takes a while (obviously longer the bigger the area
+# requested) and further processing will be needed to develop "final" datasets
+# for a model simulation. if the subdirectories for the various databases in
+# the output directory already exist (i.e., if you have already done the data
+# download), this step will be skipped but it will  tell the processor the 
+# location of the data files and read the metadata for further processing.
 
 processor.download(bbox, start, end, output, datasets = datasets)
 
-# Still working on this one! just need to re-organize the processing...
+# because there are so many data files, it makes sense to keep track of some
+# metadata for the files to use for parsing, etc. the following lines show
+# how the metadata are organized. the filenames are dictionary keys, and the
+# values are dictionaries containing the name of the station, the latitude,
+# the longitude, the elevation, and the length of the datasets.
+
+# GHCND (daily precip, tmax, tmin, snowdepth, snowfall, wind, pan evaporation
+
+for k, v in processor.metadata.ghcndstations.items(): 
+
+    print('\n'.join(['{} {} {}'.format(k, p, val) for p, val in v.items()]))
+
+# GSOD (daily precip, tmax, tmin, wind, dewpoint)
+
+for k, v in processor.metadata.gsodstations.items(): 
+
+    print('\n'.join(['{} {} {}'.format(k, p, val) for p, val in v.items()]))
+
+# hourly precipitation (only one dataset class)
+
+for k, v in processor.metadata.precip3240stations.items(): 
+
+    print('\n'.join(['{} {} {}'.format(k, p, val) for p, val in v.items()]))
+
+# NSRDB (legacy data (pre-1991), METSTAT model, SUNY model, observed (rare))
+
+for k, v in processor.metadata.nsrdbstations.items(): 
+
+    print('\n'.join(['{} {} {}'.format(k, p, val) for p, val in v.items()]))
