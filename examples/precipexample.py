@@ -1,4 +1,4 @@
-# example14.py
+# precipexample.py
 # 
 # David J. Lampert (djlampert@gmail.com)
 #

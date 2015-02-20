@@ -1,4 +1,4 @@
-# example10.py
+# nwisexample.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #

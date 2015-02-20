@@ -1,4 +1,4 @@
-# example11.py
+# nidexample.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #

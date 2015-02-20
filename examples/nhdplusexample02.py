@@ -1,4 +1,4 @@
-# example08.py
+# nhdplusexample02.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #

@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-#
-# Example4.py
+# intro04.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #

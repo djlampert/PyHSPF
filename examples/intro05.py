@@ -1,4 +1,4 @@
-# example05.py
+# intro05.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #

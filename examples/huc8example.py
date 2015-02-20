@@ -1,4 +1,4 @@
-# example12.py
+# huc8example.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #

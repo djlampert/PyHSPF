@@ -40,7 +40,7 @@ of examples are provided to illustrate PyHSPF usage."""
 )
 
 _s = """Python Extensions for utilizing the Hydrological 
-Simulation Program in Fortran (HSPF) Version 12.2"""
+Simulation Program in Fortran (HSPF)"""
 
 _l = """
 PyHSPF, Version {}

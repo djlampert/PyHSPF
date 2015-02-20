@@ -1,4 +1,4 @@
-# example06.py
+# specialactions01.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #

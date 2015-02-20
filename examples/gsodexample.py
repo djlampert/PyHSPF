@@ -1,4 +1,4 @@
-# example15.py
+# gsodexample.py
 # 
 # David J. Lampert (djlampert@gmail.com)
 #

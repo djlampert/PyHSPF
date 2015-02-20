@@ -84,5 +84,6 @@ Added NSRDB extractor example
 Added HBNReader class and example
 
 Version 0.1.11
-Updated some details in climateutils
+Updated some things in climateutils
 added new ClimateProcessor class plus example
+re-organized examples into categories

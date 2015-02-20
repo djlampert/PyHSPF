@@ -1,4 +1,4 @@
-# example16.py
+# nsrdbexample.py
 # 
 # David J. Lampert (djlampert@gmail.com)
 #

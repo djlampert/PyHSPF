@@ -1,4 +1,4 @@
-# example13.py
+# ghcndexample.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #

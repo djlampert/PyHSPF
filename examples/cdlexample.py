@@ -1,4 +1,4 @@
-# example09.py
+# cdlexample.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #
