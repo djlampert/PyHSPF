@@ -1,0 +1,61 @@
+RUN
+
+GLOBAL
+  Version 11 test run:  Inputting test data to WDM
+  START       1976              END    1976
+  RUN INTERP OUTPUT LEVEL    3
+  RESUME     0 RUN     1                   UNIT SYSTEM     1
+END GLOBAL
+
+FILES      
+<FILE>  <UN#>***<----FILE NAME------------------------------------------------->
+WDM        21   test.wdm
+MESSU      22   test02.ech
+           31   test02dt.s31
+           32   test02dt.s32
+           33   test02dt.s33
+           34   test02dt.s34
+           35   test02dt.s35
+           36   test02dt.s36
+           37   test02dt.s37
+END FILES
+
+OPN SEQUENCE
+      COPY         1   INDELT 01:00
+END OPN SEQUENCE
+
+COPY
+  TIMESERIES
+    # -  #  NPT  NMN ***
+    1              7
+  END TIMESERIES
+END COPY
+
+EXT SOURCES
+<-Volume-> <Srcfmt> SsysSgap<--Mult-->Tran <-Target vols> <-Grp> <-Member->  ***
+<Name>   #          tem strg<-factor->strg <Name>   #   #        <Name> # #  ***
+
+SEQ     31 HYDHR    ENGLZERO               COPY     1     INPUT  MEAN   1
+SEQ     32 HYDHR    ENGLZERO               COPY     1     INPUT  MEAN   2
+SEQ     33 HYDHR    ENGLZERO               COPY     1     INPUT  MEAN   3
+SEQ     34 HYDHR    ENGLZERO               COPY     1     INPUT  MEAN   4
+SEQ     35 HYDHR    ENGLZERO               COPY     1     INPUT  MEAN   5
+SEQ     36 HYDHR    ENGLZERO               COPY     1     INPUT  MEAN   6
+SEQ     37 HYDHR    ENGLZERO               COPY     1     INPUT  MEAN   7
+END EXT SOURCES
+
+EXT TARGETS
+<-Volume-> <-Grp> <-Member-><--Mult-->Tran <-Volume-> <Member> Tsys Tgap Amd ***
+<Name>   #        <Name> # #<-factor->strg <Name>   # <Name> #  tem strg strg***
+
+COPY     1 OUTPUT MEAN   1     0.01        WDM     39 PREC     ENGL      REPL
+COPY     1 OUTPUT MEAN   2            SUM  WDM     46 SOLR     ENGL AGGR REPL
+COPY     1 OUTPUT MEAN   3            AVER WDM    121 ATMP     ENGL AGGR REPL
+COPY     1 OUTPUT MEAN   4            AVER WDM    122 ATMP     ENGL AGGR REPL
+COPY     1 OUTPUT MEAN   5            AVER WDM    123 ATMP     ENGL AGGR REPL
+COPY     1 OUTPUT MEAN   6     0.01        WDM    131 PREC     ENGL      REPL
+COPY     1 OUTPUT MEAN   7     0.01        WDM    132 PREC     ENGL      REPL
+END EXT TARGETS
+
+END RUN
+
