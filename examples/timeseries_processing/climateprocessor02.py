@@ -40,7 +40,7 @@ processor.path_to_7z = r'C:/Program Files/7-Zip/7z.exe'
 # download the data; this step will be skipped if this has already been done
 # (from the last example) but is necessary to set the metadata
 
-processor.download(bbox, start, end, output)
+processor.download(bbox, start, end, output, datasets = ['GHCND'])
 
 # let's use GHCND to work with temperature data. let's use the metadata to 
 # find the 10 stations with the longest temperature records and then aggregate 
@@ -173,9 +173,9 @@ pyplot.show()
 # climate data for HSPF, the idea is to create a development environment for
 # new tools. HSPF is typically run with data from a single station, but there
 # is really no need for this assumption. in general, the temperature values
-# are not so critical for HSPF, so the most logical approach to me is to
-# average the largest "n" datasets together to account for spatial variability,
-# missing data, and reporting errors.
+# are not so critical for HSPF, so the most logical approach appears to be
+# averaging the datasets together to account for spatial variability, missing 
+# data, reporting errors, etc.
 
 
 

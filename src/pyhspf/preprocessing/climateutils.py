@@ -549,7 +549,7 @@ def find_nsrdb(bbox,
         print('verify that you have internet access\n')
         raise Exception
 
-    # parse through the GSOD stations and see if they're inside the box
+    # parse through the NSRDB stations and see if they're inside the box
 
     stations = []
     for line in metadata:
@@ -585,5 +585,7 @@ def find_nsrdb(bbox,
     if len(stations) == 0:
         print('\nwarning: unable to locate stations for the entire ' +
               'period of interest\n')
+
+    elif verbose: print('')
 
     return stations

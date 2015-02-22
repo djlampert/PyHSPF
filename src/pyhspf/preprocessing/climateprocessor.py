@@ -204,10 +204,11 @@ class ClimateProcessor:
                                 path_to_7z = self.path_to_7z,
                                 clean = False, plot = plot)
 
-                # save the metadata for the station
+                # save the metadata for the station if it has any data
 
-                self.metadata.add_precip3240station(filename, s)
+                if len(s.events) > 0:
 
+                    self.metadata.add_precip3240station(filename, s)
 
     def extract_NSRDB(self,
                       bbox,
@@ -434,6 +435,133 @@ class ClimateProcessor:
                             for a, m, w in zip(array, mask, weights)])
 
         return avg
+
+    def aggregate(self,
+                  database,
+                  parameter,
+                  start,
+                  end,
+                  nmax = 10,
+                  verbose = True,
+                  vverbose = False,
+                  ):
+        """
+        Aggregates data for "parameter" in the "database" from "start" to 
+        "end" for up to "nmax" series and saves the time series output to 
+        "destination."
+        """
+
+        # some error handling
+
+        if   database == 'GHCND':      
+            stations = self.metadata.ghcndstations
+        elif database == 'GSOD':       
+            stations = self.metadata.gsodstations
+        elif database == 'NSRDB':      
+            stations = self.metadata.nsrdbstations
+        elif database == 'precip3240': 
+            stations = self.metadata.precip3240stations
+        else:
+            print('error: database {} not recognized'.format(database))
+            raise
+
+        if len(stations) == 0:
+            print('error: no {} stations present in {}'.format(database,output))
+            raise
+
+        # make sure the parameter exists in the database
+
+        s = stations[[k for k in stations][0]]
+        if parameter not in s:
+            its = database, parameter
+            print('error: database {} contains no parameter {}'.format(*its))
+            print('available parameters include:', ', '.join(s.keys()))
+            raise
+
+        if start >= end:
+            print('error: end date must be after start date')
+            raise
+            
+        # find the longest "n" datasets
+
+        datalengths = []
+        for k, v in stations.items(): datalengths.append((v[parameter], k))
+
+        datalengths.sort()
+
+        if len(datalengths) > nmax: 
+            stations = [k for v, k in datalengths[-nmax:]]
+        else:                       
+            stations = [k for k in stations]
+            nmax = len(stations)
+
+        # preallocate an array to use to aggregate the data
+
+        if database in ['GSOD', 'GHCND']:
+
+            data = numpy.empty((nmax, (end-start).days))
+
+        elif database in ['NSRDB', 'precip3240']:
+
+            data = numpy.empty((nmax, (end-start).days * 24))
+
+        # iterate through the stations and fill the array
+
+        for i, k in enumerate(stations):
+
+            if verbose: 
+                
+                its = parameter, k
+                print('fetching the {} time series data from {}'.format(*its))
+
+            # read the data into the array
+
+            with open(k, 'rb') as f: s = pickle.load(f)
+
+            data[i,:] = s.make_timeseries(parameter, start = start, end = end)
+
+        if verbose: print('')
+
+        # transpose the series to switch the ordering from stations to days
+
+        data = data.transpose()
+        
+        # make a mask for missing data
+
+        mask = numpy.invert(numpy.isnan(data))
+
+        # iterate through the data/mask and average
+
+        if verbose: print('aggregating the data...\n')
+
+        averages = [row[m].mean() if row[m].size > 0 else None
+                    for row, m in zip(data, mask)]
+
+        # if there were no data for all time series for a day, fill with the
+        # previous days
+
+        if len([a for a in averages if a is None]) > 0:
+
+            missing = [i for i in range(len(averages)) if averages[i] is None]
+            print('warning: missing {} values;'.format(len(missing)) +
+                  ' trying to fill with next day')
+            
+            for i in missing:
+
+                if vverbose:
+                    if database in ['GSOD', 'GHCND']: 
+                        delta = datetime.timedelta(days = 1)
+                    elif database in ['NSRDB', 'precip3240']:
+                        delta = datetime.timedelta(hours = 1)
+                    print('filling {}'.format(start + delta * i))
+                j = 0
+                while averages[j] is None and j < len(averages) - 1: j += 1
+                if j == len(averages): averages[i] = 0
+                else:                  averages[i] = averages[j]
+
+        # return the timeseries
+
+        return averages
 
     def hourly_temperature(self, tmin, tmax):
         """Develops an hourly time series of temperatures from the daily min 

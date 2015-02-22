@@ -96,17 +96,17 @@ for coop in coops:
 
     # get the hourly timeseries data
 
-    ts = station.make_timeseries(start = s, end = e, tstep = 'hourly')
+    prec = station.make_timeseries(start = s, end = e, tstep = 'hourly')
 
-    # the data come as a list of time/value pairs (missing data are "None")
+    # make the times
 
-    times, prec = zip(*ts)
+    times = [s + i * datetime.timedelta(hours = 1) 
+             for i in range((end - start).days * 24)]
 
     # double check the data
 
     t = sum([p for p in prec if p is not None])
 
-    print('')
     print('total (in):     ', round(t, 1))
     print('avg (in/yr):    ', round(t / (e - s).days * 365.25, 1))
     print('')

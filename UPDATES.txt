@@ -85,5 +85,5 @@ Added HBNReader class and example
 
 Version 0.1.11
 Updated some things in climateutils
-added new ClimateProcessor class plus example
+added new ClimateProcessor class plus examples
 re-organized examples into categories

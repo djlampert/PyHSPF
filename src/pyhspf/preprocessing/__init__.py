@@ -2,19 +2,10 @@
 
 __all__ = [
     'build_watershed',
-    #'calculate_landuse',
-    #'climateplots',
     'climateutils',
     'crop_coefficient',
     'dbf',
-    #'download_climate',
-    #'extract_climate',
-    #'extract_cropland',
     'gagestation',
-    #'gisplots',
-    #'landuse_stats',
-    #'make_gagestations',
-    #'make_timeseries',
     'merge_shapes',
     'ncdcstations',
     'penman',
@@ -31,19 +22,10 @@ __all__ = [
     'Precip3240Station',
     'NSRDBStation',
     'climateprocessor',
-    #'PrecipStation',
-    #'TempStation',
-    #'SnowStation',
-    #'EvapStation',
-    #'WindStation',
-    #'DewStation',
-    #'SolarStation',
     ]
 
 #from .preprocessor      import preprocessor
 from .preprocess        import preprocess
-#from .climateplots      import *
-#from .gisplots          import *
 from .nwisextractor     import NWISExtractor
 from .nidextractor      import NIDExtractor
 from .nhdplusextractor  import NHDPlusExtractor
@@ -56,11 +38,4 @@ from .ncdcstations      import NSRDBStation
 from .ncdcstations      import GSODStation
 from .ncdcstations      import GHCNDStation
 from .ncdcstations      import Precip3240Station
-#from .ncdcstations      import PrecipStation
-#from .ncdcstations      import TempStation
-#from .ncdcstations      import SnowStation
-#from .ncdcstations      import EvapStation
-#from .ncdcstations      import WindStation
-#from .ncdcstations      import DewStation
-#from .ncdcstations      import SolarStation
 from .gagestation       import GageStation

@@ -581,6 +581,7 @@ class NHDPlusDelineator:
                             flowlines    = 'flowlines',
                             catchments   = 'catchments',
                             boundaryfile = 'boundary',
+                            plot         = None,
                             verbose      = True,
                             ):
         """Delineates the watershed for the provided point using the NHDPlus
@@ -729,6 +730,11 @@ class NHDPlusDelineator:
             print('{}/{}'.format(output, catchments))
             merge_shapes('{}/{}'.format(output, catchments), 
                          outputfile = self.boundary)
+
+        if plot is not None:
+
+            f = '{}/{}'.format(output, plot)
+            self.plot_delineated_watershed(point = (lon, lat), output = plot)
 
     def get_overland(self, 
                      catchpoints, 

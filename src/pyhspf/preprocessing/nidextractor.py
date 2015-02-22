@@ -171,16 +171,16 @@ class NIDExtractor:
 
         if not os.path.isfile(output + '.shp'):
 
-            r = Reader(shapefile)
+            if os.path.isfile(shapefile + '.shp'):
 
-            bboxes = [r.shape(i).bbox for i in range(len(r.records()))]
+                r = Reader(shapefile)
 
-            xmin = min([w for w,x,y,z in bboxes])
-            ymin = min([x for w,x,y,z in bboxes])
-            xmax = max([y for w,x,y,z in bboxes])
-            ymax = max([z for w,x,y,z in bboxes])
+            else:
 
-            self.extract_bbox([xmin, ymin, xmax, ymax], output)
+                print('error: shapefile {} does not exist'.format(shapefile))
+                raise
+
+            self.extract_bbox(r.bbox, output)
             
         else: print('dam shapefile exists\n')
             
