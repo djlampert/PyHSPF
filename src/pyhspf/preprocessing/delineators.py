@@ -1590,7 +1590,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
             length, slope = self.get_overland(catchpoints, closest)
 
-            if verbose: 
+            if vverbose: 
                 print('avg slope and length =', slope.mean(), length.mean())
 
             lengths[i], slopes[i] = length.mean(), slope.mean()
@@ -1605,7 +1605,7 @@ class HUC8Delineator(NHDPlusDelineator):
         # take the area weighted average of the slopes and flow lengths
 
         tot_area   = round(areas.sum(), 2)
-        avg_length = round(1000 * numpy.sum(areas * lengths) / tot_area, 1)
+        avg_length = round(numpy.sum(areas * lengths) / tot_area, 1)
         avg_slope  = round(numpy.sum(areas * slopes) / tot_area, 4)
 
         # get the centroid and the average elevation
@@ -2436,7 +2436,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
         elif not os.path.isfile(self.subbasincatchments + '.shp'):
 
-            if verbose: print('attempting to combine subbasin catchments ' +
+            if verbose: print('attempting to combine subbasin catchments' +
                               ', this may take a while...\n')
 
             for subbasin in self.subbasins:
@@ -2468,7 +2468,7 @@ class HUC8Delineator(NHDPlusDelineator):
                         if verbose: 
 
                             print('warning: unable to combine catchments ' + 
-                                  'in {}\n'.format(path))
+                                  'in {}\n'.format(subbasin))
 
             if verbose: print('successfully combined catchments in parallel ' +
                               'in {:.1f} seconds \n'.format(time.time() -start))
@@ -2616,13 +2616,13 @@ class HUC8Delineator(NHDPlusDelineator):
 
             for subbasin, comids in self.subbasins.items():
 
-                path     = '{}/{}/{}'.format(output, self.HUC8, subbasin)
-                flow     = path + '/flowlines'
-                combined = path + '/combined_flowline'
+                p        = '{}/{}/{}'.format(output, self.HUC8, subbasin)
+                flow     = p + '/flowlines'
+                combined = p + '/combined_flowline'
         
                 # make a directory for the output if needed
 
-                if not os.path.isdir(path): os.mkdir(path)
+                if not os.path.isdir(p): os.mkdir(p)
 
                 # extract the flowlines
 

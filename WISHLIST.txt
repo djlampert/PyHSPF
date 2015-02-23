@@ -14,3 +14,4 @@ interested in contributing to development/extension of these or other applicatio
 10. Integration with other watershed delineation tools (e.g., TauDEM)
 11. Variable land use with time
 12. Open Source GIS Integration
+13. Pandas integration for time series management

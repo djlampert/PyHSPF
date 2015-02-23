@@ -13,7 +13,7 @@ from pyhspf import HBNReader
 
 reader = HBNReader()
 
-filename = 'data/base.hbn'
+filename = 'base.hbn'
 
 if not os.path.isfile(filename):
     print('\nError: hbn file {} does not exist!\n'.format(filename))

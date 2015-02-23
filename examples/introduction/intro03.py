@@ -236,6 +236,16 @@ wdm = WDMUtil()
 
 hunthour = 'hunthour/huntobs.exp'
 
+# this is just a check to see the file is there
+
+if not os.path.isfile(hunthour):
+
+    print('error: file {} seems to be missing'.format(hunthour))
+    print('please update the path and re-run\n')
+    raise
+
+# the path to the wdm file to create
+
 f = 'hunting.wdm'
 
 # import from exp to wdm
@@ -311,3 +321,4 @@ hspfmodel.add_hydrology()
 
 with open('example03', 'wb') as f: pickle.dump(hspfmodel, f)
 
+print('\nsuccessfully created new model "example03."\n')

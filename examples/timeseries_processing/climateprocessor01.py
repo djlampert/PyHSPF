@@ -33,7 +33,7 @@ datasets = ['GHCND', 'GSOD', 'precip3240', 'NSRDB']
 # bounding box of interest--let's use PyShp to get this from the boundary
 # of the the Patuxent watershed, MD in the "data" folder
 
-sf = 'data/patuxent/boundary'
+sf = 'subbasin_catchments'
 
 if not os.path.isfile(sf + '.shp'):
 

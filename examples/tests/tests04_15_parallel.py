@@ -14,15 +14,6 @@ from multiprocessing import Pool, cpu_count
 
 import os, time
 
-if os.path.isdir('data'):
-
-    os.chdir('data')
-
-else:
-    print('you appear to be missing the data files in the "data"')
-    print('directory that are needed for this simulation')
-    raise
-
 # parallel or serial flag
 
 parallel = True
@@ -44,7 +35,15 @@ def run(ucifile):
 
 def main():    
 
-    os.chdir('data/tests')
+    if os.path.isdir('data'):
+
+        os.chdir('data')
+
+    else:
+        print('you appear to be missing the data files in the "data"')
+        print('directory that are needed for this simulation')
+        raise
+
     ucis = ['test{:02d}.uci'.format(i) for i in range(4,16)]
 
     # keep track of the time

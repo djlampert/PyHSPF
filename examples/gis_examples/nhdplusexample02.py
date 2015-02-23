@@ -23,7 +23,6 @@ VAAfile   = '{}/flowlineVAAs'.format(output)   # NHDPlus value added attributes
 flowfile  = '{}/flowlines'.format(output)      # HUC8 flowline shapefile
 cfile     = '{}/catchments'.format(output)     # HUC8 catchment shapefile
 elevfile  = '{}/elevations.tif'.format(output) # NED raster file
-watershed = '{}/delineated'.format(output)     # directory for delineated files
 
 # create an instance of the delineator and supply the path to the source files
 
@@ -37,11 +36,11 @@ latitude  =  38.5839
 
 # location to place the output (put it inside the existing HUC8 directory)
 
-gageoutput = '{}/01594670'.format(watershed)
+gageoutput = '{}/01594670'.format(output)
 
 # file name plot of the output
 
-plot = 'hunting_watershed'
+plot = '{}/hunting_watershed'.format(gageoutput)
 
 # extracts the catchments and flowlines for the gage's watershed and merge
 # the shapes together to make a boundary file

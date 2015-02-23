@@ -8,13 +8,13 @@ from numpy.distutils.core import Extension, setup
 from distutils            import sysconfig
 from urllib               import request
 
-_version   = '0.1.11'
+_version   = '0.1.12'
 _directory = '{}/pyhspf'.format(sysconfig.get_python_lib())
 
 _d = (
 """PyHSPF contains a library of subroutines to run the Hydrological 
-Simulation Program in Fortran (HSPF), Version 12.2, Python extensions to 
-the HSPF library, and a series of classes for building HSPF input files, 
+Simulation Program in Fortran (HSPF), Python extensions to the HSPF 
+library, and a series of classes for building HSPF input files, 
 performing simulations, and postprocessing simulation results.  
 
 HSPF requires flowline and catchment data for a stream network, land use 
@@ -36,13 +36,14 @@ computer.
 PyHSPF can be used to assimilate the data into an HSPF model, build the 
 HSPF input files, simulate the model over a period of time, and then 
 provide statistics and plots of the simulation output. A series 
-of examples are provided to illustrate PyHSPF usage."""
+of examples is provided to illustrate PyHSPF usage."""
 )
 
 _s = """Python Extensions for utilizing the Hydrological 
 Simulation Program in Fortran (HSPF)"""
 
-_l = """
+_l = (
+"""
 PyHSPF, Version {}
 
 Copyright (c) 2014, UChicago Argonne, LLC
@@ -82,7 +83,7 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
 POSSIBILITY OF SUCH DAMAGE.
-""".format(_version)
+""".format(_version))
 
 # minor issue with some windows
 
@@ -130,7 +131,7 @@ setup(
     description = _s,
     author = 'David Lampert',
     author_email = 'djlampert@gmail.com',
-    url = 'http://www.anl.gov',
+    url = 'https://github.com/djlampert/PyHSPF',
     license = _l,
     long_description = _d,
     keywords = ['hydrology', 
