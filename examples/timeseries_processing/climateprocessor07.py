@@ -1,11 +1,12 @@
-# climateprocessor06.py
+# climateprocessor07.py
 # 
 # David J. Lampert (djlampert@gmail.com)
 #
-# last updated: 02/21/2015
+# last updated: 02/28/2015
 #
-# illustrates how to use the ClimateProcessor class to aggregate climate time 
-# series from the hourly precipitation database (similar to the last example)
+# illustrates how to use the ClimateProcessor class to aggregate raw 
+# precipitation data into subbasin-specific time series using an inverse 
+# distance weighted average.
 
 import os, datetime, pickle
 
@@ -36,22 +37,17 @@ end   = datetime.datetime(2011, 1, 1)
 
 processor.path_to_7z = r'C:/Program Files/7-Zip/7z.exe'
 
-# download the data; this step will be skipped if this has already been done
-# (from the last example); alternatively it will set the metadata
+# download or set the location of the data; this shows how to use the path to
+# an existing shapefile to define the data download area
 
-processor.download(bbox, start, end, output, datasets = ['precip3240'])
+processor.download_shapefile('subbasin_catchments', start, end, output, 
+                             datasets = ['precip3240'], space = 0.5)
 
-# aggregate the data -- it's important to keep in mind missing data at many
-# of these stations and the high degree of spatial variability associated with
-# precipitation. in this example, all the data are aggregating into one series;
-# however, it may make sense to aggregate more specifically to capture this
-# variability to some degree (lots of papers on this subject).
 
 precip = processor.aggregate('precip3240', 'precip', start, end)
 
-# now these time series can be saved for later consistent with the structure
-# used by PyHSPF's HSPFModel class (start date, time step in minutes, data) 
-# this way the data are easy to access later
+#exit()
+# the time series can be saved for later consistent with the PyHSPF format
 
 name = '{}/precip3240_aggregated_precip'.format(output)
 ts = start, 60, precip

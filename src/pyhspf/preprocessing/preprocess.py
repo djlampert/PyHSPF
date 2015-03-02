@@ -29,9 +29,6 @@
 # The National Inventory of Dams (NID) shapefile available at                 #
 # http://nationalatlas.gov/metadata/dams00x020.faq.html                       #
 #                                                                             #
-# The Prinicipal Aquifers of the United States shapefile                      #
-# http://water.usgs.gov/GIS/metadata/usgswrd/XML/aquifers_us.xml              #
-#                                                                             #
 # The USGS NWIS gage station shapefile available at                           #
 # http://water.usgs.gov/GIS/metadata/usgswrd/XML/streamgages.xml              #
 #                                                                             #
@@ -51,7 +48,8 @@ from .nidextractor        import NIDExtractor
 from .delineators         import HUC8Delineator
 from .cdlextractor        import CDLExtractor
 from .build_watershed     import build_watershed
-from .download_climate    import download_climate
+from .climateprocessor    import ClimateProcessor
+#from .download_climate    import download_climate
 #from .extract_climate     import extract_climate
 
 def preprocess(network, 
@@ -69,8 +67,6 @@ def preprocess(network,
                vverbose       = False, 
                parallel       = True, 
                extract        = True, 
-#               subdivide      = True, 
-#               subbasins      = True, 
                delineate      = True,
                landuse        = True, 
                landstats      = True, 
@@ -96,7 +92,6 @@ def preprocess(network,
     NWIS     = '{}/NWIS'.format(network)
     CDL      = '{}/CDL'.format(network)
     NID      = '{}/NID'.format(network)
-    AQUI     = '{}/Aquifers/aquifrp025'.format(network)
 
     # file paths
 
@@ -226,6 +221,8 @@ def preprocess(network,
                                           output = results, 
                                           datatype = 'results')
 
+        print('')
+
     # build the watershed object
 
     if build:
@@ -242,12 +239,20 @@ def preprocess(network,
     s = datetime.datetime(start, 1, 1)
     e = datetime.datetime(end, 1, 1)
 
-    # extract climate data
+    # download and extract the climate data
 
-    if 1==2:
-    #if climate:
-        download_climate(output, HUC8, s, e)
-        extract_climate(output, HUC8, s, e)
+    if climate:
+
+        climatedata = '{}/{}/climate'.format(output, HUC8)
+
+        #extract_climate(output, HUC8, s, e)
+
+        if not os.path.isdir(climatedata): os.mkdir(climatedata)
+        climateprocessor = ClimateProcessor()
+        climateprocessor.download_shapefile(subbasinfile, s, e, climatedata,
+                                            space = 0.5)
+
+
 
     # make a directory for HSPF calculations
 

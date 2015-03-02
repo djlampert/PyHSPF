@@ -79,7 +79,8 @@ class NHDPlusExtractor:
         # NHDPlus raster processing units (RPUs) in each vector processing unit
 
         self.vpu_to_rpu = {'18':  ['18a', '18b', '18c'],
-                           '14':  ['14a', '14b', '15a', '15b'],
+                           '14':  ['14a', '14b'],
+                           '15':  ['15a', '15b'],
                            '16':  ['16a', '16b'],
                            '04':  ['04a', '04b', '04c', '04d'],
                            '02':  ['02a', '02b'],
@@ -96,8 +97,8 @@ class NHDPlusExtractor:
                            '03N': ['03a', '03b'], 
                            '03S': ['03c', '03d'], 
                            '03W': ['03e', '03f'], 
-                           '09': ['09a'],
-                           '12': ['12a', '12b', '12c', '12d'],
+                           '09':  ['09a'],
+                           '12':  ['12a', '12b', '12c', '12d'],
                            }
 
         # NHDPlus catchment data content numbers for each VPU (why???)

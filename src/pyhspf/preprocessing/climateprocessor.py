@@ -9,6 +9,8 @@
 
 import os, pickle, shutil, datetime, numpy
 
+from shapefile import Reader
+
 from .ncdcstations import ClimateMetadata
 from .climateutils import find_ghcnd
 from .climateutils import find_gsod
@@ -51,11 +53,17 @@ class ClimateProcessor:
     def get_boundaries(self, 
                        bbox = None,
                        shapefile = None, 
-                       space = 0.1,
+                       space = 0,
                        ):
         """Gets the boundaries for the plot."""
 
-        if bbox is not None: boundaries = [x for x in bbox]
+        if   bbox is not None: boundaries = [x for x in bbox]
+        elif shapefile is not None: 
+            r = Reader(shapefile)
+            boundaries = [b for b in r.bbox]
+        else:
+            print('error: no information provided')
+            raise
 
         xmin = boundaries[0] - (boundaries[2] - boundaries[0]) * space
         ymin = boundaries[1] - (boundaries[3] - boundaries[1]) * space
@@ -301,6 +309,26 @@ class ClimateProcessor:
 
         self.set_metadata(output, datasets = datasets)
 
+    def download_shapefile(self,
+                           shapefile,
+                           start, 
+                           end,
+                           output,
+                           space = 0,
+                           datasets = 'all',
+                           verbose = True,
+                           ):
+        """
+        Downloads select climate data from the GHCND, GSOD, NSRDB, and NCDC 3240
+        (hourly precipitation) datasets. Same as above but uses a shapefile as
+        the input and includes an optional space increase to the bounding box.
+        """
+
+        bbox = self.get_boundaries(shapefile = shapefile, space = space)
+
+        self.download(bbox, start, end, output, datasets = datasets,
+                      verbose = verbose)
+
     def set_metadata(self,
                      output,
                      datasets = 'all',
@@ -466,7 +494,7 @@ class ClimateProcessor:
             raise
 
         if len(stations) == 0:
-            print('error: no {} stations present in {}'.format(database,output))
+            print('error: no {} stations present in directory'.format(database))
             raise
 
         # make sure the parameter exists in the database

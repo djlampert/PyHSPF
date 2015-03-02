@@ -245,11 +245,11 @@ class CDLExtractor:
                           'requested year')
                     return
                     
+                print('')
+
             else: 
 
                 print('compressed file for {} {} exists'.format(*its))
-
-            print('')
 
             # decompress the files
 
