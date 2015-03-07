@@ -11,8 +11,6 @@ import os
 
 from pyhspf import HBNReader
 
-reader = HBNReader()
-
 filename = 'base.hbn'
 
 if not os.path.isfile(filename):

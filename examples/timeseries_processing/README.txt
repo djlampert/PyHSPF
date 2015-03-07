@@ -6,3 +6,4 @@ climateprocessor03.py -- automatically aggregates GHCND data
 climateprocessor04.py -- automatically aggregates GSOD data
 climateprocessor05.py -- automatically aggregates NSRDB data
 climateprocessor06.py -- automatically aggregates hourly precipitation data
+climateprocessor07.py -- manually aggregation using inverse distance weighting

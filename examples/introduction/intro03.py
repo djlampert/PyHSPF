@@ -6,7 +6,7 @@
 #
 # Purpose: This example shows how to build the HSPFModel and saves it up for 
 # later (calibration).  Assumes the reader has some familiarity with Python, 
-# hydrology, and has done example01 and example02.
+# hydrology, and has done intro01 and intro02.
 
 import os, datetime, pickle
 
