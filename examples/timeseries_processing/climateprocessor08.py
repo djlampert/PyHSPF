@@ -74,8 +74,7 @@ lat_index   = [f[0] for f in sf.fields].index('CenY')  - 1
 
 # iterate through the shapefile records and aggregate the timeseries
 
-if 1==2:
-#for i in range(len(sf.records())):
+for i in range(len(sf.records())):
 
     record = sf.record(i)
     comid  = record[comid_index]
@@ -104,12 +103,12 @@ if 1==2:
 
 # now let's do one simple aggregation and compare the results
 
-#simple = processor.aggregate('precip3240', 'precip', start, end)
+simple = processor.aggregate('precip3240', 'precip', start, end)
 
 # dump it
 
-#ts = start, 60, simple
-#with open('{}/simple'.format(directory), 'wb') as f: pickle.dump(ts, f)
+ts = start, 60, simple
+with open('{}/simple'.format(directory), 'wb') as f: pickle.dump(ts, f)
 
 i = filename, directory
 print('done aggregating all timeseries in {}, results in {}\n'.format(*i))
@@ -251,4 +250,3 @@ pyplot.legend(fontsize = 10, bbox_to_anchor = (-0.1, -0.24), loc = 9, ncol = 3)
 pyplot.subplots_adjust(bottom = 0.14, top = 0.93, hspace = 0.28, wspace = 0.22)
 pyplot.savefig('IDWA_aggregation')
 pyplot.show()
-
