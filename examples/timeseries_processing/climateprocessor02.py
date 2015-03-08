@@ -4,9 +4,10 @@
 #
 # last updated: 02/15/2015
 #
-# illustrates how to use the ClimateProcessor class to download and shows 
-# how to aggregate climate time series using some numpy features. The first
-# part is the same as the previous example, so there is minimal discussion.
+# illustrates how to use the ClimateProcessor class to download data from
+# various online databases and then aggregate the time series using some 
+# numpy features. The first part is the essentially the same as the previous 
+# example, so there is minimal discussion.
 
 import os, datetime, pickle
 
@@ -169,13 +170,10 @@ pyplot.show()
  
 # this example was made simply to show one way to work with the data--PyHSPF
 # has built-in methods to do the aggregation steps above more simply. however, 
-# because there are an infinite number of different ways to work with the 
+# because there are an infinite number of possible ways to aggregate the 
 # climate data for HSPF, the idea is to create a development environment for
-# new tools. HSPF is typically run with data from a single station, but there
-# is really no need for this assumption. in general, the temperature values
-# are not so critical for HSPF, so the most logical approach appears to be
-# averaging the datasets together to account for spatial variability, missing 
-# data, reporting errors, etc.
-
-
-
+# new tools. In the past, HSPF has typically been run with data from a single 
+# station, but there is really no need for this limitation. in general, the 
+# temperature values are not so critical for HSPF, so the most logical 
+# approach appears to be averaging the datasets together to account for 
+# spatial variability, missing data, reporting errors, etc.

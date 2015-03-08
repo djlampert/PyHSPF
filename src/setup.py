@@ -2,41 +2,44 @@
 This is the setup file.
 """
 
-import os, sys, io, zipfile, shutil, pickle
+import os, sys
 
 from numpy.distutils.core import Extension, setup
 from distutils            import sysconfig
-from urllib               import request
 
 _version   = '0.1.12'
 _directory = '{}/pyhspf'.format(sysconfig.get_python_lib())
 
 _d = (
-"""PyHSPF contains a library of subroutines to run the Hydrological 
+"""
+PyHSPF contains a library of subroutines to run the Hydrological 
 Simulation Program in Fortran (HSPF), Python extensions to the HSPF 
 library, and a series of classes for building HSPF input files, 
 performing simulations, and postprocessing simulation results.  
 
 HSPF requires flowline and catchment data for a stream network, land use 
-data for the stream reach subbasins, time series data of climate 
-parameters, and hydrology parameters for each land use category/subbasin.  
-These data sources (with the exception of the hydrology parameters) can be 
-supplied externally as needed (e.g., using Python extensions for 
-geographic information systems (GIS) software). Alternatively, a 
-series of preprocessing classes and routines were developed based on 
-flowline and catchment data from the National Hydrolography Dataset 
-Version 2 (NHDPlus), climate data from the National Climate Data Center, 
-and landuse data from the National Agricultural Statitistics Service (NASS)
-Cropland Data Layer (CDL). The "core" module requires NumPy, SciPy, and
-Matplotlib, and can be used for generating input files. The preprocessing 
-routines require GDAL, PyShp, and Pillow and make a series of specific
-assumptions about the location and availability of data sources on the 
-computer.
+data for the stream reach subbasins, time series of climate and hydrology
+data. A series of preprocessing classes were developed to extract data 
+from the following publically-available databases on the World Wide Web:
+
+-National Hydrography Dataset Plus Version 2 (NHDPlus)
+-National Water Information System (NWIS)
+-National Inventory of Dams (NID)
+-Cropland Data Layer (CDL)
+-National Solar Radiation Database (NSRDB)
+-Global Historical Climate Network Daily (GHCND)
+-Global Summary of the Day (GSOD)
+-Hourly Precipitation Database (DSI-3240)
+
+The "core" module requires NumPy, SciPy, and Matplotlib, and can be used to
+generate the HSPF input files. The preprocessing routines require GDAL, 
+PyShp, and Pillow.
 
 PyHSPF can be used to assimilate the data into an HSPF model, build the 
 HSPF input files, simulate the model over a period of time, and then 
 provide statistics and plots of the simulation output. A series 
-of examples is provided to illustrate PyHSPF usage."""
+of examples is provided to illustrate PyHSPF usage.
+"""
 )
 
 _s = """Python Extensions for utilizing the Hydrological 

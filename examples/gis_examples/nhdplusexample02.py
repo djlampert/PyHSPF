@@ -7,6 +7,8 @@
 # example delineates the watershed for the location of the discontinued flow
 # gage at Hunting Creek, MD.
 
+import os
+
 # pyhspf imports
 
 from pyhspf.preprocessing import NHDPlusDelineator
@@ -23,6 +25,32 @@ VAAfile   = '{}/flowlineVAAs'.format(output)   # NHDPlus value added attributes
 flowfile  = '{}/flowlines'.format(output)      # HUC8 flowline shapefile
 cfile     = '{}/catchments'.format(output)     # HUC8 catchment shapefile
 elevfile  = '{}/elevations.tif'.format(output) # NED raster file
+
+# make sure the files are in the right place
+
+if not os.path.isfile(VAAfile):
+
+    print('\nerror: file {} does not exist!'.format(VAAfile))
+    print('double-check that the path is correct\n')
+    raise
+
+if not os.path.isfile(flowfile + '.shp'):
+
+    print('\nerror: file {} does not exist!'.format(flowfile))
+    print('double-check that the path is correct\n')
+    raise
+
+if not os.path.isfile(cfile + '.shp'):
+
+    print('\nerror: file {} does not exist!'.format(cfile))
+    print('double-check that the path is correct\n')
+    raise
+
+if not os.path.isfile(elevfile):
+
+    print('\nerror: file {} does not exist!'.format(elevfile))
+    print('double-check that the path is correct\n')
+    raise
 
 # create an instance of the delineator and supply the path to the source files
 

@@ -1231,17 +1231,14 @@ class Precip3240Station:
 
         # find the first event after start
 
-        #print(self.events[-1][0])
         i = 0
         while self.events[i][0] < start: i+=1
-
-        #print(self.events[i][0])
 
         # fill in Nones until reaching the first event if it is later than 
         # the start date, otherwise use zeros
 
         t = start
-        while t < self.events[i][0]:
+        while t < self.events[i][0] and t < end:
             if self.events[0][0] > start: 
                 series.append(None)
             else: 

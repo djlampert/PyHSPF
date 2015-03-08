@@ -85,6 +85,13 @@ Added HBNReader class and example
 
 Version 0.1.11
 Updated some things in climateutils
-added new ClimateProcessor class plus examples
-re-organized examples into categories
-fixed issue with HUC8Delineator
+Added new ClimateProcessor class plus examples
+Re-organized examples into categories
+Fixed issue with HUC8Delineator
+
+Version 0.1.12
+Expanded ClimateProcessor
+Added new climate processing examples
+Added ETCalculator class
+fixed bug in Precip3240 class
+fixed bug in NHDPlusExtractor

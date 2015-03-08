@@ -218,7 +218,8 @@ def find_gsod(bbox,
     if verbose:
  
         i = bbox
-        print('\nsearching for GSOD stations in {}, {}, {}, {}...'.format(*i))
+        print('\nsearching for GSOD stations in ' +
+              '{:.4f}, {:.4f}, {:.4f}, {:.4f}...'.format(*i))
 
     xmin, ymin, xmax, ymax = bbox
 
@@ -320,7 +321,7 @@ def find_precip3240(bbox,
     if verbose: 
 
         print('\nsearching for hourly precipitation stations within ' +
-              '{}, {}, {}, {}...\n'.format(*bbox))
+              '{:.4f}, {:.4f}, {:.4f}, {:.4f}...\n'.format(*bbox))
 
     # state codes
 
@@ -463,7 +464,8 @@ def find_nsrdb(bbox,
     if verbose: 
 
         i = bbox
-        print('searching for NSRDB stations in {}, {}, {}, {}...\n'.format(*i))
+        print('searching for NSRDB stations in ' +
+              '{:.4f}, {:.4f}, {:.4f}, {:.4f}...\n'.format(*i))
 
     xmin, ymin, xmax, ymax = bbox
 

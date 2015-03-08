@@ -50,6 +50,15 @@ class ClimateProcessor:
 
         self.metadata = ClimateMetadata()
 
+    def is_number(self, n):
+        """tests if "n" is a number."""
+
+        try:
+            float(n)
+            return True
+        except:
+            return False
+
     def get_boundaries(self, 
                        bbox = None,
                        shapefile = None, 
@@ -448,35 +457,24 @@ class ClimateProcessor:
 
         return numpy.sqrt(k1**2 * dphi**2 + k2**2 * dlam**2)
 
-    def weighted_avg(self, m, weights = None):
-        """Returns the weighted average of the list of lists while ignoring 
-        missing values."""
-
-        if weights is None: weights = [1 / len(m[0]) for i in range(len(m[0]))]
-
-        array   = numpy.array([row for row in zip(*m)])
-        mask    = numpy.invert(numpy.equal(array, None))
-        weights = numpy.array([weights for l in array])
-
-        avg =  numpy.array([0 if numpy.invert(m).all() 
-                            else (a[m] * w[m]).sum() / w[m].sum()
-                            for a, m, w in zip(array, mask, weights)])
-
-        return avg
-
     def aggregate(self,
                   database,
                   parameter,
                   start,
                   end,
+                  method = None,
+                  latitude = None,
+                  longitude = None,
+                  elevation = None,
                   nmax = 10,
                   verbose = True,
                   vverbose = False,
                   ):
         """
         Aggregates data for "parameter" in the "database" from "start" to 
-        "end" for up to "nmax" series and saves the time series output to 
-        "destination."
+        "end" for up to "nmax" series and returns the time series output.
+        Optionally can perform an inverse distance-weighted average using the
+        method to 'IDWA' and providing the latitude and longitude.
         """
 
         # some error handling
@@ -496,6 +494,24 @@ class ClimateProcessor:
         if len(stations) == 0:
             print('error: no {} stations present in directory'.format(database))
             raise
+
+        # weighted average check
+
+        if method is not None:
+
+            if method not in ['IDWA']:
+                print('error: unknown weighting scheme ' +
+                      '"{}" specified'.format(weights))
+                raise
+                
+            elif latitude is None or longitude is None:
+                print('to use the distance weighted-average, the location ' +
+                      '(latitude and longitude) must be specified\n')
+                raise
+
+            elif not self.is_number(latitude) or not self.is_number(longitude):
+                print('latitude and longitude must be numeric')
+                raise                
 
         # make sure the parameter exists in the database
 
@@ -517,10 +533,12 @@ class ClimateProcessor:
 
         datalengths.sort()
 
+        # save the station file names and locations
+
         if len(datalengths) > nmax: 
-            stations = [k for v, k in datalengths[-nmax:]]
+            names = [k for v, k in datalengths[-nmax:]]
         else:                       
-            stations = [k for k in stations]
+            names = [k for k in stations]
             nmax = len(stations)
 
         # preallocate an array to use to aggregate the data
@@ -533,9 +551,13 @@ class ClimateProcessor:
 
             data = numpy.empty((nmax, (end-start).days * 24))
 
+        # locations of the stations
+
+        descriptions, lats, lons, elevs = [], [], [], []
+
         # iterate through the stations and fill the array
 
-        for i, k in enumerate(stations):
+        for i, k in enumerate(names):
 
             if verbose: 
                 
@@ -547,6 +569,38 @@ class ClimateProcessor:
             with open(k, 'rb') as f: s = pickle.load(f)
 
             data[i,:] = s.make_timeseries(parameter, start = start, end = end)
+
+            # station locations
+
+            descriptions.append(stations[k]['name'])
+            lons.append(stations[k]['longitude'])
+            lats.append(stations[k]['latitude'])
+            elevs.append(stations[k]['elevation'])
+
+        # weighting factors for inverse distance-weighted average (or other)
+
+        if method is not None:
+
+            if method == 'IDWA': 
+
+                p1 = float(longitude), float(latitude)
+
+                # find the distance between the supplied point and each station
+
+                distances = [self.get_distance(p1, (lon, lat))
+                             for lon, lat in zip(lons, lats)]
+
+                if verbose:
+
+                    print('')
+                    for i in zip(descriptions, lons, lats, distances):
+
+                        print('the distance between ' +
+                              '{} and {:.4f}, {:.4f} is {:.1f} km'.format(*i))
+
+                # use the inverse distance squared as the weighting factors
+
+                weights = numpy.array([1/d**2 for d in distances])
 
         if verbose: print('')
 
@@ -562,8 +616,17 @@ class ClimateProcessor:
 
         if verbose: print('aggregating the data...\n')
 
-        averages = [row[m].mean() if row[m].size > 0 else None
-                    for row, m in zip(data, mask)]
+        if method is None:
+
+            averages = [row[m].mean() 
+                        if row[m].size > 0 else None
+                        for row, m in zip(data, mask)]
+
+        elif method == 'IDWA':
+
+            averages = [(row[m] * weights[m]).sum() / weights[m].sum() 
+                        if row[m].size > 0 else None
+                        for row, m in zip(data, mask)]
 
         # if there were no data for all time series for a day, fill with the
         # previous days
