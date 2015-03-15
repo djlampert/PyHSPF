@@ -146,10 +146,6 @@ class ClimateProcessor:
 
                         stations.append(s)
 
-                        # save the metadata for the station
-
-                        self.metadata.add_ghcndstation(filename, s)
-
             space += 0.5
 
     def extract_gsod(self,
@@ -191,10 +187,6 @@ class ClimateProcessor:
 
                 its = self.GSOD, s.airforce
                 if plot: s.plot(output = '{}/{}'.format(*its))
-
-                # save the metadata for the station
-
-                self.metadata.add_gsodstation(filename, s)
 
     def extract_precip3240(self,
                            bbox,
@@ -252,10 +244,6 @@ class ClimateProcessor:
                 s.download_data(self.NSRDB, dates = (start, end))
                 s.plot(start = start, end = end, tstep = 'monthly',
                        output = '{}/{}'.format(self.NSRDB, s.usaf))
-
-                # save the metadata
-
-                self.metadata.add_nsrdbstation(filename, s)
 
     def download(self,
                  bbox,
@@ -380,7 +368,7 @@ class ClimateProcessor:
         # set the GSOD data
 
         if datasets == 'all' or 'GSOD' in datasets:
-
+            
             self.GSOD = '{}/GSOD'.format(output)
             if not os.path.isdir(self.GSOD):
                 print('error: GSOD data do not exist\n')

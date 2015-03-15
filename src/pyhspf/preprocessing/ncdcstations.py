@@ -1,6 +1,6 @@
-# File: ncdcstations.py
+# ncdcstations.py
 #
-# by David J. Lampert, PhD, PE (djlampert@gmail.com)
+# David J. Lampert (djlampert@gmail.com)
 #
 # Last updated: 02/15/2015
 #

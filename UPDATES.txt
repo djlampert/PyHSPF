@@ -92,6 +92,8 @@ Fixed issue with HUC8Delineator
 Version 0.1.12
 Expanded ClimateProcessor
 Added new climate processing examples
+
+Version 0.1.13
 Added ETCalculator class
 fixed bug in Precip3240 class
 fixed bug in NHDPlusExtractor

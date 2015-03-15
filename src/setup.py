@@ -7,7 +7,7 @@ import os, sys
 from numpy.distutils.core import Extension, setup
 from distutils            import sysconfig
 
-_version   = '0.1.12'
+_version   = '0.1.13'
 _directory = '{}/pyhspf'.format(sysconfig.get_python_lib())
 
 _d = (
