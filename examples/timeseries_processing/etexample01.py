@@ -30,7 +30,7 @@ if not os.path.isdir(output): os.mkdir(output)
 # start and end dates
 
 start = datetime.datetime(1980, 1, 1)
-end   = datetime.datetime(1985, 1, 1)
+end   = datetime.datetime(2010, 1, 1)
 
 # use the "subbasin_catchments" shapefile to define the data processing area
 
@@ -85,16 +85,21 @@ for k, v in processor.metadata.ghcndstations.items():
 
         data = s.make_timeseries('evaporation', start, end)
 
-        # this next step isn't necessary, but let's ignore datasets with no
-        # observations during the requested period
+        # ignore datasets with no observations during the requested period
 
         observations = [v for v in data if v is not None]
 
         if len(observations) > 0:
 
-            # add the data to the dictionary
+            # the pan evaporation data are "backward-looking;" i.e., the value
+            # for June 2 represents evaporation between midnight June 1 and
+            # midnight June 2; whereas the ETCalculator uses data that are
+            # "forward-looking;" i.e., tmin, tmax, dewpoint, wind speed for 
+            # June 2 represent values between midnight June 2 and midnight
+            # June 3; so the pan evaporation data must be shifted forward by
+            # a day for comparison. 
 
-            evaporation[v['name']] = data
+            evaporation[v['name']] = data[1:] + [None]
 
 print('')
 
@@ -115,7 +120,7 @@ calculator = ETCalculator()
 # so now we can add the daily timeseries from above
 
 calculator.add_timeseries('tmin',     'daily', start, tmin)
-calculator.add_timeseries('tmax',     'daily', start, tmin)
+calculator.add_timeseries('tmax',     'daily', start, tmax)
 calculator.add_timeseries('dewpoint', 'daily', start, dewt)
 calculator.add_timeseries('wind',     'daily', start, wind)
 calculator.add_timeseries('solar',    'daily', start, solar)
@@ -151,11 +156,15 @@ elev = sum([a * z for a, z in zip(areas, zs)]) / sum(areas)
 
 calculator.add_location(lon, lat, elev)
 
-# the calculator makes it pretty trivial to get the corresponding reference 
-# evapotranspiration (RET) time series from the Daily Penman-Monteith Equation
-# if the necessary data are available
+# it is pretty trivial to get the corresponding reference evapotranspiration 
+# (RET) time series from the Daily Penman-Monteith Equation if the necessary 
+# data are available by calling the public "penman_daily" method
 
-RET = calculator.penman_daily(start, end)
+calculator.penman_daily(start, end)
+
+# the timeseries is stored in the timeseries dictionary 
+
+RET = calculator.daily['RET']
 
 # calculate the linear regression between the Penman-Monteith model and the 
 # observed pan evaporation using scipy
@@ -217,7 +226,7 @@ for k,c in zip(evaporation, colors):
 t = subs[0].text(0.01,0.98, l, ha = 'left', va = 'top', fontsize = 9,
                  transform = subs[0].transAxes)
 
-subs[-1].xaxis.set_major_locator(dates.YearLocator())
+subs[-1].xaxis.set_major_locator(dates.YearLocator(3))
 subs[-1].xaxis.set_major_formatter(dates.DateFormatter('%Y'))
 
 subs[0].set_ylim((0, 12))

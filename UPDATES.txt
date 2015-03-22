@@ -95,5 +95,6 @@ Added new climate processing examples
 
 Version 0.1.13
 Added ETCalculator class
+Added evapotranspiration calculation examples
 fixed bug in Precip3240 class
 fixed bug in NHDPlusExtractor
