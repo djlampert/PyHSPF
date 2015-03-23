@@ -325,7 +325,9 @@ for t in (subs[0].yaxis.get_ticklabels() +
 
 for sub in subs[-2:]: sub.yaxis.set_major_locator(ticker.MaxNLocator(6))
 
+filename = '{}/hourly_penman_monteith'.format(output)
+
 pyplot.suptitle('Penman-Monteith Calculation')
 pyplot.subplots_adjust(hspace = 0.3, top = 0.95)
-pyplot.savefig('hourly_penman_monteith')
+pyplot.savefig(filename)
 pyplot.show()
