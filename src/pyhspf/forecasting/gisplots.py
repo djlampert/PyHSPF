@@ -18,7 +18,7 @@ from itertools               import chain
 from shapefile               import Reader, Writer
 from PIL                     import Image, ImageDraw
 
-from pyhspf.preprocessing.merge_shapes       import format_shape
+from pyhspf.preprocessing.vectorutils        import format_shape
 from pyhspf.preprocessing.rasterutils        import get_pixel, get_raster
 from pyhspf.preprocessing.rasterutils        import get_raster_in_poly
 from pyhspf.preprocessing.rasterutils        import get_raster_on_poly

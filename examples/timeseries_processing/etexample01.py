@@ -162,9 +162,10 @@ calculator.add_location(lon, lat, elev)
 
 calculator.penman_daily(start, end)
 
-# the timeseries is stored in the timeseries dictionary 
+# the RET estimates are stored in the calculator's daily timeseries dictionary
+# with the start date and data (the timestep is 1440 minutes = 1 day)
 
-RET = calculator.daily['RET']
+start, RET = calculator.daily['RET']
 
 # calculate the linear regression between the Penman-Monteith model and the 
 # observed pan evaporation using scipy

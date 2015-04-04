@@ -98,3 +98,6 @@ Added ETCalculator class
 Added evapotranspiration calculation examples
 fixed bug in Precip3240 class
 fixed bug in NHDPlusExtractor
+
+Version 0.1.14
+Added crop coefficient to ETCalculator and examples

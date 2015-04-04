@@ -25,7 +25,7 @@ from .dbfutils               import read_dbf
 from .rasterutils            import get_raster_table
 from .rasterutils            import get_degree_transform
 from .rasterutils            import get_raster
-from .merge_shapes           import merge_shapes
+from .vectorutils            import merge_shapes
 
 from .flowline import Flowline
 

@@ -18,7 +18,7 @@ from itertools               import chain
 from shapefile               import Reader, Writer
 from PIL                     import Image, ImageDraw
 
-from .merge_shapes       import format_shape
+from .vectorutils        import format_shape
 from .rasterutils        import get_pixel, get_raster
 from .rasterutils        import get_raster_in_poly
 from .rasterutils        import get_raster_on_poly

@@ -12,9 +12,14 @@ import os, sys, shutil, pickle, datetime, time, math
 
 from multiprocessing import Process, Queue, cpu_count
 
+from shapefile                         import Reader, Writer
+
 from pyhspf import HSPFModel
 from pyhspf import Postprocessor
 from pyhspf import hspf
+from pyhspf.preprocessing.vectorutils import merge_shapes
+from pyhspf.forecasting.gisplots    import plot_gage_subbasin
+from pyhspf.forecasting.gisplots    import plot_gage_segments
 
 class HydrologyErrors:
     """A class to store statistics for calibrating an HSPF model."""
@@ -1605,10 +1610,6 @@ class HydrologyCalibrator:
     def plot_gage_subbasin(self, hspfmodel):
         """Makes a plot of the subbasin area."""
 
-        from shapefile                         import Reader, Writer
-        from pyhspf.preprocessing.merge_shapes import merge_shapes
-        from pyhspf.preprocessing.gisplots     import plot_gage_subbasin
-
         folder = (self.directory, self.HUC8, self.gageid)
 
         subbasinfile = '{0}/{1}/calibrations/{2}/subbasins'.format(*folder)
@@ -1703,8 +1704,6 @@ class HydrologyCalibrator:
 
     def plot_gage_landuse(self, hspfmodel):
         """Makes plots of the landuse for a gage."""
-
-        from pyhspf.preprocessing.gisplots import plot_gage_segments
 
         if hspfmodel.landuseyear is None: 
             subbasin = hspfmodel.subbasins[self.flowgages[self.gageid]]

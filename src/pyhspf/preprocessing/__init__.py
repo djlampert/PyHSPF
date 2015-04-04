@@ -1,15 +1,15 @@
 #!/usr/bin/python
 
 __all__ = [
-    'build_watershed',
+    #'build_watershed',
     'climateutils',
-    'crop_coefficient',
-    'dbf',
-    'gagestation',
-    'merge_shapes',
-    'ncdcstations',
-    'penman',
-    'preprocess',
+    #'crop_coefficient',
+    'dbfutils',
+    #'gagestation',
+    'vectorutils',
+    #'ncdcstations',
+    #'penman',
+    #'preprocess',
     'rasterutils',
     'NWISExtractor',
     'CDLExtractor',
@@ -17,10 +17,10 @@ __all__ = [
     'NHDPlusExtractor',
     'NHDPlusDelineator',
     'HUC8Delineator',
-    'GHCNDStation',
-    'GSODStation',
-    'Precip3240Station',
-    'NSRDBStation',
+    #'GHCNDStation',
+    #'GSODStation',
+    #'Precip3240Station',
+    #'NSRDBStation',
     'climateprocessor',
     ]
 

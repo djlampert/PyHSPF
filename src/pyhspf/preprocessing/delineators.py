@@ -15,8 +15,8 @@ from shapefile               import Reader, Writer
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pyhspf.core             import Watershed, Subbasin
 
-from .merge_shapes import format_shape, combine_shapes, merge_shapes
-from .rasterutils  import get_raster, get_raster_on_poly, get_raster_in_poly
+from .vectorutils import format_shape, combine_shapes, merge_shapes
+from .rasterutils import get_raster, get_raster_on_poly, get_raster_in_poly
 
 class NHDPlusDelineator:
     """A class to delineate a watershed using the NHDPlus data."""

@@ -16,6 +16,11 @@ from pyhspf.forecasting.forecastplots import plot_calibration
 from pyhspf.forecasting.forecastplots import plot_dayofyear
 from pyhspf.forecasting.forecastplots import plot_waterbudget
 
+from shapefile                         import Reader, Writer
+from pyhspf.preprocessing.vectorutils  import merge_shapes
+from pyhspf.forecasting.gisplots     import plot_gage_subbasin
+from pyhspf.forecasting.gisplots     import plot_gage_segments
+
 class Forecaster:
     """A class to perform hindcasts for HSPF models."""
 
@@ -641,10 +646,6 @@ class Forecaster:
     def plot_gage_subbasin(self, hspfmodel, folder):
         """Makes a plot of the subbasin area."""
 
-        from shapefile                         import Reader, Writer
-        from pyhspf.preprocessing.merge_shapes import merge_shapes
-        from pyhspf.preprocessing.gisplots     import plot_gage_subbasin
-
         subbasinfile  = '{}/subbasins'.format(folder)
         boundaryfile  = '{}/boundary'.format(folder)
         flowfile      = '{}/flowlines'.format(folder)
@@ -734,8 +735,6 @@ class Forecaster:
 
     def plot_gage_landuse(self, hspfmodel, folder):
         """Makes plots of the landuse for a gage."""
-
-        from pyhspf.preprocessing.gisplots import plot_gage_segments
 
         if hspfmodel.landuseyear is None: 
             subbasin = hspfmodel.subbasins[self.flowgages[self.gageid]]

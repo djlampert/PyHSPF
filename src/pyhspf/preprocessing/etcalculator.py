@@ -2,7 +2,7 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# last updated: 03/15/2015
+# last updated: 03/28/2015
 #
 # contains the ETCalculator class that can be used to compute evapotranspiration
 # time series from other time series with models including the daily and hourly
@@ -11,7 +11,6 @@
 import os, pickle, datetime, calendar, numpy
 
 from matplotlib import pyplot, dates, ticker
-from .crop_coefficient import calculate_cropPET
 
 class ETCalculator:
     """
@@ -23,6 +22,8 @@ class ETCalculator:
     def __init__(self):
 
         # create some dictionary structures to store important timeseries
+        
+        # daily time series
 
         self.daily = {
             'tmin':        None,
@@ -35,6 +36,8 @@ class ETCalculator:
             'RET':         None,
             }
 
+        # hourly time series
+
         self.hourly = {
             'temperature': None,
             'dewpoint':    None,
@@ -44,6 +47,8 @@ class ETCalculator:
             'RET':         None,
             }
 
+        # day of the year data
+
         self.dayoftheyear = {
             'temperature': None,
             'dewpoint':    None,
@@ -52,6 +57,13 @@ class ETCalculator:
             'solar':       None,
             'RET':         None,
             }
+
+        self.dailyKcs   = {}  # crop coefficient time series
+        self.dailyPETs  = {}  # crop daily PET time series
+        self.hourlyPETs = {}  # crop hourly PET time series
+        self.crops      = {}  # crop coefficient/growth information
+
+        # location
 
         self.longitude = None
         self.latitude  = None
@@ -100,6 +112,20 @@ class ETCalculator:
             raise
             
         d[tstype] = start, data
+
+    def add_crop(self,
+                 name,
+                 plant,
+                 emergence,
+                 growth,
+                 full,
+                 late,
+                 Ki,
+                 Km,
+                 Kl,
+                 ):
+
+        self.crops[name] = plant, emergence, growth, full, late, Ki, Km, Kl
 
     def time_round(self, d):
         """Rounds a datetime.datetime instance to the nearest hour."""
@@ -765,9 +791,7 @@ class ETCalculator:
         RET = ((0.408 * (rnet - soil) * d  + Cn * u2 / T * (Ps - Pv) * g) / 
                (d + g * (1 + Cd * u2)))
 
-        self.daily['RET'] = RET
-
-        return RET
+        self.daily['RET'] = start, RET
 
     def penman_hourly(self,
                       start,
@@ -914,13 +938,11 @@ class ETCalculator:
         RET = ((0.408 * (rnet - soil) * d  + Cn * u2 / T * (Ps - Pv) * g) / 
                (d + (g * (1 + Cd * u2))))
 
-        self.hourly['RET'] = RET
+        self.hourly['RET'] = start, RET
 
         if verbose: 
 
             print('finished calculating reference evapotranspiration\n')
-
-        return RET
 
     def average(self, values):
         """Returns the average values of the list."""
@@ -1287,199 +1309,189 @@ class ETCalculator:
 
         if show: pyplot.show()
 
-def plot_hourlyET(HUC8, start, end, evaporations, hETs, temp, dewpoint, wind, 
-                  solar, title = None, totals = True, labels = None, 
-                  colors = None, axsize = 11, fill = False, 
-                  output = None, show = False, verbose = True):
+    def calculate_daily_crop(self, 
+                             crop, 
+                             start, 
+                             end,
+                             ):
+        """
+        Calculates the daily crop coefficient for a given crop from the start
+        date to the end date
+        """
 
-    if verbose: print('plotting hourly evapotranspiration\n')
+        # error handling
 
-    # figure out the average conditions for each day of the water year
+        if crop not in self.crops:
 
-    dates = [start + datetime.timedelta(hours = 1) * i 
-             for i in range((end-start).days * 24)]
+            print('error: no data for crop {} in the calculator\n'.format(crop))
+            raise
 
-    solar = dayofyear(dates, solar)
-    temp  = dayofyear(dates, temp)
-    hETs  = [[24 * p for p in dayofyear(dates, hET)] for hET in hETs]
+        p, Le, Lg, Lm, Ll, Ki, Km, Kl = self.crops[crop]
 
-    # these are daily values
+        # check the crop lengths are less than a year
 
-    dates = [start + datetime.timedelta(days = 1) * i 
-             for i in range((end - start).days)]
+        if sum(((datetime.datetime(start.year, p.month, p.day) - start).days,
+                Le, Lg, Lm)) > 365:
+            print('error: provided crop growth periods are more than a year\n')
+            raise
 
-    dewpoint = dayofyear(dates, dewpoint)
-    wind     = dayofyear(dates, wind)
+        # construct the crop coefficient time series
 
-    # day of year times (2004 is a leap year)
+        Kc = []
 
-    times = [datetime.datetime(2003, 10, 1) + datetime.timedelta(days = 1) * i 
-             for i in range(366)]
+        # slope of the crop coefficient curve during the growth phase
 
-    # make the plot
+        Ksg = (Km - Ki) / Lg
 
-    fig = pyplot.figure(figsize = (8,8))
-    
-    subs =  [pyplot.subplot2grid((6,1), (0,0), rowspan = 3)]
-    subs += [pyplot.subplot2grid((6,1), (i,0), sharex = subs[0]) 
-             for i in (3, 4, 5)]
+        # slope of the crop coefficient curve during the late phase
 
-    if title is None:
-        v = HUC8, 'Evapotranspiration'
-        subs[0].set_title('{} {}'.format(*v), size = 14)
-    else: subs[0].set_title(title, size = 14)
+        Ksl = (Kl - Km) / Ll
 
-    # evaporation and potential evapotranspiration
+        # iterate through to the end
 
-    i = 0
+        delta = datetime.timedelta(days = 1)
+        t = start
+        while t < end:
 
-    # total annual evaporation
+            # figure out the dates for the first year
 
-    if labels is None: labels = ['Penman Equation' for h in hETs]
+            plant     = datetime.datetime(t.year, p.month, p.day)
+            emergence = plant + datetime.timedelta(days = Le)
+            growth    = emergence + datetime.timedelta(days = Lg)
+            full      = growth + datetime.timedelta(days = Lm)        
+            harvest   = full + datetime.timedelta(days = Ll)
+            last      = datetime.datetime(t.year + 1, 1, 1)
 
-    if totals:
+            # use Ki until the after emergence
 
-        tots = ['\n{}: {:4.0f} mm'.format(l, sum(e)) 
-                for l, e in zip(labels, hETs)]
+            while t < emergence:
+                Kc.append(Ki)
+                t += delta
 
-        # snip the first break
+            # scale up K to Km linearly during the growth phase
 
-        tots[0] = tots[0][1:]
+            while t < growth:
+                Kc.append(Kc[-1] + Ksg)
+                t += delta
 
-    else: tots = ['{} Annual Total: {:4.0f} mm'.format(labels[0], sum(hETs[0]))]
+            # append Km through the full growth period
 
-    # colors
+            while t < full:
+                Kc.append(Km)
+                t += delta
 
-    #color_codes = {'Empty':       (255, 255, 255),  # empty
-    #               'Corn':        (255, 211,   0),  # corn 
-    #               'Soybeans':    ( 38, 112,   0),  # soybeans
-    #               'Other grain': (255, 221, 165),  # other grain
-    #               'Developed':   (155, 155, 155),  # developed
-    #               'Wetland':     ( 76, 112, 163),  # water/wetland
-    #               'Forest':      (147, 204, 147),  # forest
-    #               'Alfalfa':     (255, 165, 226),  # hay/alfalfa
-    #               'Fallow':      (191, 191, 119),  # fallow
-    #               'Pasture':     (232, 255, 191),  # pasture/grass
-    #               'Other':       (  0,   0,   0)   # other
-    #               }
-    color_codes = {'cereals':     (255, 211,   0),  # corn 
-                   'legumes':     ( 38, 112,   0),  # soybeans
-                   'alfalfa':     (255, 165, 226),  # hay/alfalfa
-                   'wetland':     ( 76, 112, 163),  # water/wetland
-                   'fallow':      (191, 191, 119),  # fallow
-                   'pasture':     (232, 255, 191),  # pasture/grass
-                   'others':      (  0,   0,   0)   # other
-                   }
+            # scale down K to Kl through the late growth period (until harvest)
 
-    if colors is None:
-        colors = [color_codes[crop] 
-                  if crop in color_codes else color_codes['others']
-                  for crop in labels]
-        colors = [[r / 255, g / 255, b / 255] for r, g, b in colors]
+            while t < harvest:
+                Kc.append(Kc[-1] + Ksl)
+                t += delta
 
-    for hET, c, l in zip(hETs, colors, labels):
-        subs[i].plot_date(times, hET, color = c, lw = 1., fmt = '-', label = l)
-        if fill:
-            subs[i].fill_between(times, 0, hET, color = c, alpha = 0.3)
+            # use Ki after the harvest
 
-    fmts = ['s', '+', '*', 'o']
+            while t < last:
+                Kc.append(Ki)
+                t += delta
 
-    for item, fmt, color in zip(evaporations.items(), fmts, colors):
-        k, v = item
-        evaporation = dayofyear(dates, v.make_timeseries(start, end))
-        if len([e for e in evaporation if e is not None]) > 0:
-            subs[i].plot_date(times, evaporation, fmt = fmt,
-                              markerfacecolor = 'None', markersize = 4,
-                              markeredgecolor = color,
-                              label = k + ' evaporation')
+        self.dailyKcs[crop] = start, Kc
 
-            if totals:
-                tot = sum([e for e in evaporation if e is not None])
-                tots.append('\n{}: {:4.0f} mm'.format(k, tot))
+    def daily_PET(self,
+                  crop,
+                  start,
+                  end,
+                  ):
+        """
+        calculates a daily potential evapotranspiration time series for 
+        a given crop.
+        """
 
-            else:
+        # make sure crop data available
 
-                # calculate the linear regression between April 1 and October 31
-                # for the reference ET versus the pan evaporation to see the 
-                # goodness of fit and estimate the pan coefficient
+        if crop not in self.crops:
+            print('error: no data for crop {} in the calculator\n'.format(crop))
+            raise
 
-                xs = [x for t, x in zip(times, evaporation) 
-                      if 3 < t.month and t.month < 11] 
-                ys = [y for t, y in zip(times, hETs[0]) 
-                      if 3 < t.month and t.month < 11] 
+        # get the daily RET
 
-                # get the linear regression
+        if self.daily['RET'] is None:
+            print('daily reference evapotranspiration time series ' +
+                  'not available\n')
+        
+            try: 
+                print('attempting to calculate the required time series\n')
+                self.penman_daily(start, end)
+            except:
+                print('insufficient information provided: either calculate ' +
+                      'and supply daily reference ET or supply the other ' +
+                      'necessary input timeseries (tmin, tmax, dewpoint, ' +
+                      'solar radiation, wind speed)\n')
+                raise
 
-                m, b, r, p, std_err = stats.linregress(xs, ys)
+        # make sure the time series are aligned
+
+        if self.daily['RET'][0] != start:
+            print('error: start date for the reference evapotranspiration ' +
+                  'is different than the supplied start date\n')
+            raise
             
-                # add it to the text box
+        # calculate the daily crop coefficient
+        
+        self.calculate_daily_crop(crop, start, end)
 
-                its = k, m, b, r**2
-                t = '\n{0}: y={1:.2f}x+{2:1.2f}; r\u00B2={3:.2f}'.format(*its)
-                tots.append(t)
+        # multiply the daily crop timeseries with the daily ET to get PET
 
-    subs[i].set_ylabel('Evaporation\n(mm)', color = 'green', size = axsize, 
-                       multialignment = 'center')
-    subs[i].legend(fontsize = 8, loc = 'upper left')
+        PET = [k * et for k, et in 
+               zip(self.daily['RET'][1], self.dailyKcs[crop][1])]
 
-    t = ''.join(tots)
-    subs[i].text(0.98, 0.99, t, ha = 'right', va = 'top', 
-                 transform = subs[i].transAxes, size = 8)
+        # add the PET timeseries to the dictionary structure
 
-    subs[i].tick_params(axis = 'y', colors = 'green', size = 9)
+        self.dailyPETs[crop] = start, PET
 
-    # temperature and dewpoint
+    def hourly_PET(self,
+                   crop,
+                   start,
+                   end,
+                   ):
+        """
+        calculates an hourly potential evapotranspiration time series for 
+        a given crop.
+        """
 
-    i = 1
+        if crop not in self.crops:
+            print('error: no data for crop {} in the calculator\n'.format(crop))
+            raise
 
-    subs[i].plot_date(times, temp, fmt = '-', color = 'red', lw = 0.5, 
-                      label = 'temperature')
-    subs[i].plot_date(times, dewpoint, fmt = '-', color = 'green', lw = 0.5, 
-                      label = 'dewpoint')
-    subs[i].set_ylabel('Temperature\n(\u00B0C)', size = axsize, color = 'red',
-                       multialignment = 'center')
-    subs[i].tick_params(axis = 'y', colors = 'red', size = 9)
+        if self.hourly['RET'] is None:
+            print('hourly reference evapotranspiration time series ' +
+                  'not available\n')
+            try: 
+                print('attempting to calculate the required time series\n')
+                self.penman_hourly(start, end)
+            except:
+                print('insufficient information provided: either calculate ' +
+                      'and supply hourly reference ET or supply the other ' +
+                      'necessary input timeseries (temperature, dewpoint, ' +
+                      'solar radiation, wind speed)\n')
+                raise
 
-    subs[i].legend(fontsize = 8, loc = 'lower right')
+        if self.hourly['RET'][0] != start:
+            print('error: start date for the reference evapotranspiration ' +
+                  'is different than the supplied start date\n')
+            raise
+            
+        # calculate the daily crop coefficient
+        
+        self.calculate_daily_crop(crop, start, end)
 
-    # average daily wind speed
+        # disaggregate daily Kc to hourly and use an array
 
-    i = 2
+        Kc = numpy.array([k for k in self.dailyKcs[crop][1] for i in range(24)])
+        
+        # calculate the PET
 
-    subs[i].plot_date(times, wind, fmt = '-', color = 'purple', lw = 0.5, 
-                      label = 'wind')
-    subs[i].tick_params(axis = 'y', colors = 'purple', size = 9)
-    subs[i].set_ylabel('Wind Speed\n(m/s)', color = 'purple', size = axsize, 
-                       multialignment = 'center')
-    subs[i].set_ylim([0, subs[i].get_ylim()[1]])
+        RET = numpy.array([e for e in self.hourly['RET'][1]])
 
-    # daily solar radiation
+        PET = Kc * RET
 
-    i = 3
+        # store for later
 
-    subs[i].plot_date(times, solar, fmt = '-', color = 'orange', lw = 0.5,
-                      label = 'solar')
-    subs[i].tick_params(axis = 'y', colors = 'orange', size = 9)
-    subs[i].set_ylabel('Solar Radiation\n(kW hr/m\u00B2/day)', color = 'orange',
-                       multialignment = 'center', size = axsize)
-    subs[i].set_ylim([0, subs[i].get_ylim()[1]])
-
-    # ticks
-
-    for sub in subs[:-1]: 
-        for t in sub.xaxis.get_ticklabels(): t.set_visible(False)
-
-    subs[-1].set_xlabel('Water Year')
-    subs[-1].xaxis.set_major_locator(MonthLocator())
-    for s in subs[1:]: 
-        s.yaxis.set_major_locator(MaxNLocator(5))
-        for t in s.yaxis.get_ticklabels(): t.set_fontsize(9)
-    labels = [t.get_text() for t in subs[-1].get_xticklabels()]
-    labels = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar',
-              'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
-    subs[-1].set_xticklabels(labels, size = 9)
-
-    pyplot.tight_layout()
-    if output is not None: pyplot.savefig(output)
-
-    if show: pyplot.show()
+        self.hourlyPETs[crop] = start, [e for e in PET]

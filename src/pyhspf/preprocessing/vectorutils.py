@@ -1,4 +1,4 @@
-# Merge shapes in a shapefile
+# Various utility functions for manipulating vector GIS data
 #
 # David J. Lampert, PhD, PE
 #

@@ -11,4 +11,5 @@ climateprocessor08.py -- automatic aggregation using inverse distance weighting
 etcalculator01.py     -- daily reference ET calculation
 etcalculator02.py     -- hourly reference ET calculation over short time
 etcalculator03.py     -- hourly reference ET calculation over long time
-etcalculator04.py     -- hourly crop-specific potential ET calculation
+etcalculator04.py     -- daily crop-specific potential ET calculation
+etcalculator05.py     -- hourly crop-specific potential ET calculation

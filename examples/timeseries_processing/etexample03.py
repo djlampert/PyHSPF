@@ -131,7 +131,7 @@ calculator.penman_hourly(start, end)
 
 # save the time series for later (i.e., to add to an HSPF Model)
 
-RET = [e for e in calculator.hourly['RET']]
+RET = [e for e in calculator.hourly['RET'][1]]
 
 data = start, 60, RET
 filename = '{}/hourlyRET'.format(output)

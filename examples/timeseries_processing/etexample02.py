@@ -8,7 +8,7 @@
 # reference evapotranspiration from the other time series after using the
 # ClimateProcessor class to extract and aggregate the climate data from the
 # World Wide Web. the first part is really the same as the daily example, 
-# with the differences coming at the end. the script consists of six parts: 
+# with the differences coming at the end. the script consists of five parts: 
 #
 #    1. download and aggregate climate data
 #    2. get pan evaporation data
@@ -184,10 +184,10 @@ calculator.add_timeseries('solar', 'hourly', start, solar)
 calculator.penman_hourly(start, end)
 calculator.penman_daily(start, end)
 
-# create pointers to the time series
+# create pointers to the time series in the etcalculator's dictionaries
 
-RET  = calculator.hourly['RET']
-dRET = calculator.daily['RET']
+start, RET  = calculator.hourly['RET']
+start, dRET = calculator.daily['RET']
 
 # aggregate the hourly back to daily
 
@@ -254,10 +254,15 @@ for k,c in zip(evaporation, colors):
                       markerfacecolor = 'None', markeredgecolor = c, 
                       markersize = 6, label = k)
 
-    # compare the model data (have to shift the data to compare)
-    # get the linear regression
+    # compare the model data (have to shift the data to compare) and remove 
+    # missing values to get the linear regression
 
-    m, b, r, p, stderr = linregress(hRET[:-1], evap[1:])
+    model = [m for m,o in zip(hRET[:-1], evap[1:]) 
+             if m is not None and o is not None]
+    data  = [o for m,o in zip(hRET[:-1], evap[1:]) 
+             if m is not None and o is not None]
+             
+    m, b, r, p, stderr = linregress(model, data)
 
     # add a label with the correlation and pan coefficient
 

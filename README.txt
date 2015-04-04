@@ -1,11 +1,11 @@
-PyHSPF, Version 0.1.13
-last updated: 03/22/2015
+PyHSPF, Version 0.1.14
+last updated: 03/27/2015
 Developed by David J. Lampert and May M. Wu, Argonne National Laboratory
 
 Summary: PyHSPF contains a library of subroutines to run the Hydrological 
-Simulation Program in Fortran (HSPF), Version 12.2, Python extensions to 
-the HSPF library, and classes for building the required input files, 
-performing simulations, and postprocessing simulation results.  
+Simulation Program in Fortran (HSPF) Python extensions to the HSPF library, 
+and classes for building the required input files, performing simulations, 
+and postprocessing simulation results.  
 
 HSPF requires flowline and catchment data for a stream network, land use 
 data for the stream reach subbasins, time series data of climate 
@@ -44,18 +44,17 @@ Python Shapefile Library (PyShp)
 Python Imaging Library (Pillow)
 7-zip
 
-Installation: Extract the source zip files, then open a command prompt,
-navigate to the PyHSPF directory, and run "python setup.py install." 
-A few pre-built distributions are also provided for Windows, although
-these cannot be guaranteed to port to different machines. The binaries 
-can be rebuilt using the open source GNU compiler collection (other 
-compilers may work but are untested). The HSPF13 folder contains the 
-source code including some minor modifications needed to simplify the 
-compilation. Assuming gfortran and gcc are available as environment 
-variables, the HSPF library can be rebuilt by navigating as before, 
-running "python setup.py build," and then (as adminstrator) 
-"python setup.py install." Please report any issues encountered with
-the installation or running the example files.
+Installation: A few pre-built distributions are provided for Windows at the 
+Python Package Index (PyPI), although these cannot be guaranteed to port to 
+different machines. The HSPF library and associated PyHSPF code can be 
+rebuilt using the open source GNU compiler collection (other compilers may 
+work but are untested). The HSPF13 folder contains the HSPF source code 
+including some minor modifications needed to simplify the compilation. 
+Assuming gfortran and gcc are available as environment variables, the HSPF 
+library can be built by navigating to the PyHSPF src folder, running 
+"python setup.py build," and then (as adminstrator) "python setup.py install." 
+Please report any issues encountered with the compilation, installation or 
+running the example files.
 
 Testing: Open the Python interpreter (from a command prompt simply type 
 "python"). Then try "import pyhspf"; the base Fortran subroutines can be
