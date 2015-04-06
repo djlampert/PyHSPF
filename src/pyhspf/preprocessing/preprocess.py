@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-#
 ###############################################################################
 #                                                                             #
 # Python Upper Mississippi River Basin HSPF Preprocessor                      #
@@ -38,19 +36,20 @@
 #                                                                             #
 ###############################################################################
 
-import os, time, datetime
+import os, time, pickle, datetime
+
+from shapefile import Reader
 
 # local imports
 
-from .nhdplusextractor    import NHDPlusExtractor
-from .nwisextractor       import NWISExtractor
-from .nidextractor        import NIDExtractor
-from .delineators         import HUC8Delineator
-from .cdlextractor        import CDLExtractor
-from .build_watershed     import build_watershed
-from .climateprocessor    import ClimateProcessor
-#from .download_climate    import download_climate
-#from .extract_climate     import extract_climate
+from .nhdplusextractor import NHDPlusExtractor
+from .nwisextractor    import NWISExtractor
+from .nidextractor     import NIDExtractor
+from .delineators      import HUC8Delineator
+from .cdlextractor     import CDLExtractor
+from .build_watershed  import build_watershed
+from .climateprocessor import ClimateProcessor
+from .etcalculator     import ETCalculator   
 
 def preprocess(network, 
                output, 
@@ -245,14 +244,450 @@ def preprocess(network,
 
         climatedata = '{}/{}/climate'.format(output, HUC8)
 
-        #extract_climate(output, HUC8, s, e)
-
         if not os.path.isdir(climatedata): os.mkdir(climatedata)
         climateprocessor = ClimateProcessor()
         climateprocessor.download_shapefile(subbasinfile, s, e, climatedata,
                                             space = 0.5)
 
+        # make directories for hourly and daily aggregated timeseries
 
+        hourly = '{}/hourly'.format(climatedata)
+        daily  = '{}/daily'.format(climatedata)
+
+        if not os.path.isdir(hourly): os.mkdir(hourly)
+        if not os.path.isdir(daily):  os.mkdir(daily)
+
+        # aggregate the daily GSOD tmin, tmax, dewpoint, and wind data
+
+        tmin = '{}/tmin'.format(daily)
+        tmax = '{}/tmax'.format(daily)
+        dewt = '{}/dewpoint'.format(daily)
+        wind = '{}/wind'.format(daily)
+
+        if not os.path.isfile(tmin):
+            ts = s, 1440, climateprocessor.aggregate('GSOD', 'tmin', s, e)
+            with open(tmin, 'wb') as f: pickle.dump(ts, f)
+        if not os.path.isfile(tmax):
+            ts = s, 1440, climateprocessor.aggregate('GSOD', 'tmax', s, e)
+            with open(tmax, 'wb') as f: pickle.dump(ts, f)
+        if not os.path.isfile(dewt):
+            ts = s, 1440, climateprocessor.aggregate('GSOD', 'dewpoint', s, e)
+            with open(dewt, 'wb') as f: pickle.dump(ts, f)
+        if not os.path.isfile(wind):
+            ts = s, 1440, climateprocessor.aggregate('GSOD', 'wind', s, e)
+            with open(wind, 'wb') as f: pickle.dump(ts, f)
+
+        # aggregate the daily GHCND snowfall and snowdepth data
+
+        snowfall  = '{}/snowfall'.format(daily)
+        snowdepth = '{}/snowdepth'.format(daily)
+
+        if not os.path.isfile(snowfall):
+            ts = s, 1440, climateprocessor.aggregate('GHCND', 'snowfall', s, e)
+            with open(snowfall, 'wb') as f: pickle.dump(ts, f)
+        if not os.path.isfile(snowdepth):
+            ts = s, 1440, climateprocessor.aggregate('GHCND', 'snowdepth', s, e)
+            with open(snowdepth, 'wb') as f: pickle.dump(ts, f)
+
+        # find stations with pan evaporation data from GHCND
+
+        evapstations = []
+        for k, v in climateprocessor.metadata.ghcndstations.items():
+
+            # check if the station has any evaporation data
+
+            if v['evap'] > 0:
+                
+                # open up the file and get the data
+
+                with open(k, 'rb') as f: station = pickle.load(f)
+
+                data = station.make_timeseries('evaporation', s, e)
+
+                # ignore datasets with no observations during the period
+
+                observations = [v for v in data if v is not None]
+
+                if len(observations) > 0: evapstations.append(k)
+
+        # aggregate the hourly NSRDB metstat data
+
+        hsolar = '{}/solar'.format(hourly)
+        if not os.path.isfile(hsolar):
+            ts = s, 60, climateprocessor.aggregate('NSRDB', 'metstat', s, e)
+            with open(hsolar, 'wb') as f: pickle.dump(ts, f)
+            
+        # aggregate the hourly solar to daily
+
+        dsolar = '{}/solar'.format(daily)
+        if not os.path.isfile(dsolar):
+
+            with open(hsolar, 'rb') as f: t, tstep, data = pickle.load(f)
+            ts = s, 1440, [sum(data[i:i+24]) / 24 
+                           for i in range(0, 24 * (e-s).days, 24)]
+
+            with open(dsolar, 'wb') as f: pickle.dump(ts, f)
+
+        # aggregate the hourly precipitation for each subbasin using IDWA
+
+        precip = '{}/hourlyprecipitation'.format(climatedata)
+        if not os.path.isdir(precip): os.mkdir(precip)
+
+        # use the subbasin shapefile to get the location of the centroids
+
+        sf = Reader(subbasinfile)
+
+        # index of the comid, latitude, and longitude records
+
+        comid_index = [f[0] for f in sf.fields].index('ComID') - 1
+        lon_index   = [f[0] for f in sf.fields].index('CenX')  - 1
+        lat_index   = [f[0] for f in sf.fields].index('CenY')  - 1
+        elev_index  = [f[0] for f in sf.fields].index('AvgElevM') - 1
+        area_index  = [f[0] for f in sf.fields].index('AreaSqKm') - 1
+
+        # iterate through the shapefile records and aggregate the timeseries
+
+        for i in range(len(sf.records())):
+
+            record = sf.record(i)
+            comid  = record[comid_index]
+            lon    = record[lon_index]
+            lat    = record[lat_index]
+
+            # check if the aggregated time series exists and then calculate it
+
+            subbasinprecip = '{}/{}'.format(precip, comid)
+            if not os.path.isfile(subbasinprecip):
+
+                if verbose:
+                    i = comid, lon, lat
+                    print('aggregating timeseries for comid ' +
+                          '{} at {}, {}\n'.format(*i))
+
+                p = climateprocessor.aggregate('precip3240', 'precip', s, e,
+                                               method = 'IDWA', longitude = lon,
+                                               latitude = lat)
+
+                ts = s, 60, p
+                with open(subbasinprecip, 'wb') as f: pickle.dump(ts, f)
+
+        # make a directory for the evapotranspiration time series
+
+        evapotranspiration = '{}/evapotranspiration'.format(climatedata)
+        if not os.path.isdir(evapotranspiration): os.mkdir(evapotranspiration)
+
+        # use the ETCalculator to calculate the ET time series
+
+        etcalculator = ETCalculator()
+
+        # get the centroid of the watershed from the subbasin shapefile
+
+        areas = [r[area_index] for r in sf.records()]
+        xs    = [r[lon_index]  for r in sf.records()]
+        ys    = [r[lat_index]  for r in sf.records()]
+        zs    = [r[elev_index] for r in sf.records()]
+
+        # get the areal-weighted averages
+
+        lon  = sum([a * x for a, x in zip(areas, xs)]) / sum(areas)
+        lat  = sum([a * y for a, y in zip(areas, ys)]) / sum(areas)
+        elev = sum([a * z for a, z in zip(areas, zs)]) / sum(areas)
+
+        # add them to the ETCalculator
+
+        etcalculator.add_location(lon, lat, elev)
+
+        # check if the daily RET exists; otherwise calculate it
+
+        dRET = '{}/dailyRET'.format(evapotranspiration)
+        if not os.path.isfile(dRET):
+
+            # add the daily time series to the calculator
+
+            with open(tmin, 'rb') as f: t, tstep, data = pickle.load(f)
+
+            etcalculator.add_timeseries('tmin', tstep, t, data)
+
+            with open(tmax, 'rb') as f: t, tstep, data = pickle.load(f)
+
+            etcalculator.add_timeseries('tmax', tstep, t, data)
+
+            with open(dewt, 'rb') as f: t, tstep, data = pickle.load(f)
+
+            etcalculator.add_timeseries('dewpoint', tstep, t, data)
+
+            with open(wind, 'rb') as f: t, tstep, data = pickle.load(f)
+
+            etcalculator.add_timeseries('wind', tstep, t, data)
+
+            with open(dsolar, 'rb') as f: t, tstep, data = pickle.load(f)
+
+            etcalculator.add_timeseries('solar', tstep, t, data)
+
+            # calculate the daily RET
+
+            etcalculator.penman_daily(s, e)
+
+            ts = s, 1440, etcalculator.daily['RET'][1]
+
+            with open(dRET, 'wb') as f: pickle.dump(ts, f)
+
+        # disaggregate the daily temperature time series to hourly
+
+        hourlytemp = '{}/temperature'.format(hourly)
+        if not os.path.isfile(hourlytemp):
+                
+            if etcalculator.daily['tmin'] is None:
+
+                with open(tmin, 'rb') as f: t, tstep, data = pickle.load(f)
+
+                etcalculator.add_timeseries('tmin', tstep, t, data)
+
+            if etcalculator.daily['tmax'] is None:
+
+                with open(tmax, 'rb') as f: t, tstep, data = pickle.load(f)
+
+                etcalculator.add_timeseries('tmax', tstep, t, data)
+
+            data  = etcalculator.interpolate_temperatures(s, e)
+            tstep = 60
+            ts    = t, tstep, data
+
+            with open(hourlytemp, 'wb') as f: pickle.dump(ts, f)
+
+            etcalculator.add_timeseries('temperature', tstep, t, data)
+
+        # disaggregate the dewpoint and wind speed time series to hourly
+
+        hourlydewt = '{}/dewpoint'.format(hourly)        
+        if not os.path.isfile(hourlydewt):
+
+            if etcalculator.daily['dewpoint'] is None:
+
+                with open(dewt, 'rb') as f: t, tstep, data = pickle.load(f)
+
+            else:
+
+                t, data = etcalculator.daily['dewpoint']
+                
+            tstep = 60
+            data  = [v for v in data for i in range(24)]
+            ts    = t, tstep, data 
+            
+            with open(hourlydewt, 'wb') as f: pickle.dump(ts, f)
+
+            etcalculator.add_timeseries('dewpoint', tstep, t, data)
+
+        hourlywind = '{}/wind'.format(hourly)        
+        if not os.path.isfile(hourlywind):
+
+            if etcalculator.daily['wind'] is None:
+
+                with open(wind, 'rb') as f: t, tstep, data = pickle.load(f)
+
+            else:
+
+                t, data = etcalculator.daily['wind']
+
+            tstep = 60
+            data  = [v for v in data for i in range(24)]
+            ts    = t, tstep, data 
+            
+            with open(hourlywind, 'wb') as f: pickle.dump(ts, f)
+
+            etcalculator.add_timeseries('wind', tstep, t, data)
+
+        # check if the hourly RET exists; otherwise calculate it
+
+        hRET = '{}/hourlyRET'.format(evapotranspiration)
+        if not os.path.isfile(hRET):
+
+            required = 'temperature', 'solar', 'dewpoint', 'wind'
+
+            for tstype in required:
+
+                if etcalculator.hourly[tstype] is None:
+
+                    name = '{}/{}'.format(hourly, tstype)
+                    with open(name, 'rb') as f: t, tstep, data = pickle.load(f)
+                    etcalculator.add_timeseries(tstype, tstep, t, data)
+
+            # calculate and save the hourly RET
+
+            etcalculator.penman_hourly(s, e)
+
+            ts = s, 60, etcalculator.hourly['RET'][1]
+
+            with open(hRET, 'wb') as f: pickle.dump(ts, f)
+
+            # add the daily time series for the plot
+
+            required = 'tmin', 'tmax', 'dewpoint', 'wind', 'solar'
+
+            for tstype in required:
+
+                if etcalculator.daily[tstype] is None:
+
+                    name = '{}/{}'.format(daily, tstype)
+                    with open(name, 'rb') as f: t, tstep, data = pickle.load(f)
+                    etcalculator.add_timeseries(tstype, tstep, t, data)
+
+            # aggregate the hourly to daily for plotting
+
+            hRET = etcalculator.hourly['RET'][1]
+
+            dRET = [sum(hRET[i:i+24]) for i in range(0, len(hRET), 24)]
+
+            etcalculator.add_timeseries('RET', 'daily', s, dRET)
+
+            name = '{}/referenceET'.format(evapotranspiration)
+            etcalculator.plotET(stations = evapstations, output = name, 
+                                show = False)
+            
+            name = '{}/dayofyearET'.format(evapotranspiration)
+
+            etcalculator.plotdayofyear(stations = evapstations, output = name, 
+                                       show = False)
+
+        # calculate hourly PET for different land use categories
+
+        lucs = ('corn', 
+                'soybeans', 
+                'grains', 
+                'alfalfa', 
+                'fallow',
+                'pasture', 
+                'wetlands', 
+                'others',
+                )
+
+        colors  = ('yellow',  
+                   'green',        
+                   'brown',    
+                   'lime',   
+                   'gray', 
+                   'orange',      
+                   'blue', 
+                   'black',
+                   )
+
+        pdates = (datetime.datetime(2000, 4, 15),
+                  datetime.datetime(2000, 5, 15),
+                  datetime.datetime(2000, 4, 15),
+                  datetime.datetime(2000, 5, 15),
+                  datetime.datetime(2000, 3,  1),
+                  datetime.datetime(2000, 3,  1),
+                  datetime.datetime(2000, 3,  1),
+                  datetime.datetime(2000, 3,  1),
+                  )
+
+        ems = (30,
+               20,
+               20,
+               10,
+               10,
+               10,
+               10,
+               10,
+               )
+
+        gs = (50,
+              30,
+              30,
+              10,
+              10,
+              10,
+              10,
+              10,
+              )
+
+        fs = (60,
+              60,
+              60,
+              120,
+              240,
+              240,
+              240,
+              240,
+              )
+
+        ls = (40,
+              30,
+              40,
+              10,
+              10,
+              10,
+              10,
+              10,
+              )
+
+        Kis = (0.30,
+               0.40,
+               0.30,
+               0.30,
+               0.30,
+               0.30,
+               1.00,
+               1.00,
+               )
+
+        Kms = (1.15,
+               1.15,
+               1.15,
+               0.95,
+               0.30,
+               0.85,
+               1.20,
+               1.00,
+               )
+
+        Kls = (0.40,
+               0.55,
+               0.40,
+               0.90,
+               0.30,
+               0.30,
+               1.00,
+               1.00,
+               )
+
+        # add the hourly RET time series if it isn't present
+
+        if etcalculator.hourly['RET'] is None:
+
+            with open(hRET, 'rb') as f: t, tstep, data = pickle.load(f)
+            etcalculator.add_timeseries('RET', tstep, t, data)
+
+        # iterate through the land use categories and calculate PET time series
+
+        for i in zip(lucs, colors, pdates, ems, gs, fs, ls, Kis, Kms, Kls):
+
+            crop, color, plant, emergence, growth, full, late, Ki, Km, Kl = i
+
+            # add the information and calculate the PET time series
+
+            etcalculator.add_crop(crop, 
+                                  plant, 
+                                  emergence, 
+                                  growth, 
+                                  full, 
+                                  late, 
+                                  Ki,
+                                  Km, 
+                                  Kl,
+                                  ) 
+
+            etcalculator.hourly_PET(crop, s, e)
+
+            # get the PET time series
+    
+            t, PET = etcalculator.hourlyPETs[crop]
+            ts = t, 60, PET
+
+            # save it
+
+            name = '{}/{}'.format(evapotranspiration, crop)
+            with open(name, 'wb') as f: pickle.dump(ts, f)
 
     # make a directory for HSPF calculations
 
