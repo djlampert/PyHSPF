@@ -1301,9 +1301,21 @@ class Precip3240Station:
 
             elif self.events[i][2] == 'I':
 
-                while t < self.events[i+1][0] and t < end:
-                    series.append(None)
-                    t += datetime.timedelta(hours = 1)
+                # if it's the last event, just fill to the end
+
+                if i == len(self.events) - 1:
+
+                    while t < end:
+                        series.append(None)
+                        t += datetime.timedelta(hours = 1)
+
+                # otherwise fill to the end of the missing period
+
+                else:
+
+                    while t < self.events[i+1][0] and t < end:
+                        series.append(None)
+                        t += datetime.timedelta(hours = 1)
                 
             elif self.events[i][1] > 999: 
                 

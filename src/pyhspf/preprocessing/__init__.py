@@ -1,15 +1,10 @@
-#!/usr/bin/python
+# __init__ for preprocessing
 
 __all__ = [
-    #'build_watershed',
+    'Preprocessor',
     'climateutils',
-    #'crop_coefficient',
     'dbfutils',
-    #'gagestation',
     'vectorutils',
-    #'ncdcstations',
-    #'penman',
-    #'preprocess',
     'rasterutils',
     'NWISExtractor',
     'CDLExtractor',
@@ -17,15 +12,10 @@ __all__ = [
     'NHDPlusExtractor',
     'NHDPlusDelineator',
     'HUC8Delineator',
-    #'GHCNDStation',
-    #'GSODStation',
-    #'Precip3240Station',
-    #'NSRDBStation',
-    'climateprocessor',
+    'Climateprocessor',
     ]
 
-#from .preprocessor      import preprocessor
-from .preprocess        import preprocess
+from .preprocessor      import Preprocessor
 from .nwisextractor     import NWISExtractor
 from .nidextractor      import NIDExtractor
 from .nhdplusextractor  import NHDPlusExtractor

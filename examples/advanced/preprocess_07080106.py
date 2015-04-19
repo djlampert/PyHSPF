@@ -1,5 +1,3 @@
-# !/usr/bin/env python3
-#
 # preprocess.py
 #
 # David J. Lampert, PhD, PE
@@ -12,7 +10,7 @@
 import os
 
 if os.name == 'posix':
-    source     = '/media/dave/Data'
+    source     = '/media/dave/DATA'
     destination = '/home/dave/HSPF_data'
 elif os.name == 'nt':
     #source     = 'Z:'
@@ -20,7 +18,7 @@ elif os.name == 'nt':
     source = 'c:/users/dave/desktop'
     destination = 'C:/HSPF_data'
 
-from pyhspf.preprocessing import preprocess
+from pyhspf.preprocessing import Preprocessor
 
 # 8-digit hydrologic unit code of interest; the lists here of states, years,
 # and RPUs are just used to point to location of the data files below
@@ -29,9 +27,12 @@ HUC8   = '07080106'
 state = 'ia'
 start = 2001
 end   = 2010
+landcodes = 'aggregate.csv'
 
 ########### you shouldn't need to modify anything below this line #############
 
 if __name__ == '__main__': 
     
-    preprocess(source, destination, HUC8, state, start, end)
+    processor = Preprocessor(source, destination, landcodes = landcodes)
+
+    processor.preprocess(HUC8, state, start, end)

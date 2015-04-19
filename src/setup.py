@@ -4,6 +4,41 @@
 #
 # the setup file for PyHSPF
 
+# check for the required and optional dependencies
+
+try:
+    import numpy
+except:
+    print('error: required package "NumPy" is not installed')
+    raise
+
+try:
+    import scipy
+except:
+    print('error: required package "SciPy" is not installed')
+    raise
+
+try:
+    import matplotlib
+except:
+    print('error: required package "Matplotlib" is not installed')
+    raise
+
+try:
+    import gdal
+except:
+    print('warning: preprocessing dependency "GDAL" is not installed')
+
+try:
+    import shapefile
+except:
+    print('warning: preprocessing dependency "PyShp" is not installed')
+
+try:
+    import PIL
+except:
+    print('warning: preprocessing dependency "Pillow" is not installed')
+    
 import os, sys
 
 from numpy.distutils.core import Extension, setup
