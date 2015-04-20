@@ -242,7 +242,8 @@ def merge_shapes(inputfile, outputfile = None, overwrite = False,
         if verbose: print('combined watershed shapefile %s exists' % outputfile)
         return
    
-    if verbose: print('combining shapes from %s\n' % inputfile)
+    if verbose: print('combining shapes from {}\n'.format(inputfile) + 
+                      'this may take a while...\n')
 
     # start by copying the projection files
 

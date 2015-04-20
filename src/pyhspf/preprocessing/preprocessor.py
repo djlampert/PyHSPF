@@ -132,6 +132,31 @@ class Preprocessor:
 
         go = time.time()
 
+        # if the destination folder does not exist, make it
+
+        if not os.path.isdir(self.output): os.mkdir(self.output)
+
+        # if the destination folder for the HUC8 does not exist, make it
+
+        its = self.output, HUC8
+        output = '{}/{}'.format(*its)
+        if not os.path.isdir(output): os.mkdir(output)
+
+        # make a subdirectory for hydrography data
+
+        self.hydrography = '{}/{}/hydrography'.format(*its)
+        if not os.path.isdir(self.hydrography): os.mkdir(self.hydrography)
+
+        # make a subdirectory for images
+
+        self.images = '{}/{}/images'.format(*its)
+        if not os.path.isdir(self.images): os.mkdir(self.images)
+
+        # make a directory for HSPF calculations
+
+        hspfdirectory = '{}/{}/hspf'.format(*its)
+        if not os.path.isdir(hspfdirectory): os.mkdir(hspfdirectory)
+
         years = [year for year in range(start, end)]
 
         # extract the data for the HUC8 from the sources
@@ -157,11 +182,6 @@ class Preprocessor:
 
         if climate: self.climate(HUC8, start, end)
 
-        # make a directory for HSPF calculations
-
-        hspfdirectory = '{}/{}/hspf'.format(self.output, HUC8)
-        if not os.path.isdir(hspfdirectory): os.mkdir(hspfdirectory)
-
         if verbose: 
             print('completed preprocessing watershed in %.1f seconds\n' % 
                   (time.time() - go))
@@ -181,26 +201,28 @@ class Preprocessor:
 
         nhdplusextractor = NHDPlusExtractor(VPU, self.NHDPlus)
 
+        # file name for the output plot file
+
+        plotfile = '{}/watershed'.format(self.images)
+
         # extract the HUC8 data for the HUC8 to the output 
 
-        nhdplusextractor.extract_HUC8(HUC8, self.output)
+        nhdplusextractor.extract_HUC8(HUC8, self.hydrography, 
+                                      plotfile = plotfile)
 
         # extract the gage data from NWIS
 
         nwisextractor = NWISExtractor(self.NWIS)
 
-        # extract the gage stations into a new shapefile for the HUC8 and 
-        # place them into the newly generated directory for the HUC8
+        # extract the gage stations into a new shapefile for the HUC8
 
-        directory = '{}/{}'.format(self.output, HUC8)
+        self.gagepath = '{}/{}/NWIS'.format(self.output, HUC8)
 
-        nwisextractor.extract_HUC8(HUC8, directory)
+        nwisextractor.extract_HUC8(HUC8, self.gagepath)
 
         # download all the gage data to the gagepath directory
 
-        gagepath = '{}/{}/NWIS'.format(self.output, HUC8)
-
-        nwisextractor.download_all(start, end, output = gagepath)
+        nwisextractor.download_all(start, end, output = self.gagepath)
 
         # extract the dam data from the NID
 
@@ -208,8 +230,8 @@ class Preprocessor:
 
         # extract dams in the HUC8 using the shapefile for the boundary
 
-        bfile   = '{0}/{1}/boundary'.format(self.output, HUC8)
-        damfile = '{0}/{1}/dams'.format(self.output, HUC8)
+        bfile   = '{}/boundary'.format(self.hydrography)
+        damfile = '{}/dams'.format(self.hydrography)
 
         nidextractor.extract_shapefile(bfile, damfile)
 
@@ -224,12 +246,13 @@ class Preprocessor:
 
         # use the HUC8Delineator to delineate the watershed
 
-        VAAfile  = '{0}/{1}/flowlineVAAs'.format(self.output, HUC8)
-        flowfile = '{0}/{1}/flowlines'.format(self.output, HUC8)
-        cfile    = '{0}/{1}/catchments'.format(self.output, HUC8)
-        elevfile = '{0}/{1}/elevations'.format(self.output, HUC8)
-        damfile  = '{0}/{1}/dams'.format(self.output, HUC8)
-        gagefile = '{0}/{1}/gagestations'.format(self.output, HUC8)
+        VAAfile  = '{}/flowlineVAAs'.format(self.hydrography)
+        flowfile = '{}/flowlines'.format(self.hydrography)
+        cfile    = '{}/catchments'.format(self.hydrography)
+        elevfile = '{}/elevations'.format(self.hydrography)
+        damfile  = '{}/dams'.format(self.hydrography)
+        gagefile = '{}/gagestations'.format(self.gagepath)
+        subbasinfile = '{}/subbasin_catchments'.format(self.hydrography)
 
         delineator = HUC8Delineator(HUC8, 
                                     VAAfile, 
@@ -242,13 +265,41 @@ class Preprocessor:
 
         # delineate the watershed using the NHDPlus data and delineator
 
-        delineator.delineate(self.output, 
-                             parallel      = parallel,
-                             drainmax      = drainmax, 
-                             extra_outlets = extra_outlets,
-                             verbose       = verbose,
-                             vverbose      = vverbose,
+        delineator.delineate(self.hydrography, 
+                             parallel       = parallel,
+                             drainmax       = drainmax, 
+                             extra_outlets  = extra_outlets,
+                             watershedplots = False,
+                             verbose        = verbose,
+                             vverbose       = vverbose,
                              )
+
+        self.preliminary = '{}/preliminary.png'.format(self.images)
+        if not os.path.isfile(self.preliminary):
+
+            description = 'Catchments, Flowlines, Dams, and Gages'
+            title = ('Cataloging Unit {}\n{}'.format(HUC8, description))
+            delineator.plot_watershed(cfile,
+                                      title = title,
+                                      dams = True,
+                                      width = 0.06,
+                                      output = self.preliminary,
+                                      verbose = verbose,
+                                      )
+
+        self.delineated = '{}/delineated.png'.format(self.images)
+        if not os.path.exists(self.delineated):
+
+            description = 'Subbasins, Major Flowlines, and Calibration Gages'
+            title = ('Cataloging Unit {}\n{}'.format(HUC8, description))
+            delineator.plot_watershed(subbasinfile, 
+                                      title = title,
+                                      gages = 'calibration',
+                                      width = 0.2,
+                                      dams = True, 
+                                      output = self.delineated, 
+                                      verbose = verbose,
+                                      )
 
     def extract_CDL(self,
                     HUC8,
@@ -266,14 +317,18 @@ class Preprocessor:
 
         # make a directory for the CDL files
 
-        landusedata = '{0}/{1}/landuse'.format(self.output, HUC8)
+        landusedata = '{}/{}/CDL'.format(self.output, HUC8)
+
+        # image files
+
+        images = '{}/{}/images'.format(self.output, HUC8)
 
         if not os.path.isdir(landusedata): os.mkdir(landusedata)
 
         # extract the data for the watershed using the boundary shapefile
 
-        landfile     = '{0}/{1}/subbasinlanduse'.format(self.output, HUC8)
-        subbasinfile = '{0}/{1}/subbasin_catchments'.format(self.output, HUC8)
+        landfile     = '{}/subbasinlanduse'.format(landusedata)
+        subbasinfile = '{}/subbasin_catchments'.format(self.hydrography)
 
         if not any([os.path.isfile('{}/{}landuse.tif'.format(landusedata, year))
                     for year in years]):
@@ -297,27 +352,34 @@ class Preprocessor:
                     print('error: no landuse code file specified\n')
                     raise
                     
-                cdlextractor.calculate_landuse(extracted, subbasinfile, 
-                                               self.landcodes, attribute,
-                                               csvfile = csvfile)
+                try:
 
-                # raw landuse plot
+                    cdlextractor.calculate_landuse(extracted, subbasinfile, 
+                                                   self.landcodes, attribute,
+                                                   csvfile = csvfile)
 
-                raw = '{}/{}raw'.format(landusedata, year)
-                if not os.path.isfile(raw + '.png'):
-                    cdlextractor.plot_landuse(extracted, subbasinfile, 
-                                              attribute, 
-                                              output = raw, lw = 2.,
-                                              datatype = 'raw')
+                    # raw landuse plot
 
-                # aggregated land use plot
+                    raw = '{}/{}raw'.format(landusedata, year)
+                    if not os.path.isfile(raw + '.png'):
+                        cdlextractor.plot_landuse(extracted, subbasinfile, 
+                                                  attribute, 
+                                                  output = raw, lw = 2.,
+                                                  datatype = 'raw')
 
-                results = '{}/{}results'.format(landusedata, year)
-                if not os.path.isfile(results + '.png'):
-                    cdlextractor.plot_landuse(extracted, subbasinfile, 
-                                              attribute, 
-                                              output = results, 
-                                              datatype = 'results')
+                    # aggregated land use plot
+
+                    results = '{}/{}results'.format(landusedata, year)
+                    if not os.path.isfile(results + '.png'):
+                        cdlextractor.plot_landuse(extracted, subbasinfile, 
+                                                  attribute, 
+                                                  output = results, 
+                                                  datatype = 'results')
+
+                except:
+
+                    print('warning: unable to calculate land use for year ' +
+                          '{}; check data availability'.format(year))
 
         print('')
 
@@ -762,13 +824,13 @@ class Preprocessor:
 
         # file paths
 
-        subbasinfile = '{}/{}/subbasin_catchments'.format(self.output, HUC8)
-        flowlinefile = '{}/{}/subbasin_flowlines'.format(self.output, HUC8)
-        outletfile   = '{}/{}/subbasin_outlets'.format(self.output, HUC8)
-        damfile      = '{}/{}/dams'.format(self.output, HUC8)
-        gagefile     = '{}/{}/gagestations'.format(self.output, HUC8)
-        landusedata  = '{}/{}/landuse'.format(self.output, HUC8)
-        VAAfile      = '{}/{}/flowlineVAAs'.format(self.output, HUC8)
+        subbasinfile = '{}/subbasin_catchments'.format(self.hydrography)
+        flowlinefile = '{}/subbasin_flowlines'.format(self.hydrography)
+        outletfile   = '{}/subbasin_outlets'.format(self.hydrography)
+        damfile      = '{}/dams'.format(self.hydrography)
+        gagefile     = '{}/gagestations'.format(self.gagepath)
+        landusedata  = '{}/{}/CDL'.format(self.output, HUC8)
+        VAAfile      = '{}/flowlineVAAs'.format(self.hydrography)
 
         if not os.path.isfile('{}/{}/watershed'.format(self.output, HUC8)):
 
@@ -784,8 +846,7 @@ class Preprocessor:
                 verbose = True,
                 ):
 
-        subbasinfile = '{}/{}/subbasin_catchments'.format(self.output, HUC8)
-
+        subbasinfile = '{}/subbasin_catchments'.format(self.hydrography)
         climatedata = '{}/{}/climate'.format(self.output, HUC8)
 
         # make a directory for the climate data and time series

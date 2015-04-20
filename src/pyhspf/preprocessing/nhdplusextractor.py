@@ -654,7 +654,7 @@ class NHDPlusExtractor:
 
     def extract_HUC8(self, 
                      HUC8,                             # HUC8
-                     directory,                        # output directory
+                     output,                           # output directory
                      flowlinefile  = 'flowlines',      # flowline shapefile
                      catchmentfile = 'catchments',     # catchment shapefile
                      boundaryfile  = 'boundary',       # merged catchment file
@@ -664,7 +664,8 @@ class NHDPlusExtractor:
                      verbose       = True,             # print verbosity
                      vverbose      = False,            # print verbosity
                      ):
-        """Creates shapefiles for the NHDPlus flowlines and catchments for an 
+        """
+        Creates shapefiles for the NHDPlus flowlines and catchments for an 
         8-digit hydrologic unit code from the NHDPlus Version 2 source data.
         Output shapefiles are written to the optional "output" directory.
         """
@@ -675,13 +676,8 @@ class NHDPlusExtractor:
 
         start = time.time()
 
-        # if the destination folder does not exist, make it
-
-        if not os.path.isdir(directory): os.mkdir(directory)
-
         # if the destination folder for the HUC8 does not exist, make it
 
-        output = '{}/{}'.format(directory, HUC8)
         if not os.path.isdir(output): os.mkdir(output)
 
         # start by copying the projection files
@@ -804,12 +800,11 @@ class NHDPlusExtractor:
             bfile    = '{}/{}'.format(output, boundaryfile)
             VAAfile  = '{}/{}'.format(output, VAAfile)
             elevfile = '{}/{}'.format(output, elevfile)
-            pfile    = '{}/{}'.format(output, plotfile)
 
-            if not os.path.isfile(pfile + '.png'):
+            if not os.path.isfile(plotfile + '.png'):
 
                 self.plot_HUC8(flowfile, cfile, bfile, VAAfile, elevfile,
-                               output = pfile)
+                               output = plotfile)
 
     def get_distance(self, p1, p2):
         """Approximates the distance in kilometers between two points on the 
@@ -909,7 +904,12 @@ class NHDPlusExtractor:
 
         zs = zs / scale
         space = 0.1
-        mi, ma = zs.min(), zs.max()
+
+        # deal with missing values
+
+        mi = numpy.min(zs[numpy.where(zs > 0)])
+        ma = zs.max()
+
         mi, ma = mi - space * (ma - mi), ma + space * (ma - mi)
         norm = colors.Normalize(vmin = mi, vmax = ma)
 

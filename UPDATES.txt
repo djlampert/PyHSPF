@@ -104,3 +104,4 @@ Added crop coefficient to ETCalculator and examples
 Re-organized examples
 Removed frivolous files
 Added Preprocessor class
+Changed readme files to markdown

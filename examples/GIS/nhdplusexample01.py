@@ -11,6 +11,8 @@
 # merge all the catchments together into a new shapefile for the boundary 
 # which also takes a while (~1 minute).
 
+import os
+
 from pyhspf.preprocessing import NHDPlusExtractor
 
 # local directory for NHDPlus source data files either to download or the 
@@ -18,14 +20,19 @@ from pyhspf.preprocessing import NHDPlusExtractor
 
 NHDPlus = 'NHDPlus'
 
-# path for HUC8 output (modify as needed)
+# make a working directory for HSPF data files
 
 output = 'HSPF_data'
+if not os.path.isdir(output): os.mkdir(output)
 
 # HUC8 NHDPlus info
 
 VPU     = '02'        # NHDPlus Vector Processing Unit
 HUC8    = '02060006'  # 8-digit HUC
+
+# path for the output files
+
+HUC8output = '{}/{}'.format(output, HUC8)
 
 # create an instance of the NHDPlus extractor
 
@@ -39,4 +46,4 @@ nhdplusextractor.download_data()
 # extract the HUC8 data for the Patuxent watershed. same thing here--if any of
 # these files already exist the extraction step will be skipped.
 
-nhdplusextractor.extract_HUC8(HUC8, output)
+nhdplusextractor.extract_HUC8(HUC8, HUC8output)

@@ -221,11 +221,16 @@ class NHDPlusDelineator:
             zs[i, :] = get_raster(filename, zip(xs, [ys[i]] * (resolution + 1)),
                                   quiet = True)
 
-        # scale the values
+        # scale the values (this is converting cm to m)
 
         zs = zs / scale
         space = 0.1
-        mi, ma = zs.min(), zs.max()
+
+        # deal with missing values
+
+        mi = numpy.min(zs[numpy.where(zs > 0)])
+        ma = zs.max()
+
         mi, ma = mi - space * (ma - mi), ma + space * (ma - mi)
         norm = colors.Normalize(vmin = mi, vmax = ma)
 
@@ -2150,12 +2155,9 @@ class HUC8Delineator(NHDPlusDelineator):
                 # see whether it's at the top of the watershed or an inlet
                 # otherwise get the flows from the gage file (note units)
 
-                if last_gage.up == 0:
+                if last_gage.up == 0 or last_gage.up not in flowlines:
                     last_flow = 0
                     last_area = 0
-                elif last_gage.up not in flowlines: 
-                    last_flow   = up_gages[last_index][ave_index]
-                    last_area   = up_gages[last_index][drain_index]
                 else: 
                     i = comids.index(last_gage.comid)
                     last_point = flowreader.shape(i).points[-1]
@@ -2370,8 +2372,8 @@ class HUC8Delineator(NHDPlusDelineator):
 
             processes = []
             for subbasin, names in self.subbasins.items():
-                its = output, self.HUC8, subbasin
-                catchments = '{}/{}/{}/catchments'.format(*its)
+                its = output, subbasin
+                catchments = '{}/{}/catchments'.format(*its)
 
                 if not os.path.isfile(catchments + '.shp'):
 
@@ -2389,8 +2391,8 @@ class HUC8Delineator(NHDPlusDelineator):
 
             for subbasin, names in self.subbasins.items():
 
-                its = output, self.HUC8, subbasin
-                catchments = '{}/{}/{}/catchments'.format(*its)
+                its = output, subbasin
+                catchments = '{}/{}/catchments'.format(*its)
 
                 if not os.path.isfile(catchments + '.shp'):
 
@@ -2409,10 +2411,10 @@ class HUC8Delineator(NHDPlusDelineator):
             processes = []
             for subbasin in self.subbasins:
 
-                its = output, self.HUC8, subbasin
-                catchments = '{}/{}/{}/catchments'.format(*its)
-                flowlines  = '{}/{}/{}/flowlines'.format(*its)
-                combined   = '{}/{}/{}/combined'.format(*its)
+                its = output, subbasin
+                catchments = '{}/{}/catchments'.format(*its)
+                flowlines  = '{}/{}/flowlines'.format(*its)
+                combined   = '{}/{}/combined'.format(*its)
 
                 if not os.path.isfile(combined + '.shp'):
 
@@ -2441,10 +2443,10 @@ class HUC8Delineator(NHDPlusDelineator):
 
             for subbasin in self.subbasins:
 
-                its = output, self.HUC8, subbasin
-                catchments = '{}/{}/{}/catchments'.format(*its)
-                flowlines  = '{}/{}/{}/flowlines'.format(*its)
-                combined   = '{}/{}/{}/combined'.format(*its)
+                its = output, subbasin
+                catchments = '{}/{}/catchments'.format(*its)
+                flowlines  = '{}/{}/flowlines'.format(*its)
+                combined   = '{}/{}/combined'.format(*its)
 
                 if not os.path.isfile(combined + '.shp'):
 
@@ -2518,8 +2520,8 @@ class HUC8Delineator(NHDPlusDelineator):
 
         for comid in self.subbasins:
 
-            its = output, self.HUC8, comid
-            filename = '{}/{}/{}/combined'.format(*its)
+            its = output, comid
+            filename = '{}/{}/combined'.format(*its)
             if os.path.isfile(filename + '.shp'):
 
                 # start by copying the projection files
@@ -2575,21 +2577,19 @@ class HUC8Delineator(NHDPlusDelineator):
         # subdivide the watershed using the USGS NWIS stations and any 
         # additional subbasins
 
-        its = output, self.HUC8
-
-        self.outletfile         = '{}/{}/subbasin_outlets'.format(*its)
-        self.inletfile          = '{}/{}/subbasin_inlets'.format(*its)
-        self.subbasinflowlines  = '{}/{}/subbasin_flowlines'.format(*its)
-        self.subbasincatchments = '{}/{}/subbasin_catchments'.format(*its)
-        self.elevations         = '{}/{}/elevations.tif'.format(*its)
-        self.boundary           = '{}/{}/boundary'.format(*its)
+        self.outletfile         = '{}/subbasin_outlets'.format(output)
+        self.inletfile          = '{}/subbasin_inlets'.format(output)
+        self.subbasinflowlines  = '{}/subbasin_flowlines'.format(output)
+        self.subbasincatchments = '{}/subbasin_catchments'.format(output)
+        self.elevations         = '{}/elevations.tif'.format(output)
+        self.boundary           = '{}/boundary'.format(output)
 
         # images
 
-        its = output, self.HUC8, form
+        its = output, form
 
-        self.preliminary = '{}/{}/preliminary.{}'.format(*its)
-        self.delineated  = '{}/{}/delineated.{}'.format(*its)
+        self.preliminary = '{}/preliminary.{}'.format(*its)
+        self.delineated  = '{}/delineated.{}'.format(*its)
 
         if (not os.path.isfile(self.outletfile         + '.shp') or
             not os.path.isfile(self.subbasinflowlines  + '.shp') or
@@ -2616,7 +2616,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
             for subbasin, comids in self.subbasins.items():
 
-                p        = '{}/{}/{}'.format(output, self.HUC8, subbasin)
+                p        = '{}/{}'.format(output, subbasin)
                 flow     = p + '/flowlines'
                 combined = p + '/combined_flowline'
         
@@ -2646,7 +2646,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
             if not os.path.isfile(self.subbasinflowlines + '.shp'):
 
-                combined = '{}/{}'.format(output, self.HUC8)
+                combined = '{}'.format(output)
                 self.combine_subbasin_flowlines(combined,
                                                 overwrite = True, 
                                                 verbose = vverbose
@@ -2788,7 +2788,9 @@ class HUC8Delineator(NHDPlusDelineator):
 
         all_comids = [r[comid_index] for r in f.records()]
 
-        if flowlines:     # show all the flowfiles 
+        # show all the flowlines
+
+        if flowlines:     
         
             # get the flows and velocities from the dictionary
         
@@ -2826,7 +2828,9 @@ class HUC8Delineator(NHDPlusDelineator):
                              lw = 5 * avg_width,
                              label = 'flowlines')
 
-        else: # use the combined flowlines
+        # otherwise use the subbasin combined flowlines
+
+        else: 
 
             c = Reader(combined, shapeType = 3)
 
@@ -2910,7 +2914,9 @@ class HUC8Delineator(NHDPlusDelineator):
             subplot.scatter(x1, y1, marker = 'o', c = 'r', s = 30, 
                             label = 'gauges')
 
-        elif gages == 'calibration': # show gages used for calibration
+        # show only gages used for calibration
+
+        elif gages == 'calibration': 
 
             f1 = Reader(self.outletfile, shapeType = 1)
 
@@ -2940,7 +2946,9 @@ class HUC8Delineator(NHDPlusDelineator):
             subplot.scatter(x1, y1, marker = 'o', c = 'r', s = 30, 
                             label = 'gauges')
 
-        if dams:  # show dams
+        # show dams
+
+        if dams:
 
             f = Reader(self.outletfile, shapeType = 1)
 
@@ -2966,7 +2974,7 @@ class HUC8Delineator(NHDPlusDelineator):
         subplot.set_xlabel('Longitude, Decimal Degrees', size = 13)
         subplot.set_ylabel('Latitude, Decimal Degrees',  size = 13)
 
-        # add the raster
+        # add the elevation raster (could be adapted for something else)
 
         if raster:
 

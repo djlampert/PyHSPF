@@ -243,7 +243,7 @@ class CDLExtractor:
                     print('unable to download CDL data')
                     print('double-check that data are available for the ' +
                           'requested year')
-                    return
+                    #return
                     
                 print('')
 
@@ -255,7 +255,7 @@ class CDLExtractor:
 
             its = self.destination, year, self.statecodes[state]
             decompressed = '{}/CDL_{}_{}.tif'.format(*its)
-            if not os.path.isfile(decompressed):
+            if os.path.isfile(compressed) and not os.path.isfile(decompressed):
 
                 print('decompressing {} archive\n'.format(compressed))
                 f = zipfile.ZipFile(compressed)
@@ -263,7 +263,7 @@ class CDLExtractor:
 
             # keep track of all the years where the source files exist
 
-            self.years.append(year)
+            if os.path.isfile(decompressed): self.years.append(year)
 
     def extract_bbox(self,
                      bbox,
@@ -288,52 +288,66 @@ class CDLExtractor:
             decompressed = '{}/CDL_{}_{}.tif'.format(*its)
             output       = '{}/{}landuse.tif'.format(directory, year)
 
-            # get the values of the raster and the origin
+            if os.path.isfile(output):
 
-            values, corner = get_raster_table(decompressed, bbox, 'uint8')
+                print('land use file {} exists'.format(output))
 
-            # get the source, source reference, and the source band
+            elif not os.path.isfile(decompressed):
 
-            source = gdal.Open(decompressed)
-            source_band = source.GetRasterBand(1)
+                print('warning: source file ' +
+                      '{} does not exist'.format(decompressed))
 
-            # set the transform to the new origin
+            else:
 
-            transform = source.GetGeoTransform()
-            transform = (corner[0], transform[1], transform[2], corner[1],
-                         transform[4], transform[1])
+                # get the values of the raster and the origin
 
-            # get a driver and set the projection and georeference
+                values, corner = get_raster_table(decompressed, bbox, 'uint8')
 
-            driver = gdal.GetDriverByName('GTiff')
+                # get the source, source reference, and the source band
 
-            destination = driver.Create(output, 
-                                        len(values[0]), 
-                                        len(values), 
-                                        1, 
-                                        gdal.GDT_Byte)
-            destination.SetGeoTransform(transform)
-            destination.SetProjection(source.GetProjection())
+                source = gdal.Open(decompressed)
+                source_band = source.GetRasterBand(1)
 
-            # set the metadata and get the destination band
+                # set the transform to the new origin
 
-            destination.SetMetadata(source.GetMetadata())
-            destination_band = destination.GetRasterBand(1)
+                transform = source.GetGeoTransform()
+                transform = (corner[0], transform[1], transform[2], corner[1],
+                             transform[4], transform[1])
 
-            # copy the pertinent attributes to the band
+                # get a driver and set the projection and georeference
 
-            destination_band.WriteArray(values, 0, 0)
-            destination_band.SetColorTable(source_band.GetColorTable().Clone())
+                driver = gdal.GetDriverByName('GTiff')
 
-            # transform the projection from WGS 1984 to NAD 1983 
-            # (needs to be done)
+                destination = driver.Create(output, 
+                                            len(values[0]), 
+                                            len(values), 
+                                            1, 
+                                            gdal.GDT_Byte)
+                destination.SetGeoTransform(transform)
+                destination.SetProjection(source.GetProjection())
 
-            # close up the files
+                # set the metadata and get the destination band
 
-            source      = None
-            destination = None
+                destination.SetMetadata(source.GetMetadata())
+                destination_band = destination.GetRasterBand(1)
+                
+                # copy the pertinent attributes to the band
 
-        if verbose: print('successfully extracted cropland data to new file\n')
+                destination_band.WriteArray(values, 0, 0)
+                ct = source_band.GetColorTable().Clone()
+                destination_band.SetColorTable(ct)
+
+                # transform the projection from WGS 1984 to NAD 1983 
+                # (needs to be done)
+
+                # close up the files
+
+                source      = None
+                destination = None
+
+                if verbose:
+ 
+                    print('successfully extracted cropland data to new file\n')
 
     def extract_shapefile(self, 
                           shapefile,
@@ -400,7 +414,7 @@ class CDLExtractor:
 
         for f in rasterfile, shapefile + '.shp', aggregatefile:
             if not os.path.isfile(f):
-                print('error, {} does not exist'.format(f))
+                print('error, {} does not exist\n'.format(f))
                 raise
 
         # read the aggregate file
@@ -522,7 +536,7 @@ class CDLExtractor:
             print('error: no aggregate file information specified')
             raise Exception
 
-        if verbose: print('generating land use plot\n')
+        if verbose: print('generating a {} land use plot\n'.format(datatype))
 
         # make the figure
 

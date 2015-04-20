@@ -22,7 +22,7 @@ from pyhspf.preprocessing import NHDPlusExtractor
 from pyhspf.preprocessing import NIDExtractor
 from pyhspf.preprocessing import NWISExtractor
 
-# let's work with the Patuxent watershed
+# 8-digit hydrologic code for the Patuxent watershed
 
 HUC8 = '02060006'
 
@@ -39,6 +39,14 @@ parallel = True
 
 source      = os.getcwd()
 destination = 'HSPF_data'
+
+# make a destination directory for all HSPF data
+
+if not os.path.isdir(destination): os.mkdir(destination)
+
+# make a destination subdirectory for the HSPF data for the HUC8
+
+output = '{}/{}'.format(destination, HUC8)
 
 # to use multiprocessing on Windows it is necessary to create a routine and
 # call it below
@@ -72,14 +80,13 @@ def main():
     nwisextractor    = NWISExtractor(NWIS)
     nidextractor     = NIDExtractor(NID)
 
-    # extract the NHDPlus data
+    # extract or set the path to the source NHDPlus data
 
     nhdplusextractor.download_data()
-    nhdplusextractor.extract_HUC8(HUC8, destination)
 
-    # the destination directory created for the NHDPlus data for the HUC8
+    # extract the hydrography data for the HUC8 to the output directory
 
-    output = '{}/{}'.format(destination, HUC8)
+    nhdplusextractor.extract_HUC8(HUC8, output)
 
     # paths to the NHDPlus data files created above by the nhdplusextractor
 
@@ -89,17 +96,17 @@ def main():
     VAAs  = '{}/flowlineVAAs'.format(output) # value-added attributes
     efile = '{}/elevations'.format(output)   # elevation geotiff
 
-    # extract the NWIS gages to a shapefile in the new HUC8 directory
+    # extract the NWIS gages to a shapefile in the HUC8 directory
 
     nwisextractor.extract_HUC8(HUC8, output)
 
-    # path to the gage file created above
+    # path to the gage shapefile created above
 
-    gfile = '{}/{}/gagestations'.format(destination, HUC8)
+    gfile = '{}/gagestations'.format(output, HUC8)
 
     # extract the NID dams to a shapefile in the new HUC8 directory
 
-    dfile = '{}/{}/dams'.format(destination, HUC8)
+    dfile = '{}/dams'.format(output, HUC8)
 
     nidextractor.extract_shapefile(bfile, dfile)
 
@@ -111,7 +118,7 @@ def main():
 
     # delineate the watershed using the NHDPlus data and delineator
 
-    delineator.delineate(destination, drainmax = drainmax, parallel = parallel)
+    delineator.delineate(output, drainmax = drainmax, parallel = parallel)
 
 # the delineation process will take advantage of multiprocessing if the
 # parallel flag to "True," although this consumes memory and is less stable.
