@@ -77,11 +77,11 @@ class Preprocessor:
 
         # source data locations on the network
 
-        self.NHDPlus  = '{}/NHDPlus'.format(self.network)
-        self.NED      = '{}/NEDSnapshot'.format(self.NHDPlus)
-        self.NWIS     = '{}/NWIS'.format(self.network)
-        self.CDL      = '{}/CDL'.format(self.network)
-        self.NID      = '{}/NID'.format(self.network)
+        self.NHDPlus   = '{}/NHDPlus'.format(self.network)
+        self.NED       = '{}/NEDSnapshot'.format(self.NHDPlus)
+        self.NWIS      = '{}/NWIS'.format(self.network)
+        self.CDL       = '{}/CDL'.format(self.network)
+        self.NID       = '{}/NID'.format(self.network)
 
         self.HUC8      = HUC8
         self.state     = state
@@ -94,7 +94,7 @@ class Preprocessor:
                    state, 
                    start, 
                    end,
-                   drainmax = 400, 
+                   drainmax       = 400, 
                    extra_outlets  = None,
                    overwrite      = False, 
                    verbose        = True, 
@@ -147,22 +147,21 @@ class Preprocessor:
         self.hydrography = '{}/{}/hydrography'.format(*its)
         if not os.path.isdir(self.hydrography): os.mkdir(self.hydrography)
 
-        # make a subdirectory for images
-
-        self.images = '{}/{}/images'.format(*its)
-        if not os.path.isdir(self.images): os.mkdir(self.images)
-
         # make a directory for HSPF calculations
 
         hspfdirectory = '{}/{}/hspf'.format(*its)
         if not os.path.isdir(hspfdirectory): os.mkdir(hspfdirectory)
 
-        years = [year for year in range(start, end)]
+        # make a list of all the years for the CDL extraction
+
+        years = [start.year]
+        
+        t = start
+        while t < end:
+            if t.year not in years: years.append(t.year)
+            t += datetime.timedelta(days = 1)
 
         # extract the data for the HUC8 from the sources
-
-        start = datetime.datetime(start, 1, 1)
-        end   = datetime.datetime(end, 1, 1)
 
         if extract: self.extract(HUC8, start, end)
 
@@ -183,8 +182,9 @@ class Preprocessor:
         if climate: self.climate(HUC8, start, end)
 
         if verbose: 
-            print('completed preprocessing watershed in %.1f seconds\n' % 
-                  (time.time() - go))
+
+            print('completed preprocessing watershed in ' +
+                  '{:.1f} seconds\n'.format((time.time() - go)))
 
     def extract(self, 
                 HUC8, 
@@ -203,7 +203,7 @@ class Preprocessor:
 
         # file name for the output plot file
 
-        plotfile = '{}/watershed'.format(self.images)
+        plotfile = '{}/watershed'.format(self.hydrography)
 
         # extract the HUC8 data for the HUC8 to the output 
 
@@ -274,7 +274,7 @@ class Preprocessor:
                              vverbose       = vverbose,
                              )
 
-        self.preliminary = '{}/preliminary.png'.format(self.images)
+        self.preliminary = '{}/preliminary.png'.format(self.hydrography)
         if not os.path.isfile(self.preliminary):
 
             description = 'Catchments, Flowlines, Dams, and Gages'
@@ -287,7 +287,7 @@ class Preprocessor:
                                       verbose = verbose,
                                       )
 
-        self.delineated = '{}/delineated.png'.format(self.images)
+        self.delineated = '{}/delineated.png'.format(self.hydrography)
         if not os.path.exists(self.delineated):
 
             description = 'Subbasins, Major Flowlines, and Calibration Gages'
@@ -317,11 +317,7 @@ class Preprocessor:
 
         # make a directory for the CDL files
 
-        landusedata = '{}/{}/CDL'.format(self.output, HUC8)
-
-        # image files
-
-        images = '{}/{}/images'.format(self.output, HUC8)
+        landusedata = '{}/{}/landuse'.format(self.output, HUC8)
 
         if not os.path.isdir(landusedata): os.mkdir(landusedata)
 
@@ -360,7 +356,7 @@ class Preprocessor:
 
                     # raw landuse plot
 
-                    raw = '{}/{}raw'.format(landusedata, year)
+                    raw = '{}/{}raw_landuse'.format(landusedata, year)
                     if not os.path.isfile(raw + '.png'):
                         cdlextractor.plot_landuse(extracted, subbasinfile, 
                                                   attribute, 
@@ -369,7 +365,7 @@ class Preprocessor:
 
                     # aggregated land use plot
 
-                    results = '{}/{}results'.format(landusedata, year)
+                    results = '{}/{}aggregated_landuse'.format(landusedata,year)
                     if not os.path.isfile(results + '.png'):
                         cdlextractor.plot_landuse(extracted, subbasinfile, 
                                                   attribute, 
@@ -393,9 +389,8 @@ class Preprocessor:
                         VAAfile, 
                         years, 
                         HUC8, 
-                        output, 
-                        plots = True, 
-                        overwrite = False,
+                        filename,
+                        plotname = None,
                         ):
 
         # create a dictionary to store subbasin data
@@ -553,10 +548,6 @@ class Preprocessor:
             emptys     = [r[1] for r in rows[3:]]
             data       = [r[2:] for r in rows[3:]]
 
-            if any([e == '0' for e in emptys]): 
-
-                print('warning, empty cells detected\n')
-
             for comid, subbasin in subbasins.items():
 
                 i = comids.index(comid)
@@ -615,16 +606,9 @@ class Preprocessor:
 
         watershed.add_mass_linkage(updown)
 
-        if output is None: output = os.getcwd()
+        with open(filename, 'wb') as f: pickle.dump(watershed, f)
 
-        filename = '{}/{}/watershed'.format(output, HUC8)
-        plotname = '{}/{}/masslink'.format(output, HUC8)
-
-        if not os.path.isfile(filename) or overwrite:
-            with open(filename, 'wb') as f: pickle.dump(watershed, f)
-
-        if (not os.path.isfile(plotname + '.png') and plots or overwrite and 
-            plots):
+        if plotname is not None and not os.path.isfile(plotname + '.png'):
  
             self.plot_mass_flow(watershed, plotname)
 
@@ -808,7 +792,6 @@ class Preprocessor:
         ax.set_xlim(xmin, xmax)
         ax.set_ylim(ymax, ymin)
         pyplot.axis('off')
-        #pyplot.tight_layout()
         pyplot.savefig(output, dpi = 200)
 
         pyplot.clf()
@@ -829,15 +812,17 @@ class Preprocessor:
         outletfile   = '{}/subbasin_outlets'.format(self.hydrography)
         damfile      = '{}/dams'.format(self.hydrography)
         gagefile     = '{}/gagestations'.format(self.gagepath)
-        landusedata  = '{}/{}/CDL'.format(self.output, HUC8)
+        landusedata  = '{}/{}/landuse'.format(self.output, HUC8)
         VAAfile      = '{}/flowlineVAAs'.format(self.hydrography)
+        filename     = '{}/{}/hspf/watershed'.format(self.output, HUC8)
+        plotname     = '{}/{}/hydrography/masslink'.format(self.output, HUC8)
 
         if not os.path.isfile('{}/{}/watershed'.format(self.output, HUC8)):
 
             self.build_watershed(subbasinfile, flowlinefile, outletfile, 
                                  damfile,
                                  gagefile, landusedata, VAAfile, 
-                                 years, HUC8, self.output, plots = flowplots)
+                                 years, HUC8, filename, plotname = plotname)
         
     def climate(self,
                 HUC8,
@@ -893,10 +878,10 @@ class Preprocessor:
         snowdepth = '{}/snowdepth'.format(daily)
 
         if not os.path.isfile(snowfall):
-            ts = s, 1440, climateprocessor.aggregate('GHCND','snowfall',s,e)
+            ts = s, 1440, climateprocessor.aggregate('GHCND','snowfall', s, e)
             with open(snowfall, 'wb') as f: pickle.dump(ts, f)
         if not os.path.isfile(snowdepth):
-            ts = s, 1440,climateprocessor.aggregate('GHCND','snowdepth',s,e)
+            ts = s, 1440,climateprocessor.aggregate('GHCND','snowdepth', s, e)
             with open(snowdepth, 'wb') as f: pickle.dump(ts, f)
 
         # find stations with pan evaporation data from GHCND
