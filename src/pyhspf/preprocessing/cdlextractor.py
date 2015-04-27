@@ -347,7 +347,7 @@ class CDLExtractor:
 
                 if verbose:
  
-                    print('successfully extracted cropland data to new file\n')
+                    print('successfully extracted cropland data to new file')
 
     def extract_shapefile(self, 
                           shapefile,

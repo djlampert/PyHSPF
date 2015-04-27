@@ -4,6 +4,8 @@
 #
 # the setup file for PyHSPF
 
+_version   = '0.1.14'
+
 # check for the required and optional dependencies
 
 try:
@@ -44,7 +46,6 @@ import os, sys
 from numpy.distutils.core import Extension, setup
 from distutils            import sysconfig
 
-_version   = '0.1.14'
 _directory = '{}/pyhspf'.format(sysconfig.get_python_lib())
 
 _d = (
@@ -57,16 +58,16 @@ performing simulations, and postprocessing simulation results.
 HSPF requires flowline and catchment data for a stream network, land use 
 data for the stream reach subbasins, time series of climate and hydrology
 data. A series of preprocessing classes were developed to extract data 
-from the following publically-available databases on the World Wide Web:\n
+from the following publically-available databases on the World Wide Web:
 
-National Hydrography Dataset Plus Version 2 (NHDPlus)
-National Water Information System (NWIS)
-National Inventory of Dams (NID)
-Cropland Data Layer (CDL)
-National Solar Radiation Database (NSRDB)
-Global Historical Climate Network Daily (GHCND)
-Global Summary of the Day (GSOD)
-Hourly Precipitation Database (DSI-3240)
+- National Hydrography Dataset Plus Version 2 (NHDPlus)
+- National Water Information System (NWIS)
+- National Inventory of Dams (NID)
+- Cropland Data Layer (CDL)
+- National Solar Radiation Database (NSRDB)
+- Global Historical Climate Network Daily (GHCND)
+- Global Summary of the Day (GSOD)
+- Hourly Precipitation Database (DSI-3240)
 
 The "core" module requires NumPy, SciPy, and Matplotlib, and can be used to
 generate the HSPF input files. The preprocessing routines require GDAL, 

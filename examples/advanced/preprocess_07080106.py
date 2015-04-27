@@ -14,9 +14,7 @@
 # great detail in other examples. The raw data are then aggregated, 
 # disaggregated, processed, etc into formats consistent with PyHSPF's 
 # built-in HSPFModel class as illustrated in other examples.
-
-import os, datetime
-
+#
 # Because the raw data files are pretty large, it may make sense to keep
 # them on a server locally although they can be placed anywhere where there
 # is sufficient space. The raw NHDPlus data for this example include the 
@@ -90,6 +88,8 @@ import os, datetime
 # After downloading all the NHDPlus and CDL data, this script took about 20 
 # minutes to run on my laptop. The NHDPlus download can take a few hours.
 
+import os, datetime
+
 # Paths to working directories for source NHDPlus, CDL, NWIS, NID datasets
 # (modify as needed for the PC of interest)
 
@@ -99,6 +99,17 @@ if os.name == 'posix':
 elif os.name == 'nt':
     network     = 'D:'
     destination = 'C:/HSPF_data'
+
+# make sure the directory paths exist
+
+if not os.path.isdir(network):
+    print('error: directory {} does not exist!'.format(network))
+    print('please specify an existing directory for source data files')
+    raise
+if not os.path.isdir(destination):
+    print('error: directory {} does not exist!'.format(destination))
+    print('please specify an existing directory for source data files')
+    raise
 
 # import the Preprocessor
 

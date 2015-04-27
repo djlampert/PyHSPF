@@ -4,4 +4,4 @@ including gfortran, gcc, and quadmath. Please report any issues with the install
 
 Binary and source distributions will be uploaded to PyPi in the future in hopes of focusing this page on development and not to clutter github with binary files.
 
-https://pypi.python.org/pypi/pyhspf/0.1.13
+https://pypi.python.org/pypi/pyhspf/0.1.14
