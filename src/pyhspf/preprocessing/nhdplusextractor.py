@@ -304,7 +304,7 @@ class NHDPlusExtractor:
                 print('downloading {} file {}\n'.format(name, url))
                 request.urlretrieve(url, compressed, self.report)        
 
-        elif verbose: print('source {} file exists\n'.format(name))
+        elif verbose: print('file {} exists\n'.format(compressed))
 
     def download_data(self,
                       ned_n = '01',
@@ -317,7 +317,10 @@ class NHDPlusExtractor:
             if verbose: print('No NHDPlus data present in destination\n')
             os.mkdir(self.destination)
 
-        else: print('NHDPlus destination directory exists\n')
+        else: 
+
+            print('NHDPlus destination directory ' +
+                  '{} exists\n'.format(self.destination))
 
         destination = '{}/NHDPlus{}'.format(self.destination, self.DA)
         if not os.path.isdir(destination):
@@ -331,6 +334,8 @@ class NHDPlusExtractor:
         self.NHDPlus = '{}/NHDPlus{}'.format(destination, self.VPU)
 
         # download all the compressed files from the NHDPlus ftp server
+
+        if verbose: print('checking for source NHDPlus data files...\n')
 
         # catchment shapefile
 
@@ -781,7 +786,9 @@ class NHDPlusExtractor:
         t = end - start
 
         if verbose: 
-            print('successfully queried data in {:.1f} seconds\n'.format(t))
+
+            print('successfully queried NHDPlus data in ' +
+                  '{:.1f} seconds\n'.format(t))
     
         # merge the shapes into a watershed
 

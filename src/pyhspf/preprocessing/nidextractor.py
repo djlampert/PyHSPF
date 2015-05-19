@@ -21,7 +21,7 @@ class NIDExtractor:
 
         if not os.path.isdir(NID):
 
-            print('destination directory does not exist\n')
+            print('destination directory {} does not exist\n'.format(NID))
             
             try: os.mkdir(NID)
             except:
@@ -69,7 +69,7 @@ class NIDExtractor:
                 print('downloading NID source file {}\n'.format(url))
                 request.urlretrieve(url, compressed)
 
-        elif verbose: print('NID source file exists\n')
+        elif verbose: print('NID source file {} exists\n'.format(compressed))
 
         # decompress the file
 
@@ -182,5 +182,5 @@ class NIDExtractor:
 
             self.extract_bbox(r.bbox, output)
             
-        else: print('dam shapefile exists\n')
+        else: print('dam shapefile {} exists\n'.format(output))
             

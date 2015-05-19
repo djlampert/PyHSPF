@@ -65,11 +65,12 @@ class Preprocessor:
     def __init__(self,
                  network, 
                  output, 
-                 HUC8      = None,
-                 state     = None,
-                 start     = None,
-                 end       = None,
-                 landcodes = None,
+                 HUC8         = None,
+                 state        = None,
+                 start        = None,
+                 end          = None,
+                 cdlaggregate = None,
+                 landuse      = None,
                  ):
 
         self.network   = network
@@ -83,12 +84,13 @@ class Preprocessor:
         self.CDL       = '{}/CDL'.format(self.network)
         self.NID       = '{}/NID'.format(self.network)
 
-        self.HUC8      = HUC8
-        self.state     = state
-        self.start     = start
-        self.end       = end
-        self.landcodes = landcodes
-    
+        self.HUC8         = HUC8
+        self.state        = state
+        self.start        = start
+        self.end          = end
+        self.cdlaggregate = cdlaggregate
+        self.landuse      = landuse
+ 
     def preprocess(self,
                    HUC8, 
                    state, 
@@ -96,7 +98,6 @@ class Preprocessor:
                    end,
                    drainmax       = 400, 
                    extra_outlets  = None,
-                   overwrite      = False, 
                    verbose        = True, 
                    vverbose       = False, 
                    parallel       = True, 
@@ -106,14 +107,6 @@ class Preprocessor:
                    landstats      = True, 
                    build          = True, 
                    climate        = True, 
-                   gagedata       = True,
-                   subbasinplots  = False, 
-                   watershedplots = True, 
-                   landplots      = True,
-                   landpercents   = False, 
-                   flowplots      = True, 
-                   metstatplots   = True,
-                   metgageplots   = True,
                    ):
         """
         Preprocesses the data for HSPF
@@ -167,7 +160,7 @@ class Preprocessor:
 
         # delineate the subbasins and the hydrography data
 
-        if delineate: self.delineate(HUC8)
+        if delineate: self.delineate(HUC8, parallel = parallel)
 
         # download and extract land use data
 
@@ -180,6 +173,8 @@ class Preprocessor:
         # download and extract the climate data
 
         if climate: self.climate(HUC8, start, end)
+
+        print('intermediate time {:.1f} seconds'.format(time.time() - go))
 
         if verbose: 
 
@@ -344,14 +339,14 @@ class Preprocessor:
             csvfile = '{}/{}landuse.csv'.format(landusedata, year)
             if not os.path.isfile(csvfile):
 
-                if self.landcodes is None:
+                if self.cdlaggregate is None:
                     print('error: no landuse code file specified\n')
                     raise
                     
                 try:
 
                     cdlextractor.calculate_landuse(extracted, subbasinfile, 
-                                                   self.landcodes, attribute,
+                                                   self.cdlaggregate, attribute,
                                                    csvfile = csvfile)
 
                     # raw landuse plot
@@ -359,7 +354,7 @@ class Preprocessor:
                     raw = '{}/{}raw_landuse'.format(landusedata, year)
                     if not os.path.isfile(raw + '.png'):
                         cdlextractor.plot_landuse(extracted, subbasinfile, 
-                                                  attribute, 
+                                                  attribute, self.landuse, 
                                                   output = raw, lw = 2.,
                                                   datatype = 'raw')
 
@@ -368,7 +363,7 @@ class Preprocessor:
                     results = '{}/{}aggregated_landuse'.format(landusedata,year)
                     if not os.path.isfile(results + '.png'):
                         cdlextractor.plot_landuse(extracted, subbasinfile, 
-                                                  attribute, 
+                                                  attribute, self.landuse,
                                                   output = results, 
                                                   datatype = 'results')
 
@@ -380,17 +375,16 @@ class Preprocessor:
         print('')
 
     def build_watershed(self,
-                        subbasinfile, 
-                        flowfile, 
-                        outletfile, 
-                        damfile, 
-                        gagefile,
-                        landfiles, 
-                        VAAfile, 
+                        #subbasinfile, 
+                        #flowfile, 
+                        #outletfile, 
+                        #damfile, 
+                        #gagefile,
+                        #landfiles, 
+                        #VAAfile, 
                         years, 
                         HUC8, 
-                        filename,
-                        plotname = None,
+                        #filename,
                         ):
 
         # create a dictionary to store subbasin data
@@ -403,7 +397,7 @@ class Preprocessor:
 
         # read in the flow plane data into an instance of the FlowPlane class
 
-        sf = Reader(subbasinfile, shapeType = 5)
+        sf = Reader(self.subbasinfile, shapeType = 5)
 
         comid_index = sf.fields.index(['ComID',      'N',  9, 0]) - 1
         len_index   = sf.fields.index(['PlaneLenM',  'N',  8, 2]) - 1
@@ -414,6 +408,7 @@ class Preprocessor:
         elev_index  = sf.fields.index(['AvgElevM',   'N',  8, 2]) - 1
 
         for record in sf.records():
+
             comid     = '{}'.format(record[comid_index])
             length    = record[len_index]
             slope     = record[slope_index]
@@ -428,7 +423,7 @@ class Preprocessor:
 
         # read in the flowline data to an instance of the Reach class
 
-        sf = Reader(flowfile)
+        sf = Reader(self.flowlinefile)
 
         outcomid_index   = sf.fields.index(['OutComID',   'N',  9, 0]) - 1
         gnis_index       = sf.fields.index(['GNIS_NAME',  'C', 65, 0]) - 1
@@ -469,7 +464,7 @@ class Preprocessor:
 
         # open up the outlet file and see if the subbasin has a gage or dam
 
-        sf = Reader(outletfile)
+        sf = Reader(self.outletfile)
 
         records = sf.records()
 
@@ -485,7 +480,7 @@ class Preprocessor:
 
         # open up the dam file and read in the information for the dams
 
-        sf = Reader(damfile)
+        sf = Reader(self.damfile)
 
         records = sf.records()
 
@@ -534,7 +529,7 @@ class Preprocessor:
 
         for year in years:
 
-            csvfile = '{}/{}landuse.csv'.format(landfiles, year)
+            csvfile = '{}/{}landuse.csv'.format(self.landusedata, year)
 
             with open(csvfile, 'r') as f: 
 
@@ -560,7 +555,7 @@ class Preprocessor:
 
         # open up the flowline VAA file to use to establish mass linkages
 
-        with open(VAAfile, 'rb') as f: flowlines = pickle.load(f)
+        with open(self.VAAfile, 'rb') as f: flowlines = pickle.load(f)
             
         # create a dictionary to connect the comids to hydroseqs
 
@@ -606,11 +601,15 @@ class Preprocessor:
 
         watershed.add_mass_linkage(updown)
 
-        with open(filename, 'wb') as f: pickle.dump(watershed, f)
+        with open(self.watershed, 'wb') as f: pickle.dump(watershed, f)
 
-        if plotname is not None and not os.path.isfile(plotname + '.png'):
- 
-            self.plot_mass_flow(watershed, plotname)
+        # make a plot of the hydrography
+
+        masslink = '{}/{}/hydrography/masslink'.format(self.output, HUC8)
+
+        if not os.path.isfile(masslink + '.png'):
+
+            self.plot_mass_flow(watershed, masslink)
 
     def plot_mass_flow(self,
                        watershed, 
@@ -621,15 +620,14 @@ class Preprocessor:
                        l = 8.5, 
                        w = 11, 
                        verbose = True, 
-                       overwrite = True,
                        ):
         """
         Makes a schematic of the mass linkages between the various subbasins
         in a watershed.
         """
 
-        if os.path.exists(output) and not overwrite:
-            if verbose: print('file %s exists' % output)
+        if os.path.exists(output):
+            if verbose: print('mass link plot {} exists'.format(output))
             return
         elif verbose: print('generating a mass linkage plot\n')
 
@@ -802,27 +800,25 @@ class Preprocessor:
               start,
               end,
               years,
-              flowplots = True,
               ):
 
         # file paths
 
-        subbasinfile = '{}/subbasin_catchments'.format(self.hydrography)
-        flowlinefile = '{}/subbasin_flowlines'.format(self.hydrography)
-        outletfile   = '{}/subbasin_outlets'.format(self.hydrography)
-        damfile      = '{}/dams'.format(self.hydrography)
-        gagefile     = '{}/gagestations'.format(self.gagepath)
-        landusedata  = '{}/{}/landuse'.format(self.output, HUC8)
-        VAAfile      = '{}/flowlineVAAs'.format(self.hydrography)
-        filename     = '{}/{}/hspf/watershed'.format(self.output, HUC8)
-        plotname     = '{}/{}/hydrography/masslink'.format(self.output, HUC8)
+        self.subbasinfile = '{}/subbasin_catchments'.format(self.hydrography)
+        self.flowlinefile = '{}/subbasin_flowlines'.format(self.hydrography)
+        self.outletfile   = '{}/subbasin_outlets'.format(self.hydrography)
+        self.damfile      = '{}/dams'.format(self.hydrography)
+        self.gagefile     = '{}/gagestations'.format(self.gagepath)
+        self.landusedata  = '{}/{}/landuse'.format(self.output, HUC8)
+        self.VAAfile      = '{}/flowlineVAAs'.format(self.hydrography)
+        self.watershed    = '{}/{}/hspf/watershed'.format(self.output, HUC8)
 
-        if not os.path.isfile('{}/{}/watershed'.format(self.output, HUC8)):
+        if not os.path.isfile(self.watershed):
 
-            self.build_watershed(subbasinfile, flowlinefile, outletfile, 
-                                 damfile,
-                                 gagefile, landusedata, VAAfile, 
-                                 years, HUC8, filename, plotname = plotname)
+            self.build_watershed(#subbasinfile, flowlinefile, outletfile, 
+                                 #damfile,
+                                 #gagefile, landusedata, VAAfile, 
+                                 years, HUC8)
         
     def climate(self,
                 HUC8,
@@ -1149,107 +1145,30 @@ class Preprocessor:
                                        output = name, 
                                        show = False)
 
-        # calculate hourly PET for different land use categories
+        # read the land use data provide
 
-        lucs = ('corn', 
-                'soybeans', 
-                'grains', 
-                'alfalfa', 
-                'fallow',
-                'pasture', 
-                'wetlands', 
-                'others',
-                )
+        with open(self.landuse, 'r') as f:
 
-        colors  = ('yellow',  
-                   'green',        
-                   'brown',    
-                   'lime',   
-                   'gray', 
-                   'orange',      
-                   'blue', 
-                   'black',
-                   )
+            reader = csv.reader(f)
+            rows = [row for row in reader][1:-1]
 
-        pdates = (datetime.datetime(2000, 4, 15),
-                  datetime.datetime(2000, 5, 15),
-                  datetime.datetime(2000, 4, 15),
-                  datetime.datetime(2000, 5, 15),
-                  datetime.datetime(2000, 3,  1),
-                  datetime.datetime(2000, 3,  1),
-                  datetime.datetime(2000, 3,  1),
-                  datetime.datetime(2000, 3,  1),
-                  )
+        lucs, cs, pdates, ems, gs, fs, ls, Kis, Kms, Kls = ([] 
+                                                            for i in range(10))
 
-        ems = (30,
-               20,
-               20,
-               10,
-               10,
-               10,
-               10,
-               10,
-               )
+        for row in rows:
 
-        gs = (50,
-              30,
-              30,
-              10,
-              10,
-              10,
-              10,
-              10,
-              )
-
-        fs = (60,
-              60,
-              60,
-              120,
-              240,
-              240,
-              240,
-              240,
-              )
-
-        ls = (40,
-              30,
-              40,
-              10,
-              10,
-              10,
-              10,
-              10,
-              )
-
-        Kis = (0.30,
-               0.40,
-               0.30,
-               0.30,
-               0.30,
-               0.30,
-               1.00,
-               1.00,
-               )
-
-        Kms = (1.15,
-               1.15,
-               1.15,
-               0.95,
-               0.30,
-               0.85,
-               1.20,
-               1.00,
-               )
-
-        Kls = (0.40,
-               0.55,
-               0.40,
-               0.90,
-               0.30,
-               0.30,
-               1.00,
-               1.00,
-               )
+            lucs.append(row[0])
+            cs.append((int(row[1]) / 255, 
+                       int(row[2]) / 255, 
+                       int(row[3]) / 255))
+            pdates.append(datetime.datetime(2001, int(row[4]), int(row[5])))
+            ems.append(int(row[6]))
+            gs.append(int(row[7]))
+            fs.append(int(row[8]))
+            ls.append(int(row[9]))
+            Kis.append(float(row[10]))
+            Kms.append(float(row[11]))
+            Kls.append(float(row[12]))
 
         # add the hourly RET time series if it isn't present
 
@@ -1258,9 +1177,13 @@ class Preprocessor:
             with open(hRET, 'rb') as f: t, tstep, data = pickle.load(f)
             etcalculator.add_timeseries('RET', tstep, t, data)
 
+        # store the PET time series in a dictionary structure
+
+        PETs = {}
+
         # iterate through the land use categories and calculate PET 
 
-        for i in zip(lucs, colors, pdates, ems, gs, fs, ls, Kis, Kms, Kls):
+        for i in zip(lucs, cs, pdates, ems, gs, fs, ls, Kis, Kms, Kls):
 
             crop, c, plant, emergence, growth, full, late, Ki, Km, Kl = i
 
@@ -1284,7 +1207,9 @@ class Preprocessor:
             t, PET = etcalculator.hourlyPETs[crop]
             ts = t, 60, PET
 
-            # save it
+            PETs[crop] = ts
 
-            name = '{}/{}'.format(evapotranspiration, crop)
-            with open(name, 'wb') as f: pickle.dump(ts, f)
+        # save it
+
+        name = '{}/hourlyPETs'.format(evapotranspiration)
+        with open(name, 'wb') as f: pickle.dump(PETs, f)

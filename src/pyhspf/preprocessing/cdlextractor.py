@@ -7,12 +7,12 @@
 # Calculates the land use data from a raster file within each of the shapes
 # in a shapefile.
 
-import os, pickle, csv, zipfile, itertools, gdal, osr, numpy
+import os, csv, zipfile, gdal, numpy
 
-from urllib          import request
-from shapefile       import Reader
-from PIL             import Image, ImageDraw
-from matplotlib      import pyplot, patches, path, colors, ticker
+from urllib     import request
+from shapefile  import Reader
+from PIL        import Image, ImageDraw
+from matplotlib import pyplot, patches, path, colors, ticker
 
 from .rasterutils import get_pixel
 from .rasterutils import get_raster
@@ -249,7 +249,8 @@ class CDLExtractor:
 
             else: 
 
-                print('compressed file for {} {} exists'.format(*its))
+                print('compressed NASS CDL raster for ' +
+                      '{} {} exists'.format(*its))
 
             # decompress the files
 
@@ -372,6 +373,10 @@ class CDLExtractor:
         self.extract_bbox((xmin, ymin, xmax, ymax), directory)
 
     def read_aggregatefile(self, aggregatefile):
+        """
+        Reads the information in the file that aggregates raw landuse 
+        categories together into homogeneous groups.
+        """
 
         with open(aggregatefile, 'r') as csvfile:
             reader = csv.reader(csvfile)
@@ -390,14 +395,43 @@ class CDLExtractor:
 
         self.categories = {int(i):c  for i,c in zip(columns[0], columns[1])}
         self.groups     = {int(i):g  for i,g in zip(columns[0], columns[2])}
-        self.reds       = {i:int(r)  for i,r in zip(columns[2], columns[3])}
-        self.greens     = {i:int(g)  for i,g in zip(columns[2], columns[4])}
-        self.blues      = {i:int(b)  for i,b in zip(columns[2], columns[5])}
 
         # make and preserve a unique, ordered list of the groups
 
         seen = set()
         self.order = [i for i in columns[2] if not (i in seen or seen.add(i))]
+
+    def read_categoryfile(self, categoryfile):
+        """
+        Reads the file that contains information about the specific land use
+        category groups such as colors and evapotranspiration parameters.
+        """
+
+        self.reds, self.greens, self.blues = {}, {}, {}
+
+        with open(categoryfile, 'r') as f:
+
+            reader = csv.reader(f)
+
+            # skip the header
+
+            dummy = next(reader, None)
+
+            # iterate through
+
+            for row in reader:
+                self.reds[row[0]]   = int(row[1])
+                self.greens[row[0]] = int(row[2])
+                self.blues[row[0]]  = int(row[3])
+
+        # check to see that info has been provided for each category
+
+        for g in self.order:
+            for c in (self.reds, self.greens, self.blues):
+                if g not in c:
+                    print('error: land use category data for ' +
+                          '"{}" missing!'.format(g))
+                    raise
 
     def calculate_landuse(self, 
                           rasterfile,
@@ -411,6 +445,8 @@ class CDLExtractor:
         feature attribute in the polygon shapefile using the aggregate 
         mapping provided in the "aggregatefile."
         """
+
+        # make sure the files exist
 
         for f in rasterfile, shapefile + '.shp', aggregatefile:
             if not os.path.isfile(f):
@@ -480,6 +516,9 @@ class CDLExtractor:
         return self.landuse
 
     def make_csv(self, attribute, output):
+        """
+        Makes a csv file for the CDL data
+        """
 
         with open(output, 'w', newline = '') as csvfile:
             writer = csv.writer(csvfile)
@@ -495,7 +534,9 @@ class CDLExtractor:
 
     def make_patch(self, points, facecolor, edgecolor = 'Black', width = 1, 
                    alpha = None, hatch = None, label = None):
-        """Uses a list or array of points to generate a matplotlib patch."""
+        """
+        Uses a list or array of points to generate a matplotlib patch.
+        """
 
         vertices = [(point[0], point[1]) for point in points]
         vertices.append((points[0][0], points[0][1]))
@@ -517,6 +558,7 @@ class CDLExtractor:
                      landuse,
                      catchments,
                      attribute,
+                     categoryfile,
                      output = None, 
                      datatype = 'raw', 
                      overwrite = False,
@@ -533,8 +575,10 @@ class CDLExtractor:
         """
 
         if self.order is None:
-            print('error: no aggregate file information specified')
-            raise Exception
+            print('error: no landuse aggregation file information provided\n')
+            raise
+
+        self.read_categoryfile(categoryfile)
 
         if verbose: print('generating a {} land use plot\n'.format(datatype))
 

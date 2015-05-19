@@ -2,7 +2,7 @@
 #
 # author: David J. Lampert (djlampert@gmail.com)
 #
-# last updated: 04/24/2015
+# last updated: 05/18/2015
 # 
 # Purpose: shows how to use the Preprocessor class to gather all the input
 # data needed to create an HSPF model for an 8-digit hydrologic unit code 
@@ -14,7 +14,9 @@
 # great detail in other examples. The raw data are then aggregated, 
 # disaggregated, processed, etc into formats consistent with PyHSPF's 
 # built-in HSPFModel class as illustrated in other examples.
-#
+
+import os, datetime
+
 # Because the raw data files are pretty large, it may make sense to keep
 # them on a server locally although they can be placed anywhere where there
 # is sufficient space. The raw NHDPlus data for this example include the 
@@ -88,8 +90,6 @@
 # After downloading all the NHDPlus and CDL data, this script took about 20 
 # minutes to run on my laptop. The NHDPlus download can take a few hours.
 
-import os, datetime
-
 # Paths to working directories for source NHDPlus, CDL, NWIS, NID datasets
 # (modify as needed for the PC of interest)
 
@@ -99,17 +99,6 @@ if os.name == 'posix':
 elif os.name == 'nt':
     network     = 'D:'
     destination = 'C:/HSPF_data'
-
-# make sure the directory paths exist
-
-if not os.path.isdir(network):
-    print('error: directory {} does not exist!'.format(network))
-    print('please specify an existing directory for source data files')
-    raise
-if not os.path.isdir(destination):
-    print('error: directory {} does not exist!'.format(destination))
-    print('please specify an existing directory for source data files')
-    raise
 
 # import the Preprocessor
 
@@ -131,10 +120,15 @@ state = 'ia'
 start = datetime.datetime(2001, 1, 1)
 end   = datetime.datetime(2011, 1, 1)
 
-# comma separated value file linking land use codes from the cropland data
-# layer to RGB colors and HSPF land segments
+# comma separated value file linking land use codes from the Cropland Data
+# Layer to aggregated land use categories for HSPF land segments
 
-landcodes = 'aggregate.csv'
+aggregation = 'cdlaggregation.csv'
+
+# comma separated value file of parameters for the HSPF land use categories
+# including RGB values for plots and evapotranspiration crop coefficients
+
+landuse = 'lucs.csv'
 
 # because parallel processing is (optionally) used, the process method has 
 # to be called at runtime as shown below
@@ -143,12 +137,13 @@ if __name__ == '__main__':
 
     # make an instance of the preprocessor
 
-    processor = Preprocessor(network, destination, landcodes = landcodes)
+    processor = Preprocessor(network, destination, cdlaggregate = aggregation,
+                             landuse = landuse)
 
     # preprocess the HUC8
 
     processor.preprocess(HUC8, state, start, end)
 
-    # so using the preprocessor in other watersheds *should* be as simple as
-    # supplying the state and 8-digit HUC; if you try and get errors please
-    # report them!
+    # using the preprocessor in other watersheds *should* be as simple as
+    # supplying the start and end date, state and 8-digit HUC; if you try and 
+    # get an error please report it!

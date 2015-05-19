@@ -70,7 +70,7 @@ class NWISExtractor:
                 print('The NWIS metadata are not present in the destination\n')
                 os.mkdir(self.destination)
 
-        else: print('NWIS directory exists\n')
+        else: print('NWIS directory {} exists\n'.format(self.destination))
 
         # source zip file download
 
@@ -81,7 +81,9 @@ class NWISExtractor:
             print('the source zip file for the NWIS metadata is not present\n')
             request.urlretrieve(url, zfile, self.report)
 
-        elif verbose: print('source zip file for the metadata is present\n')
+        elif verbose: 
+
+            print('NWIS source metadata file {} is present\n'.format(zfile))
 
         # unzip 
 
@@ -94,7 +96,7 @@ class NWISExtractor:
             zf.extractall(self.destination)
             print('')
 
-        elif verbose: print('gage metadata shapefile is present\n')
+        elif verbose: print('gage metadata {} is present\n'.format(self.NWIS))
 
     def extract_HUC8(self, HUC8, output, gagefile = 'gagestations', 
                      verbose = True):
@@ -157,7 +159,7 @@ class NWISExtractor:
 
         elif verbose: 
 
-            print('gage station shapefile for {} exists\n'.format(HUC8))
+            print('gage station file {} exists\n'.format(sfile))
 
         self.set_metadata(sfile)
 

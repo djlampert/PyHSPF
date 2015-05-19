@@ -2593,7 +2593,6 @@ class HUC8Delineator(NHDPlusDelineator):
 
         if (not os.path.isfile(self.outletfile         + '.shp') or
             not os.path.isfile(self.subbasinflowlines  + '.shp') or
-            not os.path.isfile(self.subbasinflowlines  + '.shp') or
             not os.path.isfile(self.subbasincatchments + '.shp')
             ):
 
@@ -2666,7 +2665,9 @@ class HUC8Delineator(NHDPlusDelineator):
                                     vverbose = vverbose,
                                     )
 
-        elif verbose: print('HSPF watershed {} exists\n'.format(self.HUC8))
+        elif verbose: 
+
+            print('hydrography data for {} exist\n'.format(self.HUC8))
 
         if not os.path.isfile(self.preliminary) and watershedplots:
 

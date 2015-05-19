@@ -2,13 +2,9 @@ The examples provided in this folder illustrate how to use PyHSPF to work with p
 
 PyHSPF has utilities to gather all these time series data together from several publically-available databases. The National Water Information System (NWIS) contains flow and water quality time series data. The Global Historical Climate Network Daily (GHCND) contains many climate datasets including min and max temperature, snowfall, snowdepth, wind speed, and pan evaporation. The Global Summary of the Day (GSOD) contains min and max temperature, dew point, and wind speed data data. The National Solar Radiation Database (NSRDB) has hourly estimates of solar radiation based on several models in addition to a limited amount of observed solar radiation data. The hourly precipitation database (3240) from the National Climate Data Center contains data from stations with hourly observations. Given the extreme spatial and temporal variability and the obvious importance of precipitation for hydrologic modeling, this is a particularly important dataset. The following scripts show how to use PyHSPF tools to gather relevant time series for HSPF:
  
-**nwisexample.py:** uses the NWISExtractor to extract NWIS flow and water quality data
-
-**ghcndexample.py:** uses climateutils to extract GHCND data
-
-**precipexample.py:** uses climateutils to extract hourly precipitation data
-
-**gsodexample.py:** uses climateutils to extract GSOD data
-
-**nsrdbexample.py:** uses climateutils to extract NSRDB data
+- **nwisexample.py** uses the NWISExtractor to extract NWIS flow and water quality data
+- **ghcndexample.py** uses climateutils to extract GHCND data
+- **precipexample.py** uses climateutils to extract hourly precipitation data
+- **gsodexample.py** uses climateutils to extract GSOD data
+- **nsrdbexample.py** uses climateutils to extract NSRDB data
 
