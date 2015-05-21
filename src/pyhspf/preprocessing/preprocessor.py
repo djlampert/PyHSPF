@@ -4,7 +4,7 @@
 #                                                                             #
 # David J. Lampert                                                            #
 #                                                                             #
-# last updated: 04/18/2015                                                    #
+# last updated: 05/20/2015                                                    #
 #                                                                             #
 # Purpose: Extracts hydrography, land use, and climate data from online       #
 # databases, spatially aggregates data, constructs precipitation and          #
@@ -29,7 +29,7 @@
 # The National Inventory of Dams (NID) shapefile available at                 #
 # http://nationalatlas.gov/metadata/dams00x020.faq.html                       #
 #                                                                             #
-# The USGS NWIS gage station shapefile available at                           #
+# The National Water Information System (NWIS) available at                   #
 # http://water.usgs.gov/GIS/metadata/usgswrd/XML/streamgages.xml              #
 #                                                                             #
 # The National Climate Data Center (NCDC)                                     #
@@ -173,8 +173,6 @@ class Preprocessor:
         # download and extract the climate data
 
         if climate: self.climate(HUC8, start, end)
-
-        print('intermediate time {:.1f} seconds'.format(time.time() - go))
 
         if verbose: 
 
@@ -827,6 +825,8 @@ class Preprocessor:
                 verbose = True,
                 ):
 
+        go = time.time()
+
         subbasinfile = '{}/subbasin_catchments'.format(self.hydrography)
         climatedata = '{}/{}/climate'.format(self.output, HUC8)
 
@@ -900,6 +900,8 @@ class Preprocessor:
                 observations = [v for v in data if v is not None]
 
                 if len(observations) > 0: evapstations.append(k)
+
+        print('intermediate time: {:.1f}'.format(time.time() - go))
 
         # aggregate the hourly NSRDB metstat data
 

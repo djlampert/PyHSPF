@@ -2,7 +2,7 @@
 #
 # author: David J. Lampert (djlampert@gmail.com)
 #
-# last updated: 05/18/2015
+# last updated: 05/20/2015
 # 
 # Purpose: shows how to use the Preprocessor class to gather all the input
 # data needed to create an HSPF model for an 8-digit hydrologic unit code 
@@ -47,7 +47,7 @@ import os, datetime
 # imposed by other HSPF software. Finally, submodels for individual gages can 
 # be created easily starting from the HUC8 base model.
 # 
-# In the example below, the raw files exist/will be downloaded to:
+# In the example below, the raw files exist or will be downloaded to:
 #
 # /media/data/DATA (for Linux) 
 # 
@@ -112,7 +112,7 @@ HUC8 = '07080106'
 
 state = 'ia'
 
-# if the watershed is in more than one state, this will probably not work 
+# If the watershed is in more than one state, this will probably not work 
 # (this is a feature that should be added in the future).
 
 # start and end dates (2001 to 2010)
@@ -120,17 +120,21 @@ state = 'ia'
 start = datetime.datetime(2001, 1, 1)
 end   = datetime.datetime(2011, 1, 1)
 
-# comma separated value file linking land use codes from the Cropland Data
+# maximum drainage area for subbasins in square kilometers
+
+drainmax = 400
+
+# Comma separated value file linking land use codes from the Cropland Data
 # Layer to aggregated land use categories for HSPF land segments
 
 aggregation = 'cdlaggregation.csv'
 
-# comma separated value file of parameters for the HSPF land use categories
+# Comma separated value file of parameters for the HSPF land use categories
 # including RGB values for plots and evapotranspiration crop coefficients
 
 landuse = 'lucs.csv'
 
-# because parallel processing is (optionally) used, the process method has 
+# Because parallel processing is (optionally) used, the process method has 
 # to be called at runtime as shown below
 
 if __name__ == '__main__': 
@@ -142,8 +146,124 @@ if __name__ == '__main__':
 
     # preprocess the HUC8
 
-    processor.preprocess(HUC8, state, start, end)
+    processor.preprocess(HUC8, state, start, end, drainmax = drainmax)
 
-    # using the preprocessor in other watersheds *should* be as simple as
-    # supplying the start and end date, state and 8-digit HUC; if you try and 
-    # get an error please report it!
+# If the script runs succesfully, the following file structure will be created:
+#
+# <network>
+#       /NHDPlus
+#             /NHDPlusMS
+#                   /NHDPlus07
+#                          /EROMExtension
+#                                HUC07 Erosion Runoff Model (dbf)
+#                          /NEDSnapshot
+#                                HUC07 Elevation Rasters (tif)
+#                          /NHDPlusAttributes
+#                                HUC07 Flowline attributes (dbf)
+#                          /NHDPlusCatchment
+#                                HUC07 Catchment shapefile
+#                          /NHDSnapshot
+#                                HUC07 Flowline shapefile
+#                          /WBDSnapshot
+#                                HUC07 Watershed shapefile
+#
+#             Compressed NHDPlus 7-zip files
+#
+#       /CDL
+#             CDL_<year>_19.zip
+#             CDL_<year>_19.tif
+#             CDL_<year>_19.tif.vat.dbf
+#
+#             <year> ranges from 2000 forward (CDL)
+#             "19" is the state FIPS code for Iowa
+#             so this is all the crop land use data for Iowa
+#       
+#       /NID
+#             dams00x020 shapefile of dam attributes
+#             dams00x020.tar.gz compressed file
+#
+#       /NWIS
+#             USGS_Streamgages-NHD_Locations shapefile of gage attributes
+#             USGS_Streamgages-NHD_Locations_Shape.zip compressed file
+#
+# <destination>
+#       /07080106  destination directory for a HUC8
+#             /hydrography
+#                   flowlines shapefile (raw NHDPlus flowlines)
+#                   catchments shapefile (raw NHDPlus catchments)
+#                   elevations geotiff (30-meter NED raster)
+#                   dams shapefile (NID metadata)
+#
+#                   subbasin_outlets shapefile (co-located w/dams, gages)
+
+#                   /<comid>  (common identifier for subbasin outlet flowline)
+#                          flowlines shapefile (unaggregated NHDPlus) 
+#                          catchments shapefile (unaggregated NHDPlus)
+#                          combine_flowline shapefile (primary flowline)
+#                          combined shapefile (aggregated subbasin catchment)
+#
+#                   subbasin_flowlines shapefile (subbasin primary flowlines)
+#                   subbasin_catchments shapefile (aggregated subbasins)
+#                   boundary shapefile (aggregated HUC8 boundary)
+#                   flowlineVAAs (pickled dictionary of PyHSPF Flowline class)
+#                   watershed.png (image of raw NHDPlus data)
+#                   preliminary.png (image of NHDPlus, NID, NWIS data)
+#                   delineated.png (image of aggregated subbasins and flowlines)
+#                   masslink.png (image of subbasin flowline network)
+#             /landuse
+#                   <year>landuse.tif (geotiff of raw CDL data)
+#                   <year>raw_landuse.png (image of raw CDL and subbasin data)
+#                   <year>landuse.csv (csv of subbasin aggregated CDL data)
+#                   <year>aggregated_landuse.png (image of subbasin fractions)
+#             /NWIS
+#                   gagestations shapefile (gage metadata for the HUC8)
+#                   <NWIS gageid> (pickled instance of PyHSPF GageStation class)
+#                   <NWIS gageid>.png (image of gage data)
+#             /climate
+#                   metadata (pickled PyHSPF ClimateProcessor metadata)
+#                   /GHCND
+#                         <COOP> (pickled instance of PyHSPF GHCNDStation class)
+#                         <COOP>.png (image of station data)
+#                   /GSOD
+#                         <WBAN> (pickled instance of PyHSPF GSODStation class)
+#                         <WBAN>.png (image of station data)
+#                   /NSRDB
+#                         <WBAN> (pickled instance of PyHSPF NSRDBStation class)
+#                         <WBAN>.png (image of station data)
+#                   /precip3240
+#                         /precip3240
+#                               3240_<state FIPS>_<year1>-<year2>.tar.Z
+#                               3240_<state FIPS>_<year1>-<year2>.tar
+#
+#                               raw state-level hourly precipitation gage data 
+#                               in UNIX compressed taped archive
+#                               must be decompressed w/7zip on Windows
+#
+#                         <WBAN> (pickled instance of Precip3240Station class)
+#                         <WBAN>.png (image of station data)
+#                   /daily
+#                         dewpoint (pickled aggregated dewpoint time series)
+#                         snowdepth (pickled aggregated snowdepth time series)
+#                         snowfall (pickled aggregated snowfall time series)
+#                         solar (pickled aggregated solar time series)
+#                         tmax (pickled aggregated tmax time series)
+#                         tmin (pickled aggregated tmin time series)
+#                         wind (pickled aggregated wind time series)
+#                   /hourly
+#                         dewpoint (pickled aggregated dewpoint time series)
+#                         solar (pickled aggregated solar time series)
+#                         temperature (pickled aggregated temp time series)
+#                         wind (pickled aggregated wind time series)
+#                   /hourlyprecipitation
+#                         <comid> (subbasin hourly precipitation time series)
+#                   /evapotranspiration
+#                         dailyRET (pickled aggregated daily RET time series)
+#                         hourlyRET (pickled aggregated hourly RET time series)
+#                         hourlyPETs (land use-specific PET time series)
+#                         referenceET.png (image of RET calculation)
+#                         dayofyearET.png (image of RET calculation)
+#             /hspf (directory for running HSPF simulations) 
+#
+# Using the preprocessor in other watersheds *should* be as simple as
+# supplying the start and end date, state and 8-digit HUC; if you try and 
+# get an error please report it!
