@@ -54,17 +54,18 @@ from .delineators      import HUC8Delineator
 from .cdlextractor     import CDLExtractor
 from .climateprocessor import ClimateProcessor
 from .etcalculator     import ETCalculator
-from  pyhspf.core      import Watershed, Subbasin
+from  pyhspf.core      import HSPFModel, Watershed, Subbasin
 
 class Preprocessor:
     """
     A class that integrates the various preprocessing tools together into a 
-    single class to build a baseline HSPFModel
+    single class to build a baseline HSPFModel for an 8-digit Hydrologic Unit
+    Code (HUC8).
     """
 
     def __init__(self,
-                 network, 
-                 output, 
+                 network      = None, 
+                 output       = None, 
                  HUC8         = None,
                  state        = None,
                  start        = None,
@@ -72,44 +73,96 @@ class Preprocessor:
                  cdlaggregate = None,
                  landuse      = None,
                  ):
+        """
+        Constructor method; sets up pointers to directory locations.
+        """
 
-        self.network   = network
-        self.output    = output
-
-        # source data locations on the network
-
-        self.NHDPlus   = '{}/NHDPlus'.format(self.network)
-        self.NED       = '{}/NEDSnapshot'.format(self.NHDPlus)
-        self.NWIS      = '{}/NWIS'.format(self.network)
-        self.CDL       = '{}/CDL'.format(self.network)
-        self.NID       = '{}/NID'.format(self.network)
-
+        self.network      = network
+        self.output       = output
         self.HUC8         = HUC8
         self.state        = state
         self.start        = start
         self.end          = end
         self.cdlaggregate = cdlaggregate
         self.landuse      = landuse
- 
+
+    def set_network(self,
+                    network,
+                    NHDPlus = None,
+                    NED     = None,
+                    NWIS    = None,
+                    CDL     = None,
+                    NID     = None,
+                    ):
+        """
+        Sets the default source data locations on the network.
+        """
+
+        self.network = network
+
+        # if provided, set the file paths to raw data; otherwise use defaults
+
+        if NHDPlus is None: self.NHDPlus = '{}/NHDPlus'.format(self.network)
+        else:               self.NHDPlus = NHDPlus
+
+        if NED is None:     self.NED = '{}/NEDSnapshot'.format(self.NHDPlus)
+        else:               self.NED = NED
+
+        if NWIS is None:    self.NWIS = '{}/NWIS'.format(self.network)
+        else:               self.NWIS = NWIS
+
+        if CDL is None:     self.CDL = '{}/CDL'.format(self.network)
+        else:               self.CDL = CDL
+
+        if NID is None:     self.NID = '{}/NID'.format(self.network)
+        else:               self.NID = NID
+
+    def set_output(self, output):
+        """
+        Sets the location for output directories.
+        """
+
+        self.output = output
+
+    def set_parameters(self,
+                       HUC8         = None,
+                       state        = None,
+                       start        = None,
+                       end          = None,
+                       cdlaggregate = None,
+                       landuse      = None,
+                       ):
+        """
+        Sets simulation-specific parameters.
+        """
+
+        if HUC8         is not None:  self.HUC8         = HUC8
+        if state        is not None:  self.state        = state
+        if start        is not None:  self.start        = start
+        if end          is not None:  self.end          = end
+        if cdlaggregate is not None:  self.cdlaggregate = cdlaggregate
+        if landuse      is not None:  self.landuse      = landuse
+
     def preprocess(self,
-                   HUC8, 
-                   state, 
-                   start, 
-                   end,
-                   drainmax       = 400, 
-                   extra_outlets  = None,
-                   verbose        = True, 
-                   vverbose       = False, 
-                   parallel       = True, 
-                   extract        = True, 
-                   delineate      = True,
-                   landuse        = True, 
-                   landstats      = True, 
-                   build          = True, 
-                   climate        = True, 
+                   hydrography      = None,
+                   gagedirectory    = None,
+                   landusedata      = None,
+                   climatedata      = None,
+                   hspfdirectory    = None,
+                   drainmax         = 400, 
+                   extra_outlets    = None,
+                   masslink         = True,
+                   plotET           = True,
+                   hydrographyplot  = True,
+                   preliminary      = True,
+                   delineated       = True,
+                   landuseplots     = True,
+                   verbose          = True, 
+                   vverbose         = False, 
+                   parallel         = True,
                    ):
         """
-        Preprocesses the data for HSPF
+        Preprocesses the data for HSPF.
         """
 
         # check the network is mounted on Unix-like systems
@@ -119,6 +172,26 @@ class Preprocessor:
             if not os.path.ismount(self.network):
                 print('\nerror: network ' +
                       '{} does not seem to be mounted\n'.format(self.network))
+                raise
+
+        # check that all the required information has been supplied
+
+        required = {self.network:      'network directory location', 
+                    self.output:       'output directory location', 
+                    self.HUC8:         '8-digit hydrologic unit code', 
+                    self.state:        '2-character state abbreviation', 
+                    self.start:        'start date', 
+                    self.end:          'end date', 
+                    self.cdlaggregate: 'CDL aggregation file', 
+                    self.landuse:      'land use parameter file',
+                    }
+
+        for info in required:
+
+            if info is None:
+                
+                print('error: required information ' +
+                      '"{}" has not supplied!\n'.format(info))
                 raise
 
         # keep track of how long it takes
@@ -131,129 +204,222 @@ class Preprocessor:
 
         # if the destination folder for the HUC8 does not exist, make it
 
-        its = self.output, HUC8
+        its = self.output, self.HUC8
         output = '{}/{}'.format(*its)
         if not os.path.isdir(output): os.mkdir(output)
 
         # make a subdirectory for hydrography data
 
-        self.hydrography = '{}/{}/hydrography'.format(*its)
+        if hydrography is None:
+            self.hydrography = '{}/{}/hydrography'.format(*its)
+        else:
+            self.hydrography = hydrography
+
         if not os.path.isdir(self.hydrography): os.mkdir(self.hydrography)
 
-        # make a directory for HSPF calculations
+        # make a subdirectory for NWIS flow and water quality data
 
-        hspfdirectory = '{}/{}/hspf'.format(*its)
-        if not os.path.isdir(hspfdirectory): os.mkdir(hspfdirectory)
+        if gagedirectory is None:
+            self.gagedirectory = '{}/{}/NWIS'.format(*its)
+        else:
+            self.gagedirectory = gagedirectory
+
+        if not os.path.isdir(self.gagedirectory): os.mkdir(self.gagedirectory)
+
+        # make a directory for the CDL data
+
+        if landusedata is None:
+            self.landusedata = '{}/{}/landuse'.format(*its)
+        else:
+            self.landusedata = landusedata
+
+        if not os.path.isdir(self.landusedata): os.mkdir(self.landusedata)
+
+        # make a directory for the climate data
+
+        if climatedata is None:
+            self.climatedata = '{}/{}/climate'.format(self.output, self.HUC8)
+        else:
+            self.climatedata = climatedata
+
+        if not os.path.isdir(self.climatedata): os.mkdir(self.climatedata)
+
+        # make a subdirectory for HSPF calculations
+
+        if hspfdirectory is None:
+            self.hspfdirectory = '{}/{}/hspf'.format(*its)
+        else:
+            self.hspfdirectory = hspfdirectory
+
+        if not os.path.isdir(self.hspfdirectory): os.mkdir(self.hspfdirectory)
 
         # make a list of all the years for the CDL extraction
 
-        years = [start.year]
+        self.years = [self.start.year]
         
-        t = start
-        while t < end:
-            if t.year not in years: years.append(t.year)
+        t = self.start
+        while t < self.end:
+            if t.year not in self.years: self.years.append(t.year)
             t += datetime.timedelta(days = 1)
+
+        # file paths to files used throughout preprocessing
+
+        self.flowfile      = '{}/flowlines'.format(self.hydrography)
+        self.catchmentfile = '{}/catchments'.format(self.hydrography)
+        self.elevfile      = '{}/elevations'.format(self.hydrography)
+        self.damfile       = '{}/dams'.format(self.hydrography)
+        self.gagefile      = '{}/gagestations'.format(self.gagedirectory)
+        self.boundaryfile  = '{}/boundary'.format(self.hydrography)
+        self.VAAfile       = '{}/flowlineVAAs'.format(self.hydrography)
+        self.outletfile    = '{}/subbasin_outlets'.format(self.hydrography)
+        self.flowlinefile  = '{}/subbasin_flowlines'.format(self.hydrography)
+        self.subbasinfile  = '{}/subbasin_catchments'.format(self.hydrography)
+
+        # watershed data container for hydrography and land use data
+
+        its = self.output, self.HUC8
+        self.watershed = '{}/{}/hspf/watershed'.format(*its)
+
+        # make directories for hourly and daily aggregated climate time series
+
+        self.hourly = '{}/hourly'.format(self.climatedata)
+        self.daily  = '{}/daily'.format(self.climatedata)
+
+        if not os.path.isdir(self.hourly): os.mkdir(self.hourly)
+        if not os.path.isdir(self.daily):  os.mkdir(self.daily)
+
+        # make a directory for subbasin-specific precipitation time series
+
+        self.precip = '{}/hourlyprecipitation'.format(self.climatedata)
+        if not os.path.isdir(self.precip): os.mkdir(self.precip)
+
+        # make a directory for the evapotranspiration time series
+
+        its = self.climatedata
+        self.evapotranspiration = '{}/evapotranspiration'.format(its)
+        if not os.path.isdir(self.evapotranspiration): 
+            os.mkdir(self.evapotranspiration)
+
+        # file paths to pickled file containing "final" time series
+
+        self.tmin      = '{}/tmin'.format(self.daily)
+        self.tmax      = '{}/tmax'.format(self.daily)
+        self.dewpoint  = '{}/dewpoint'.format(self.daily)
+        self.wind      = '{}/wind'.format(self.daily)
+        self.snowfall  = '{}/snowfall'.format(self.daily)
+        self.snowdepth = '{}/snowdepth'.format(self.daily)
+        self.hsolar    = '{}/solar'.format(self.hourly)
+        self.dsolar    = '{}/solar'.format(self.daily)
+        self.dRET      = '{}/dailyRET'.format(self.evapotranspiration)
+        self.hRET      = '{}/hourlyRET'.format(self.evapotranspiration)
+        self.htemp     = '{}/temperature'.format(self.hourly)
+        self.hdewpoint = '{}/dewpoint'.format(self.hourly)        
+        self.hwind     = '{}/wind'.format(self.hourly)        
+        self.hPETs     = '{}/hourlyPETs'.format(self.evapotranspiration)
+
+        # path to file containing a list of GHCND stations with evaporation data
+
+        self.evaporation = '{}/evaporation'.format(self.evapotranspiration)
 
         # extract the data for the HUC8 from the sources
 
-        if extract: self.extract(HUC8, start, end)
+        self.extract_hydrography(plot = hydrographyplot)
 
         # delineate the subbasins and the hydrography data
 
-        if delineate: self.delineate(HUC8, parallel = parallel)
+        self.delineate(drainmax      = drainmax, 
+                       extra_outlets = extra_outlets,
+                       parallel      = parallel,
+                       preliminary   = preliminary,
+                       delineated    = delineated,
+                       )
 
         # download and extract land use data
 
-        if landuse: self.extract_CDL(HUC8, state, years)
+        self.extract_CDL(plots = landuseplots)
 
         # build the watershed object
 
-        if build: self.build(HUC8, start, end, years)
+        if not os.path.isfile(self.watershed): 
+            self.build_watershed(masslink = masslink)
 
         # download and extract the climate data
 
-        if climate: self.climate(HUC8, start, end)
+        self.climate(plotET = plotET)
 
         if verbose: 
 
             print('completed preprocessing watershed in ' +
                   '{:.1f} seconds\n'.format((time.time() - go)))
 
-    def extract(self, 
-                HUC8, 
-                start, 
-                end,
-               ):
+    def extract_hydrography(self, plot = True):
         """
         Downloads and extracts NHDPlus, NWIS, and NID data for a HUC8.
         """
 
-        VPU = HUC8[:2]
+        # 2-digit HUC for the HUC8 or Vector Processing Unit (for NHDPlus)
 
-        # create an instance of the extractor
+        VPU = self.HUC8[:2]
+
+        # create an instance of the NHDPlusExtractor for the VPU
 
         nhdplusextractor = NHDPlusExtractor(VPU, self.NHDPlus)
 
         # file name for the output plot file
 
-        plotfile = '{}/watershed'.format(self.hydrography)
+        if plot:
+            plotfile = '{}/watershed'.format(self.hydrography)
+        else:
+            plotfile = None
 
-        # extract the HUC8 data for the HUC8 to the output 
+        # extract NHDPlus data from the VPU for the HUC8 to the output directory
 
-        nhdplusextractor.extract_HUC8(HUC8, self.hydrography, 
+        nhdplusextractor.extract_HUC8(self.HUC8, self.hydrography, 
                                       plotfile = plotfile)
 
-        # extract the gage data from NWIS
+        # create an instance of the NWISExtractor to extract flow and water 
+        # quality data for the gages in the HUC8
 
         nwisextractor = NWISExtractor(self.NWIS)
 
-        # extract the gage stations into a new shapefile for the HUC8
+        # extract the gage station metadata into a new shapefile for the HUC8
 
-        self.gagepath = '{}/{}/NWIS'.format(self.output, HUC8)
+        nwisextractor.extract_HUC8(self.HUC8, self.gagedirectory)
 
-        nwisextractor.extract_HUC8(HUC8, self.gagepath)
+        # download all the gage time series data to the gagepath directory
 
-        # download all the gage data to the gagepath directory
+        nwisextractor.download_all(self.start, self.end, 
+                                   output = self.gagedirectory)
 
-        nwisextractor.download_all(start, end, output = self.gagepath)
-
-        # extract the dam data from the NID
+        # create an instance of the NIDExtractor to extract data for the HUC8
 
         nidextractor = NIDExtractor(self.NID)
 
-        # extract dams in the HUC8 using the shapefile for the boundary
+        # extract the dam data from the NID to a new shapefile using the 
+        # bounding box for the boundary shapefile
 
-        bfile   = '{}/boundary'.format(self.hydrography)
-        damfile = '{}/dams'.format(self.hydrography)
-
-        nidextractor.extract_shapefile(bfile, damfile)
+        nidextractor.extract_shapefile(self.boundaryfile, self.damfile)
 
     def delineate(self,
-                  HUC8,
                   drainmax      = 400, 
                   extra_outlets = None,
-                  parallel      = True, 
+                  parallel      = True,
+                  preliminary   = True,
+                  delineated    = True,
                   verbose       = True, 
                   vverbose      = False, 
                   ):
 
-        # use the HUC8Delineator to delineate the watershed
+        # create an instance of the HUC8Delineator to use to subdivide the 
+        # HUC8 into subbasins
 
-        VAAfile  = '{}/flowlineVAAs'.format(self.hydrography)
-        flowfile = '{}/flowlines'.format(self.hydrography)
-        cfile    = '{}/catchments'.format(self.hydrography)
-        elevfile = '{}/elevations'.format(self.hydrography)
-        damfile  = '{}/dams'.format(self.hydrography)
-        gagefile = '{}/gagestations'.format(self.gagepath)
-        subbasinfile = '{}/subbasin_catchments'.format(self.hydrography)
-
-        delineator = HUC8Delineator(HUC8, 
-                                    VAAfile, 
-                                    flowfile, 
-                                    cfile, 
-                                    elevfile,
-                                    gagefile, 
-                                    damfile,
+        delineator = HUC8Delineator(self.HUC8, 
+                                    self.VAAfile, 
+                                    self.flowfile, 
+                                    self.catchmentfile, 
+                                    self.elevfile,
+                                    self.gagefile, 
+                                    self.damfile,
                                     ) 
 
         # delineate the watershed using the NHDPlus data and delineator
@@ -267,133 +433,154 @@ class Preprocessor:
                              vverbose       = vverbose,
                              )
 
-        self.preliminary = '{}/preliminary.png'.format(self.hydrography)
-        if not os.path.isfile(self.preliminary):
+        # plot the preliminary data
+
+        f = '{}/preliminary.png'.format(self.hydrography)
+        if preliminary and not os.path.isfile(f):
 
             description = 'Catchments, Flowlines, Dams, and Gages'
-            title = ('Cataloging Unit {}\n{}'.format(HUC8, description))
-            delineator.plot_watershed(cfile,
+            title = ('Cataloging Unit {}\n{}'.format(self.HUC8, description))
+            delineator.plot_watershed(self.catchmentfile,
                                       title = title,
                                       dams = True,
                                       width = 0.06,
-                                      output = self.preliminary,
+                                      output = f,
                                       verbose = verbose,
                                       )
 
-        self.delineated = '{}/delineated.png'.format(self.hydrography)
-        if not os.path.exists(self.delineated):
+        # plot the delineated data
+
+        f = '{}/delineated.png'.format(self.hydrography)
+        if delineated and not os.path.exists(f):
 
             description = 'Subbasins, Major Flowlines, and Calibration Gages'
-            title = ('Cataloging Unit {}\n{}'.format(HUC8, description))
-            delineator.plot_watershed(subbasinfile, 
+            title = ('Cataloging Unit {}\n{}'.format(self.HUC8, description))
+            delineator.plot_watershed(self.subbasinfile, 
                                       title = title,
                                       gages = 'calibration',
                                       width = 0.2,
                                       dams = True, 
-                                      output = self.delineated, 
+                                      output = f, 
                                       verbose = verbose,
                                       )
 
-    def extract_CDL(self,
-                    HUC8,
-                    state,
-                    years,
-                    ):
+    def extract_CDL(self, plots = True):
+        """
+        Extract cropland data from the NASS CDL.
+        """
 
-        # extract cropland data from NASS
+        if all([os.path.isfile('{}/{}landuse.csv'.format(self.landusedata, y))
+                for y in self.years]):
+            print('CDL data for {} exist\n'.format(self.HUC8))
+            return
 
         cdlextractor = CDLExtractor(self.CDL)
 
         # download the data for each state for each year
 
-        cdlextractor.download_data(state.upper(), years)
+        cdlextractor.download_data(self.state.upper(), self.years)
+        print('')
 
-        # make a directory for the CDL files
+        # extract the CDL data for the watershed using the boundary shapefile
 
-        landusedata = '{}/{}/landuse'.format(self.output, HUC8)
+        cdlextractor.extract_shapefile(self.subbasinfile, self.landusedata)
+        print('')
 
-        if not os.path.isdir(landusedata): os.mkdir(landusedata)
+        # check to see if CDL data are available for each year
 
-        # extract the data for the watershed using the boundary shapefile
+        l = self.landusedata
+        self.years = [year
+                      for year in self.years
+                      if os.path.isfile('{}/{}landuse.tif'.format(l, year))]
 
-        landfile     = '{}/subbasinlanduse'.format(landusedata)
-        subbasinfile = '{}/subbasin_catchments'.format(self.hydrography)
+        for year in self.years:
 
-        if not any([os.path.isfile('{}/{}landuse.tif'.format(landusedata, year))
-                    for year in years]):
-                                   
-            cdlextractor.extract_shapefile(subbasinfile, landusedata)
-            print('')
+            # landuse in each subbasin for each year
 
-        # calculate the landuse in each subbasin for each year
+            extracted = '{}/{}landuse.tif'.format(self.landusedata, year)
 
-        for year in years:
+            # field code for the subbasin shapefile to match CDL data
 
             attribute = 'ComID'
-            extracted = '{}/{}landuse.tif'.format(landusedata, year)
 
             # csv file of the output
 
-            csvfile = '{}/{}landuse.csv'.format(landusedata, year)
+            csvfile = '{}/{}landuse.csv'.format(self.landusedata, year)
             if not os.path.isfile(csvfile):
 
-                if self.cdlaggregate is None:
-                    print('error: no landuse code file specified\n')
-                    raise
-                    
                 try:
 
-                    cdlextractor.calculate_landuse(extracted, subbasinfile, 
-                                                   self.cdlaggregate, attribute,
+                    cdlextractor.calculate_landuse(extracted, 
+                                                   self.subbasinfile,
+                                                   self.cdlaggregate, 
+                                                   attribute,
                                                    csvfile = csvfile)
 
-                    # raw landuse plot
+                    if plots:
 
-                    raw = '{}/{}raw_landuse'.format(landusedata, year)
-                    if not os.path.isfile(raw + '.png'):
-                        cdlextractor.plot_landuse(extracted, subbasinfile, 
-                                                  attribute, self.landuse, 
-                                                  output = raw, lw = 2.,
-                                                  datatype = 'raw')
+                        # raw landuse plot
 
-                    # aggregated land use plot
+                        raw = '{}/{}raw_landuse'.format(self.landusedata, year)
+                        if not os.path.isfile(raw + '.png'):
+                            cdlextractor.plot_landuse(extracted, 
+                                                      self.subbasinfile, 
+                                                      attribute, 
+                                                      self.landuse, 
+                                                      output = raw, 
+                                                      lw = 2.,
+                                                      datatype = 'raw')
 
-                    results = '{}/{}aggregated_landuse'.format(landusedata,year)
-                    if not os.path.isfile(results + '.png'):
-                        cdlextractor.plot_landuse(extracted, subbasinfile, 
-                                                  attribute, self.landuse,
-                                                  output = results, 
-                                                  datatype = 'results')
+                        # aggregated land use plot
+
+                        its = self.landusedata, year
+                        results = '{}/{}aggregated_landuse'.format(*its)
+                        if not os.path.isfile(results + '.png'):
+                            cdlextractor.plot_landuse(extracted, 
+                                                      self.subbasinfile, 
+                                                      attribute, 
+                                                      self.landuse,
+                                                      output = results, 
+                                                      datatype = 'results')
 
                 except:
 
                     print('warning: unable to calculate land use for year ' +
                           '{}; check data availability'.format(year))
 
-        print('')
+    def build_watershed(self, masslink = True):
+        """
+        Method to build the Watershed data structure that is the input to an
+        HSPFModel using data acquired from other PyHSPF utilities. The method
+        performs the following tasks:
 
-    def build_watershed(self,
-                        #subbasinfile, 
-                        #flowfile, 
-                        #outletfile, 
-                        #damfile, 
-                        #gagefile,
-                        #landfiles, 
-                        #VAAfile, 
-                        years, 
-                        HUC8, 
-                        #filename,
-                        ):
+             1. Creates instances of the Subbasin data structure from aggregated
+                NHDPlus catchment data in the self.subbasinfile shapefile
+             2. Adds stream reach data for the principle flowline to the 
+                Subbasin data structures using aggregated NHDPlus data in the 
+                self.flowline shapefile and the value-added attributes in the
+                Flowline data structures located in the self.VAAfile
+             3. Adds location and information on NWIS gages to the Subbasin 
+                data structures in the self.gagefile shapefile 
+             4. Adds location and information on NID dams to the Subbasin data
+                structures in the self.damfile shapefile
+             5. Adds land use data from the CDL to the Subbasin data structures
+                using information from the aggregated CDL files
+             6. Creates an instance of the Watershed data structure from the 
+                Subbasin data structures
+             7. Adds mass linkages between the individual subbasin stream 
+                reaches including the locations of inlets and outlets
+
+        """
 
         # create a dictionary to store subbasin data
 
         subbasins = {}
 
-        # create a dictionary to keep track of subbasin inlets
+        # create a dictionary to keep track of any subbasins that are inlets
 
         inlets = {}
 
-        # read in the flow plane data into an instance of the FlowPlane class
+        # read in the flow plane data into an instance of the Subbasin class
 
         sf = Reader(self.subbasinfile, shapeType = 5)
 
@@ -419,7 +606,7 @@ class Preprocessor:
 
             subbasins[comid] = subbasin
 
-        # read in the flowline data to an instance of the Reach class
+        # read in the stream reach data to an instance of the Subbasin class
 
         sf = Reader(self.flowlinefile)
 
@@ -451,6 +638,8 @@ class Preprocessor:
             velocity   = record[velocity_index]
             traveltime = record[traveltime_index]
 
+            # work around for empty GNIS stream names
+
             if isinstance(gnis, bytes): gnis = ''
 
             subbasin = subbasins[outcomid]
@@ -473,7 +662,8 @@ class Preprocessor:
         nids = {'{}'.format(r[comid_index]):r[nid_index] for r in records 
                 if isinstance(r[nid_index], str)}
 
-        nwiss = {'{}'.format(r[comid_index]):r[nwis_index] for r in records 
+        nwiss = {'{}'.format(r[comid_index]):r[nwis_index] 
+                 for r in records 
                  if r[nwis_index] is not None}
 
         # open up the dam file and read in the information for the dams
@@ -523,9 +713,9 @@ class Preprocessor:
                                  r[area_index],
                                  ) 
 
-        # read in the landuse data from the csv files
+        # read in the land use data from the csv files
 
-        for year in years:
+        for year in self.years:
 
             csvfile = '{}/{}landuse.csv'.format(self.landusedata, year)
 
@@ -549,7 +739,7 @@ class Preprocessor:
 
         # create an instance of the Watershed class
 
-        watershed = Watershed(HUC8, subbasins)
+        watershed = Watershed(self.HUC8, subbasins)
 
         # open up the flowline VAA file to use to establish mass linkages
 
@@ -560,11 +750,9 @@ class Preprocessor:
         hydroseqs = {'{}'.format(flowlines[f].comid): 
                      flowlines[f].hydroseq for f in flowlines}
 
-        # establish the mass linkages using a dictionary "updown" and a list of 
-        # head water subbasins
+        # establish the mass linkages using an "updown" dictionary
 
-        updown = {}
-    
+        updown = {}    
         for comid, subbasin in watershed.subbasins.items():
 
             # get the flowline instance for the outlet comid
@@ -599,15 +787,418 @@ class Preprocessor:
 
         watershed.add_mass_linkage(updown)
 
+        # save the Watershed data structure for later
+
         with open(self.watershed, 'wb') as f: pickle.dump(watershed, f)
 
-        # make a plot of the hydrography
+        # make a plot of the mass linkages between subbasin reaches
 
-        masslink = '{}/{}/hydrography/masslink'.format(self.output, HUC8)
+        its = self.output, self.HUC8
+        masslinkplot = '{}/{}/hydrography/masslink'.format(*its)
+        if masslink and not os.path.isfile(masslinkplot + '.png'):
+            self.plot_mass_flow(watershed, masslinkplot)
 
-        if not os.path.isfile(masslink + '.png'):
+    def climate(self, 
+                plotET = True, 
+                verbose = True,
+                ):
+        """
+        Method to download, aggregate, disaggregate all climate data needed
+        for HSPF modeling for an 8-digit watershed. Performs the following:
 
-            self.plot_mass_flow(watershed, masslink)
+             1. Downloads raw GSOD, GHCND, NSRDB, Precip3240 data
+             2. Aggregates tmin, tmax, dewpoint, and wind data from GSOD
+             3. Aggregates snowfall and snowdepth data from GHCND
+             4. Finds GHCND stations with pan evaporation data
+             5. Aggregates hourly solar radiation station data from NSRDB
+             6. Aggregates the hourly solar radiation time series to daily 
+             7. Calculates subbasin-specific precipitation time series using
+                inverse-distance weighted averaging (IDWA)
+             8. Calculates daily and hourly reference evapotranspiration
+             9. Calculates hourly potential evapotranspiration for specific
+                land use categories
+        """
+
+        # create an instance of the ClimateProcessor to download and aggregate
+        # data for the watershed
+
+        climateprocessor = ClimateProcessor()
+
+        # use the subbasin shapefile to get the data
+
+        climateprocessor.download_shapefile(self.subbasinfile, 
+                                            self.start,
+                                            self.end,
+                                            self.climatedata,
+                                            space = 0.5)
+
+        # aggregate and save the daily GSOD tmin, tmax, dewpoint, and wind data
+
+        if not os.path.isfile(self.tmin):
+            data = climateprocessor.aggregate('GSOD', 'tmin', 
+                                              self.start, self.end)
+            ts = self.start, 1440, data
+            with open(self.tmin, 'wb') as f: pickle.dump(ts, f)
+        if not os.path.isfile(self.tmax):
+            data = climateprocessor.aggregate('GSOD', 'tmax', 
+                                              self.start, self.end)
+            ts = self.start, 1440, data
+            with open(self.tmax, 'wb') as f: pickle.dump(ts, f)
+        if not os.path.isfile(self.dewpoint):
+            data = climateprocessor.aggregate('GSOD', 'dewpoint', 
+                                              self.start, self.end)
+            ts = self.start, 1440, data
+            with open(self.dewpoint, 'wb') as f: pickle.dump(ts, f)
+        if not os.path.isfile(self.wind):
+            data = climateprocessor.aggregate('GSOD', 'wind', 
+                                              self.start, self.end)
+            ts = self.start, 1440, data
+            with open(self.wind, 'wb') as f: pickle.dump(ts, f)
+
+        # aggregate and save the daily GHCND snowfall and snowdepth data
+
+        if not os.path.isfile(self.snowfall):
+            data = climateprocessor.aggregate('GHCND','snowfall', 
+                                              self.start, self.end)
+            ts = self.start, 1440, data
+            with open(self.snowfall, 'wb') as f: pickle.dump(ts, f)
+        if not os.path.isfile(self.snowdepth):
+            data = climateprocessor.aggregate('GHCND','snowdepth', 
+                                              self.start, self.end)
+            ts = self.start, 1440, data
+            with open(self.snowdepth, 'wb') as f: pickle.dump(ts, f)
+
+        # find and save a list of stations with pan evaporation data from GHCND
+
+        if not os.path.isfile(self.evaporation):
+        
+            evapstations = []
+            for k, v in climateprocessor.metadata.ghcndstations.items():
+
+                # check if the station has any evaporation data
+
+                if v['evap'] > 0:
+                
+                    # open up the file and get the data
+
+                    with open(k, 'rb') as f: station = pickle.load(f)
+
+                    data = station.make_timeseries('evaporation', 
+                                                   self.start, self.end)
+
+                    # ignore datasets with no observations during the period
+
+                    observations = [v for v in data if v is not None]
+
+                    if len(observations) > 0: evapstations.append(k)
+
+            with open(self.evaporation, 'wb') as f: pickle.dump(evapstations, f)
+
+        else:
+
+            with open(self.evaporation, 'rb') as f: 
+                evapstations = pickle.load(f)
+
+        # aggregate and save the hourly NSRDB metstat data
+
+        if not os.path.isfile(self.hsolar):
+            data = climateprocessor.aggregate('NSRDB', 'metstat', 
+                                              self.start, self.end)
+            ts = self.start, 60, data
+            with open(self.hsolar, 'wb') as f: pickle.dump(ts, f)
+            
+        # aggregate the hourly solar to daily and save
+
+        if not os.path.isfile(self.dsolar):
+
+            with open(self.hsolar, 'rb') as f: t, tstep, data = pickle.load(f)
+
+            data = [sum(data[i:i+24]) / 24 
+                    for i in range(0, 24 * (self.end - self.start).days, 24)]
+
+            ts = self.start, 1440, data
+            with open(self.dsolar, 'wb') as f: pickle.dump(ts, f)
+
+        # use the subbasin shapefile to get the location of the centroids
+
+        sf = Reader(self.subbasinfile)
+
+        # index of the comid, latitude, and longitude records
+
+        comid_index = [f[0] for f in sf.fields].index('ComID') - 1
+        lon_index   = [f[0] for f in sf.fields].index('CenX')  - 1
+        lat_index   = [f[0] for f in sf.fields].index('CenY')  - 1
+        elev_index  = [f[0] for f in sf.fields].index('AvgElevM') - 1
+        area_index  = [f[0] for f in sf.fields].index('AreaSqKm') - 1
+
+        # iterate through the shapefile records and aggregate the timeseries
+
+        for i in range(len(sf.records())):
+
+            record = sf.record(i)
+            comid  = record[comid_index]
+            lon    = record[lon_index]
+            lat    = record[lat_index]
+
+            # check if the aggregated time series exists or calculate it
+
+            subbasinprecip = '{}/{}'.format(self.precip, comid)
+            if not os.path.isfile(subbasinprecip):
+
+                if verbose:
+                    its = comid, lon, lat
+                    print('aggregating timeseries for comid ' +
+                          '{} at {}, {}\n'.format(*its))
+
+                # aggregate the hourly precipitation time series for each 
+                # subbasin using IDWA
+
+                data = climateprocessor.aggregate('precip3240', 
+                                                  'precip', 
+                                                  self.start, 
+                                                  self.end,
+                                                  method = 'IDWA', 
+                                                  longitude = lon,
+                                                  latitude = lat)
+                ts = self.start, 60, data
+                with open(subbasinprecip, 'wb') as f: pickle.dump(ts, f)
+
+        # create an instance of the ETCalculator to calculate ET time series
+
+        etcalculator = ETCalculator()
+
+        # get the centroid of the watershed from the subbasin shapefile
+
+        areas = [r[area_index] for r in sf.records()]
+        xs    = [r[lon_index]  for r in sf.records()]
+        ys    = [r[lat_index]  for r in sf.records()]
+        zs    = [r[elev_index] for r in sf.records()]
+
+        # get the areal-weighted averages
+
+        lon  = sum([a * x for a, x in zip(areas, xs)]) / sum(areas)
+        lat  = sum([a * y for a, y in zip(areas, ys)]) / sum(areas)
+        elev = sum([a * z for a, z in zip(areas, zs)]) / sum(areas)
+
+        # add them to the ETCalculator
+
+        etcalculator.add_location(lon, lat, elev)
+
+        # check if the daily RET exists; otherwise calculate it
+
+        if not os.path.isfile(self.dRET):
+
+            # add the daily time series to the calculator
+
+            with open(self.tmin, 'rb') as f: t, tstep, data = pickle.load(f)
+
+            etcalculator.add_timeseries('tmin', tstep, t, data)
+            
+            with open(self.tmax, 'rb') as f: t, tstep, data = pickle.load(f)
+
+            etcalculator.add_timeseries('tmax', tstep, t, data)
+
+            with open(self.dewpoint, 'rb') as f: t, tstep, data = pickle.load(f)
+
+            etcalculator.add_timeseries('dewpoint', tstep, t, data)
+
+            with open(self.wind, 'rb') as f: t, tstep, data = pickle.load(f)
+
+            etcalculator.add_timeseries('wind', tstep, t, data)
+
+            with open(self.dsolar, 'rb') as f: t, tstep, data = pickle.load(f)
+
+            etcalculator.add_timeseries('solar', tstep, t, data)
+
+            # calculate the daily RET
+
+            etcalculator.penman_daily(self.start, self.end)
+
+            ts = self.start, 1440, etcalculator.daily['RET'][1]
+
+            with open(self.dRET, 'wb') as f: pickle.dump(ts, f)
+
+        # disaggregate the daily temperature time series to hourly
+
+        if not os.path.isfile(self.htemp):
+                
+            if etcalculator.daily['tmin'] is None:
+
+                with open(self.tmin, 'rb') as f: t, tstep, data = pickle.load(f)
+
+                etcalculator.add_timeseries('tmin', tstep, t, data)
+
+            if etcalculator.daily['tmax'] is None:
+
+                with open(self.tmax, 'rb') as f: t, tstep, data = pickle.load(f)
+
+                etcalculator.add_timeseries('tmax', tstep, t, data)
+
+            data  = etcalculator.interpolate_temperatures(self.start, self.end)
+            tstep = 60
+            ts    = t, tstep, data
+
+            with open(self.htemp, 'wb') as f: pickle.dump(ts, f)
+
+            etcalculator.add_timeseries('temperature', tstep, t, data)
+
+        # disaggregate the dewpoint and wind speed time series to hourly
+
+        if not os.path.isfile(self.hdewpoint):
+
+            if etcalculator.daily['dewpoint'] is None:
+
+                with open(self.dewpoint, 'rb') as f: 
+                    t, tstep, data = pickle.load(f)
+
+            else:
+
+                t, data = etcalculator.daily['dewpoint']
+                
+            tstep = 60
+            data  = [v for v in data for i in range(24)]
+            ts    = t, tstep, data 
+            
+            with open(self.hdewpoint, 'wb') as f: pickle.dump(ts, f)
+
+            etcalculator.add_timeseries('dewpoint', tstep, t, data)
+
+        if not os.path.isfile(self.hwind):
+
+            if etcalculator.daily['wind'] is None:
+                
+                with open(self.wind, 'rb') as f: t, tstep, data = pickle.load(f)
+
+            else:
+
+                t, data = etcalculator.daily['wind']
+
+            tstep = 60
+            data  = [v for v in data for i in range(24)]
+            ts    = t, tstep, data 
+            
+            with open(self.hwind, 'wb') as f: pickle.dump(ts, f)
+
+            etcalculator.add_timeseries('wind', tstep, t, data)
+
+        # check if the hourly RET exists; otherwise calculate it
+
+        if not os.path.isfile(self.hRET):
+
+            required = 'temperature', 'solar', 'dewpoint', 'wind'
+
+            for tstype in required:
+
+                if etcalculator.hourly[tstype] is None:
+
+                    name = '{}/{}'.format(self.hourly, tstype)
+                    with open(name, 'rb') as f: 
+                        t, tstep, data = pickle.load(f)
+                    etcalculator.add_timeseries(tstype, tstep, t, data)
+
+            # calculate and save the hourly RET
+
+            etcalculator.penman_hourly(self.start, self.end)
+
+            ts = self.start, 60, etcalculator.hourly['RET'][1]
+
+            with open(self.hRET, 'wb') as f: pickle.dump(ts, f)
+
+            # add the daily time series for the plot
+
+            required = 'tmin', 'tmax', 'dewpoint', 'wind', 'solar'
+
+            for tstype in required:
+
+                if etcalculator.daily[tstype] is None:
+
+                    name = '{}/{}'.format(self.daily, tstype)
+                    with open(name, 'rb') as f: 
+                        t, tstep, data = pickle.load(f)
+                    etcalculator.add_timeseries(tstype, tstep, t, data)
+
+            # aggregate the hourly to daily for plotting
+
+            RET = etcalculator.hourly['RET'][1]
+
+            data = [sum(RET[i:i+24]) for i in range(0, len(RET), 24)]
+
+            etcalculator.add_timeseries('RET', 'daily', self.start, data)
+
+            if plotET:
+
+                name = '{}/referenceET'.format(self.evapotranspiration)
+                etcalculator.plotET(stations = evapstations, output = name)
+            
+                name = '{}/dayofyearET'.format(self.evapotranspiration)
+                etcalculator.plotdayofyear(stations = evapstations, 
+                                           output = name) 
+
+        if not os.path.isfile(self.hPETs):
+
+            # store the PET time series in a dictionary structure
+
+            PETs = {}
+
+            # add the hourly RET time series if it isn't present
+
+            if etcalculator.hourly['RET'] is None:
+
+                with open(self.hRET, 'rb') as f: t, tstep, data = pickle.load(f)
+                etcalculator.add_timeseries('RET', tstep, t, data)
+
+            # read the land use evapotranspiration data file
+
+            with open(self.landuse, 'r') as f:
+        
+                reader = csv.DictReader(f)
+
+                for row in reader:
+
+                    crop      = row['HSPF Category']
+                    red       = int(row['Red']) / 255
+                    green     = int(row['Green']) / 255
+                    blue      = int(row['Blue']) / 255
+                    day       = int(row['Plant Day'])
+                    month     = int(row['Plant Month'])                   
+                    emergence = int(row['Emergence Days'])
+                    growth    = int(row['Growth Days'])
+                    full      = int(row['Full Days'])
+                    late      = int(row['Late Days'])
+                    Ki        = float(row['Initial Crop Coefficient'])
+                    Km        = float(row['Mid Season Crop Coefficient'])
+                    Kl        = float(row['Late Season Crop Coefficient'])
+        
+                    if crop != 'Empty':
+
+                        plant = datetime.datetime(2001, month, day)
+                        color = red, green, blue
+
+                        # add the information and calculate the PET time series
+
+                        etcalculator.add_crop(crop, 
+                                              plant, 
+                                              emergence, 
+                                              growth, 
+                                              full, 
+                                              late, 
+                                              Ki,
+                                              Km, 
+                                              Kl,
+                                              ) 
+
+                        etcalculator.hourly_PET(crop, self.start, self.end)
+
+                        # get the PET time series
+    
+                        t, PET = etcalculator.hourlyPETs[crop]
+                        ts = t, 60, PET
+
+                        PETs[crop] = ts
+
+            # save it
+
+            with open(self.hPETs, 'wb') as f: pickle.dump(PETs, f)
 
     def plot_mass_flow(self,
                        watershed, 
@@ -792,426 +1383,3 @@ class Preprocessor:
 
         pyplot.clf()
         pyplot.close()
-
-    def build(self,
-              HUC8,
-              start,
-              end,
-              years,
-              ):
-
-        # file paths
-
-        self.subbasinfile = '{}/subbasin_catchments'.format(self.hydrography)
-        self.flowlinefile = '{}/subbasin_flowlines'.format(self.hydrography)
-        self.outletfile   = '{}/subbasin_outlets'.format(self.hydrography)
-        self.damfile      = '{}/dams'.format(self.hydrography)
-        self.gagefile     = '{}/gagestations'.format(self.gagepath)
-        self.landusedata  = '{}/{}/landuse'.format(self.output, HUC8)
-        self.VAAfile      = '{}/flowlineVAAs'.format(self.hydrography)
-        self.watershed    = '{}/{}/hspf/watershed'.format(self.output, HUC8)
-
-        if not os.path.isfile(self.watershed):
-
-            self.build_watershed(#subbasinfile, flowlinefile, outletfile, 
-                                 #damfile,
-                                 #gagefile, landusedata, VAAfile, 
-                                 years, HUC8)
-        
-    def climate(self,
-                HUC8,
-                s,
-                e,
-                verbose = True,
-                ):
-
-        go = time.time()
-
-        subbasinfile = '{}/subbasin_catchments'.format(self.hydrography)
-        climatedata = '{}/{}/climate'.format(self.output, HUC8)
-
-        # make a directory for the climate data and time series
-
-        if not os.path.isdir(climatedata): os.mkdir(climatedata)
-
-        # use the Climateprocessor to get the data
-
-        climateprocessor = ClimateProcessor()
-        climateprocessor.download_shapefile(subbasinfile, s, e, climatedata,
-                                            space = 0.5)
-
-        # make directories for hourly and daily aggregated timeseries
-
-        hourly = '{}/hourly'.format(climatedata)
-        daily  = '{}/daily'.format(climatedata)
-
-        if not os.path.isdir(hourly): os.mkdir(hourly)
-        if not os.path.isdir(daily):  os.mkdir(daily)
-
-        # aggregate the daily GSOD tmin, tmax, dewpoint, and wind data
-
-        tmin = '{}/tmin'.format(daily)
-        tmax = '{}/tmax'.format(daily)
-        dewt = '{}/dewpoint'.format(daily)
-        wind = '{}/wind'.format(daily)
-
-        if not os.path.isfile(tmin):
-            ts = s, 1440, climateprocessor.aggregate('GSOD', 'tmin', s, e)
-            with open(tmin, 'wb') as f: pickle.dump(ts, f)
-        if not os.path.isfile(tmax):
-            ts = s, 1440, climateprocessor.aggregate('GSOD', 'tmax', s, e)
-            with open(tmax, 'wb') as f: pickle.dump(ts, f)
-        if not os.path.isfile(dewt):
-            ts = s, 1440, climateprocessor.aggregate('GSOD','dewpoint', s,e)
-            with open(dewt, 'wb') as f: pickle.dump(ts, f)
-        if not os.path.isfile(wind):
-            ts = s, 1440, climateprocessor.aggregate('GSOD', 'wind', s, e)
-            with open(wind, 'wb') as f: pickle.dump(ts, f)
-
-        # aggregate the daily GHCND snowfall and snowdepth data
-
-        snowfall  = '{}/snowfall'.format(daily)
-        snowdepth = '{}/snowdepth'.format(daily)
-
-        if not os.path.isfile(snowfall):
-            ts = s, 1440, climateprocessor.aggregate('GHCND','snowfall', s, e)
-            with open(snowfall, 'wb') as f: pickle.dump(ts, f)
-        if not os.path.isfile(snowdepth):
-            ts = s, 1440,climateprocessor.aggregate('GHCND','snowdepth', s, e)
-            with open(snowdepth, 'wb') as f: pickle.dump(ts, f)
-
-        # find stations with pan evaporation data from GHCND
-
-        evapstations = []
-        for k, v in climateprocessor.metadata.ghcndstations.items():
-
-        # check if the station has any evaporation data
-
-            if v['evap'] > 0:
-                
-                # open up the file and get the data
-
-                with open(k, 'rb') as f: station = pickle.load(f)
-
-                data = station.make_timeseries('evaporation', s, e)
-
-                # ignore datasets with no observations during the period
-
-                observations = [v for v in data if v is not None]
-
-                if len(observations) > 0: evapstations.append(k)
-
-        print('intermediate time: {:.1f}'.format(time.time() - go))
-
-        # aggregate the hourly NSRDB metstat data
-
-        hsolar = '{}/solar'.format(hourly)
-        if not os.path.isfile(hsolar):
-            ts = s, 60, climateprocessor.aggregate('NSRDB', 'metstat', s, e)
-            with open(hsolar, 'wb') as f: pickle.dump(ts, f)
-            
-        # aggregate the hourly solar to daily
-
-        dsolar = '{}/solar'.format(daily)
-        if not os.path.isfile(dsolar):
-
-            with open(hsolar, 'rb') as f: t, tstep, data = pickle.load(f)
-            ts = s, 1440, [sum(data[i:i+24]) / 24 
-                           for i in range(0, 24 * (e-s).days, 24)]
-
-            with open(dsolar, 'wb') as f: pickle.dump(ts, f)
-
-        # aggregate the hourly precipitation for each subbasin using IDWA
-
-        precip = '{}/hourlyprecipitation'.format(climatedata)
-        if not os.path.isdir(precip): os.mkdir(precip)
-
-        # use the subbasin shapefile to get the location of the centroids
-
-        sf = Reader(subbasinfile)
-
-        # index of the comid, latitude, and longitude records
-
-        comid_index = [f[0] for f in sf.fields].index('ComID') - 1
-        lon_index   = [f[0] for f in sf.fields].index('CenX')  - 1
-        lat_index   = [f[0] for f in sf.fields].index('CenY')  - 1
-        elev_index  = [f[0] for f in sf.fields].index('AvgElevM') - 1
-        area_index  = [f[0] for f in sf.fields].index('AreaSqKm') - 1
-
-        # iterate through the shapefile records and aggregate the timeseries
-
-        for i in range(len(sf.records())):
-
-            record = sf.record(i)
-            comid  = record[comid_index]
-            lon    = record[lon_index]
-            lat    = record[lat_index]
-
-            # check if the aggregated time series exists or calculate it
-
-            subbasinprecip = '{}/{}'.format(precip, comid)
-            if not os.path.isfile(subbasinprecip):
-
-                if verbose:
-                    i = comid, lon, lat
-                    print('aggregating timeseries for comid ' +
-                          '{} at {}, {}\n'.format(*i))
-
-                p = climateprocessor.aggregate('precip3240', 'precip', s, e,
-                                               method = 'IDWA', 
-                                               longitude = lon,
-                                               latitude = lat)
-
-                ts = s, 60, p
-                with open(subbasinprecip, 'wb') as f: pickle.dump(ts, f)
-
-        # make a directory for the evapotranspiration time series
-
-        evapotranspiration = '{}/evapotranspiration'.format(climatedata)
-        if not os.path.isdir(evapotranspiration): 
-            os.mkdir(evapotranspiration)
-
-        # use the ETCalculator to calculate the ET time series
-
-        etcalculator = ETCalculator()
-
-        # get the centroid of the watershed from the subbasin shapefile
-
-        areas = [r[area_index] for r in sf.records()]
-        xs    = [r[lon_index]  for r in sf.records()]
-        ys    = [r[lat_index]  for r in sf.records()]
-        zs    = [r[elev_index] for r in sf.records()]
-
-        # get the areal-weighted averages
-
-        lon  = sum([a * x for a, x in zip(areas, xs)]) / sum(areas)
-        lat  = sum([a * y for a, y in zip(areas, ys)]) / sum(areas)
-        elev = sum([a * z for a, z in zip(areas, zs)]) / sum(areas)
-
-        # add them to the ETCalculator
-
-        etcalculator.add_location(lon, lat, elev)
-
-        # check if the daily RET exists; otherwise calculate it
-
-        dRET = '{}/dailyRET'.format(evapotranspiration)
-        if not os.path.isfile(dRET):
-
-            # add the daily time series to the calculator
-
-            with open(tmin, 'rb') as f: t, tstep, data = pickle.load(f)
-
-            etcalculator.add_timeseries('tmin', tstep, t, data)
-            
-            with open(tmax, 'rb') as f: t, tstep, data = pickle.load(f)
-
-            etcalculator.add_timeseries('tmax', tstep, t, data)
-
-            with open(dewt, 'rb') as f: t, tstep, data = pickle.load(f)
-
-            etcalculator.add_timeseries('dewpoint', tstep, t, data)
-
-            with open(wind, 'rb') as f: t, tstep, data = pickle.load(f)
-
-            etcalculator.add_timeseries('wind', tstep, t, data)
-
-            with open(dsolar, 'rb') as f: t, tstep, data = pickle.load(f)
-
-            etcalculator.add_timeseries('solar', tstep, t, data)
-
-            # calculate the daily RET
-
-            etcalculator.penman_daily(s, e)
-
-            ts = s, 1440, etcalculator.daily['RET'][1]
-
-            with open(dRET, 'wb') as f: pickle.dump(ts, f)
-
-        # disaggregate the daily temperature time series to hourly
-
-        hourlytemp = '{}/temperature'.format(hourly)
-        if not os.path.isfile(hourlytemp):
-                
-            if etcalculator.daily['tmin'] is None:
-
-                with open(tmin, 'rb') as f: t, tstep, data = pickle.load(f)
-
-                etcalculator.add_timeseries('tmin', tstep, t, data)
-
-            if etcalculator.daily['tmax'] is None:
-
-                with open(tmax, 'rb') as f: t, tstep, data = pickle.load(f)
-
-                etcalculator.add_timeseries('tmax', tstep, t, data)
-
-            data  = etcalculator.interpolate_temperatures(s, e)
-            tstep = 60
-            ts    = t, tstep, data
-
-            with open(hourlytemp, 'wb') as f: pickle.dump(ts, f)
-
-            etcalculator.add_timeseries('temperature', tstep, t, data)
-
-        # disaggregate the dewpoint and wind speed time series to hourly
-
-        hourlydewt = '{}/dewpoint'.format(hourly)        
-        if not os.path.isfile(hourlydewt):
-
-            if etcalculator.daily['dewpoint'] is None:
-
-                with open(dewt, 'rb') as f: t, tstep, data = pickle.load(f)
-
-            else:
-
-                t, data = etcalculator.daily['dewpoint']
-                
-            tstep = 60
-            data  = [v for v in data for i in range(24)]
-            ts    = t, tstep, data 
-            
-            with open(hourlydewt, 'wb') as f: pickle.dump(ts, f)
-
-            etcalculator.add_timeseries('dewpoint', tstep, t, data)
-
-        hourlywind = '{}/wind'.format(hourly)        
-        if not os.path.isfile(hourlywind):
-
-            if etcalculator.daily['wind'] is None:
-                
-                with open(wind, 'rb') as f: t, tstep, data = pickle.load(f)
-
-            else:
-
-                t, data = etcalculator.daily['wind']
-
-            tstep = 60
-            data  = [v for v in data for i in range(24)]
-            ts    = t, tstep, data 
-            
-            with open(hourlywind, 'wb') as f: pickle.dump(ts, f)
-
-            etcalculator.add_timeseries('wind', tstep, t, data)
-
-        # check if the hourly RET exists; otherwise calculate it
-
-        hRET = '{}/hourlyRET'.format(evapotranspiration)
-        if not os.path.isfile(hRET):
-
-            required = 'temperature', 'solar', 'dewpoint', 'wind'
-
-            for tstype in required:
-
-                if etcalculator.hourly[tstype] is None:
-
-                    name = '{}/{}'.format(hourly, tstype)
-                    with open(name, 'rb') as f: 
-                        t, tstep, data = pickle.load(f)
-                    etcalculator.add_timeseries(tstype, tstep, t, data)
-
-            # calculate and save the hourly RET
-
-            etcalculator.penman_hourly(s, e)
-
-            ts = s, 60, etcalculator.hourly['RET'][1]
-
-            with open(hRET, 'wb') as f: pickle.dump(ts, f)
-
-            # add the daily time series for the plot
-
-            required = 'tmin', 'tmax', 'dewpoint', 'wind', 'solar'
-
-            for tstype in required:
-
-                if etcalculator.daily[tstype] is None:
-
-                    name = '{}/{}'.format(daily, tstype)
-                    with open(name, 'rb') as f: 
-                        t, tstep, data = pickle.load(f)
-                    etcalculator.add_timeseries(tstype, tstep, t, data)
-
-            # aggregate the hourly to daily for plotting
-
-            hRET = etcalculator.hourly['RET'][1]
-
-            dRET = [sum(hRET[i:i+24]) for i in range(0, len(hRET), 24)]
-
-            etcalculator.add_timeseries('RET', 'daily', s, dRET)
-
-            name = '{}/referenceET'.format(evapotranspiration)
-            etcalculator.plotET(stations = evapstations, output = name, 
-                                show = False)
-            
-            name = '{}/dayofyearET'.format(evapotranspiration)
-
-            etcalculator.plotdayofyear(stations = evapstations, 
-                                       output = name, 
-                                       show = False)
-
-        # read the land use data provide
-
-        with open(self.landuse, 'r') as f:
-
-            reader = csv.reader(f)
-            rows = [row for row in reader][1:-1]
-
-        lucs, cs, pdates, ems, gs, fs, ls, Kis, Kms, Kls = ([] 
-                                                            for i in range(10))
-
-        for row in rows:
-
-            lucs.append(row[0])
-            cs.append((int(row[1]) / 255, 
-                       int(row[2]) / 255, 
-                       int(row[3]) / 255))
-            pdates.append(datetime.datetime(2001, int(row[4]), int(row[5])))
-            ems.append(int(row[6]))
-            gs.append(int(row[7]))
-            fs.append(int(row[8]))
-            ls.append(int(row[9]))
-            Kis.append(float(row[10]))
-            Kms.append(float(row[11]))
-            Kls.append(float(row[12]))
-
-        # add the hourly RET time series if it isn't present
-
-        if etcalculator.hourly['RET'] is None:
-
-            with open(hRET, 'rb') as f: t, tstep, data = pickle.load(f)
-            etcalculator.add_timeseries('RET', tstep, t, data)
-
-        # store the PET time series in a dictionary structure
-
-        PETs = {}
-
-        # iterate through the land use categories and calculate PET 
-
-        for i in zip(lucs, cs, pdates, ems, gs, fs, ls, Kis, Kms, Kls):
-
-            crop, c, plant, emergence, growth, full, late, Ki, Km, Kl = i
-
-            # add the information and calculate the PET time series
-
-            etcalculator.add_crop(crop, 
-                                  plant, 
-                                  emergence, 
-                                  growth, 
-                                  full, 
-                                  late, 
-                                  Ki,
-                                  Km, 
-                                  Kl,
-                                  ) 
-
-            etcalculator.hourly_PET(crop, s, e)
-
-            # get the PET time series
-    
-            t, PET = etcalculator.hourlyPETs[crop]
-            ts = t, 60, PET
-
-            PETs[crop] = ts
-
-        # save it
-
-        name = '{}/hourlyPETs'.format(evapotranspiration)
-        with open(name, 'wb') as f: pickle.dump(PETs, f)

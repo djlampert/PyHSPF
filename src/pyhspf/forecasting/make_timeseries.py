@@ -1,16 +1,15 @@
-#!/usr/bin/env python
-#
 # make_timeseries.py
-# David J. Lampert
+#
+# David J. Lampert (djlampert@gmail.com)
 # 
 # extracts the grid point for a watershed from the preprocessed NRCM data
 
 import os, pickle, datetime, numpy
 
-from shapefile                             import Reader
-from pyhspf.preprocessing.penman           import penman_hourly
-from pyhspf.preprocessing.climateplots     import plot_hourlyET
-from pyhspf.preprocessing.crop_coefficient import calculate_cropPET
+from shapefile                           import Reader
+from pyhspf.forecasting.penman           import penman_hourly
+from pyhspf.forecasting.climateplots     import plot_hourlyET
+from pyhspf.forecasting.crop_coefficient import calculate_cropPET
 
 def average_timeseries(directory,
                        variables = ['temperature', 'wind', 'humidity', 

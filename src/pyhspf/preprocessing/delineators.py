@@ -2650,7 +2650,6 @@ class HUC8Delineator(NHDPlusDelineator):
                                                 overwrite = True, 
                                                 verbose = vverbose
                                                 )
-                if verbose: print('')
 
             if verbose: 
 

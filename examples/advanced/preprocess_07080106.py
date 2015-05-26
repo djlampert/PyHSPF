@@ -139,14 +139,27 @@ landuse = 'lucs.csv'
 
 if __name__ == '__main__': 
 
-    # make an instance of the preprocessor
+    # make an instance of the Preprocessor
 
-    processor = Preprocessor(network, destination, cdlaggregate = aggregation,
+    processor = Preprocessor()
+
+    # set up the directory locations
+
+    processor.set_network(network)
+    processor.set_output(destination)
+
+    # set the simulation-specific parameters
+
+    processor.set_parameters(HUC8 = HUC8,
+                             start = start,
+                             end = end,
+                             state = state,
+                             cdlaggregate = aggregation,
                              landuse = landuse)
 
     # preprocess the HUC8
 
-    processor.preprocess(HUC8, state, start, end, drainmax = drainmax)
+    processor.preprocess(drainmax = drainmax)
 
 # If the script runs succesfully, the following file structure will be created:
 #

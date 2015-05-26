@@ -18,8 +18,8 @@ sfile  = 'data/boundary'        # catchment file for land use calculation
 
 aggregate = 'data/cdlaggregation.csv'
 
-# the land use file (CSV); maps land use categories defined in the aggregate 
-# file to properties including RGB color tuple and crop coefficients
+# the land use codes file (CSV); maps land use categories defined in the 
+# aggregate file to properties including RGB color tuple and crop coefficients
 
 lucfile = 'data/lucs.csv'
 
@@ -63,10 +63,11 @@ landuse = cdlextractor.calculate_landuse(extracted, sfile, aggregate,
 # 'FEATUREID' attribute (or whatever field from the shapefile is supplied)
 #
 # the keys to the second level dictionary are the unique values of the landuse
-# specified in "aggregate" (data/patuxent/aggregate.csv)
+# specified in "aggregate" (data/patuxent/cdlaggregation.csv)
 #
 # to understand how this works, it's a good idea to spend some time looking at 
-# the aggregate file and CDL rasters and the output.
+# the aggregate file and CDL rasters and the output; there are 255 unique codes
+# in the CDL that are mapped into 10 categories in this example
 
 # the processing can be visualized using the plot_landuse method. the 
 # "datatype" keyword of 'raw' or 'results' can be used to see the aggregated
@@ -81,7 +82,7 @@ cdlextractor.plot_landuse(extracted, sfile, attribute, lucfile,
                           output = '{}/{}results'.format(output, year),
                           datatype = 'results')
 
-# now let's repeat it using the catchment rather than just the boundary
+# now repeat it using the catchment rather than just the boundary
 
 sfile   = 'data/catchments'
 csvfile = 'catchment_landuse.csv'
