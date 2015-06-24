@@ -141,7 +141,7 @@ class NHDPlusExtractor:
                           '09':  '04',
                           '10L': '05',
                           '10U': '06',
-                          '11':  '04',
+                          '11':  '05',
                           '12':  '04',
                           '13':  '04',
                           '14':  '04',
@@ -307,7 +307,6 @@ class NHDPlusExtractor:
         elif verbose: print('file {} exists\n'.format(compressed))
 
     def download_data(self,
-                      ned_n = '01',
                       verbose = True,
                       ):
         """Downloads the compressed source data files from NHDPlus."""
@@ -365,7 +364,7 @@ class NHDPlusExtractor:
 
         nedfiles = []
         for rpu in self.vpu_to_rpu[self.VPU]:
-            its = self.DA, self.VPU, rpu, ned_n
+            its = self.DA, self.VPU, rpu, self.NEDs[self.VPU]
             nedfile = 'NHDPlusV21_{}_{}_{}_NEDSnapshot_{}.7z'.format(*its)
             self.download_compressed(nedfile, 'NED raster')
             nedfiles.append(nedfile)
