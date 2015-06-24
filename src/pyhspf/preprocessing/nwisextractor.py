@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-#
 # nwisextractor.py
 #
 # David J. Lampert (djlampert@gmail.com)
@@ -51,7 +49,6 @@ class NWISExtractor:
         if n % 100 == 0:
             it = block * n / 10**6, size / 10**6
             print('{:.1f} MB of {:.1f} MB transferred'.format(*it))
-
 
     def download_metadata(self,
                           webfile = 'USGS_Streamgages-NHD_Locations_Shape.zip', 

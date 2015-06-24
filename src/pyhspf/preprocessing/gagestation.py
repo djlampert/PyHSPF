@@ -57,7 +57,7 @@ class GageStation:
         if verbose: print('attempting to download daily discharge data ' +
                           'directly from NWIS for {}'.format(self.gageid))
 
-        t = start.year, start.month, start.day, end.year, end.month, end.day - 1
+        t = start.year, start.month, start.day, end.year, end.month, end.day
 
         url = ('http://waterdata.usgs.gov/nwis/dv?cb_00060=on&format=rdb&' +
                'period=&begin_date=' +
@@ -84,6 +84,7 @@ class GageStation:
             if verbose: print('successfully downloaded data\n')
 
         except: 
+
             print('warning: unable to download daily discharge data\n')
             
             self.gagedates = []

@@ -40,9 +40,8 @@
 #                                                                             #
 ###############################################################################
 
-import os, time, pickle, datetime, csv, math
+import os, time, pickle, datetime, csv
 
-from matplotlib import pyplot, patches
 from shapefile  import Reader
 
 # local imports
@@ -72,10 +71,20 @@ class Preprocessor:
                  end          = None,
                  cdlaggregate = None,
                  landuse      = None,
+                 watershed    = None,
+                 htemp        = None,
+                 hdewpoint    = None,
+                 hsolar       = None,
+                 hwind        = None,
+                 hPETs        = None,
+                 precip       = None,
+                 hspfmodel    = None,
                  ):
         """
         Constructor method; sets up pointers to directory locations.
         """
+
+        # paths to directories and model domain
 
         self.network      = network
         self.output       = output
@@ -85,6 +94,17 @@ class Preprocessor:
         self.end          = end
         self.cdlaggregate = cdlaggregate
         self.landuse      = landuse
+
+        # paths to essential data structure files
+
+        self.hspfmodel = hspfmodel
+        self.watershed = watershed
+        self.htemp     = htemp
+        self.hdewpoint = hdewpoint
+        self.hwind     = hwind
+        self.hsolar    = hsolar
+        self.hPETs     = hPETs
+        self.precip    = precip
 
     def set_network(self,
                     network,
@@ -143,26 +163,38 @@ class Preprocessor:
         if cdlaggregate is not None:  self.cdlaggregate = cdlaggregate
         if landuse      is not None:  self.landuse      = landuse
 
+    def make_float(self, s):
+        """
+        Converts string "s" into a float.
+        """
+
+        try: 
+            f = float(s)
+            return f
+        except:
+            print('error, cannot convert string to float')
+            raise
+
     def preprocess(self,
-                   hydrography      = None,
-                   gagedirectory    = None,
-                   landusedata      = None,
-                   climatedata      = None,
-                   hspfdirectory    = None,
-                   drainmax         = 400, 
-                   extra_outlets    = None,
-                   masslink         = True,
-                   plotET           = True,
-                   hydrographyplot  = True,
-                   preliminary      = True,
-                   delineated       = True,
-                   landuseplots     = True,
-                   verbose          = True, 
-                   vverbose         = False, 
-                   parallel         = True,
+                   hydrography     = None,
+                   gagedirectory   = None,
+                   landusedata     = None,
+                   climatedata     = None,
+                   hspfdirectory   = None,
+                   drainmax        = 400, 
+                   extra_outlets   = None,
+                   masslink        = True,
+                   plotET          = True,
+                   hydrographyplot = True,
+                   preliminary     = True,
+                   delineated      = True,
+                   landuseplots    = True,
+                   verbose         = True, 
+                   vverbose        = False, 
+                   parallel        = True,
                    ):
         """
-        Preprocesses the data for HSPF.
+        Gathers all the input data for HSPF.
         """
 
         # check the network is mounted on Unix-like systems
@@ -205,8 +237,8 @@ class Preprocessor:
         # if the destination folder for the HUC8 does not exist, make it
 
         its = self.output, self.HUC8
-        output = '{}/{}'.format(*its)
-        if not os.path.isdir(output): os.mkdir(output)
+        directory = '{}/{}'.format(*its)
+        if not os.path.isdir(directory): os.mkdir(directory)
 
         # make a subdirectory for hydrography data
 
@@ -220,7 +252,7 @@ class Preprocessor:
         # make a subdirectory for NWIS flow and water quality data
 
         if gagedirectory is None:
-            self.gagedirectory = '{}/{}/NWIS'.format(*its)
+            self.gagedirectory = '{}/{}/gagedata'.format(*its)
         else:
             self.gagedirectory = gagedirectory
 
@@ -352,6 +384,279 @@ class Preprocessor:
             print('completed preprocessing watershed in ' +
                   '{:.1f} seconds\n'.format((time.time() - go)))
 
+    def build_hspfmodel(self, 
+                        output = None,
+                        landuseyear = 2008,
+                        ifraction = 0.5,
+                        atemp = False,
+                        snow = False,
+                        hydrology = False,
+                        verbose = True,
+                        ):
+        """
+        Builds an instance of the HSPFModel class to the output location using
+        land use data for the given year after the necessary data have been 
+        supplied.
+        """
+
+        # location for the output baseline HSPFModel class instance file
+
+        if output is None:
+ 
+            its = self.hspfdirectory, landuseyear
+            self.hspfmodel = '{}/{}baseline'.format(*its)
+
+        else:
+
+            self.hspfmodel = output
+
+        # make sure the file doesn't already exist
+
+        if os.path.isfile(self.hspfmodel):
+
+            print('HSPFModel {} exists\n'.format(self.hspfmodel))
+            return
+        
+        elif verbose:
+
+            print('building the HSPFModel...\n')
+
+        # make sure the hydrography and land use data have been used to create
+        # an instance of the Watershed class
+
+        if self.watershed is None:
+
+            print('error: watershed data stucture has not been supplied!\n')
+            raise
+
+        # make sure the climate time series data are available
+
+        climateseries = {self.htemp:     'hourly temperature', 
+                         self.hdewpoint: 'hourly dewpoint', 
+                         self.hwind:     'hourly wind speed', 
+                         self.hsolar:    'hourly solar radiation',
+                         self.hPETs:     'potential evapotranspiration',
+                         }
+
+        for k in climateseries: 
+
+            if not os.path.isfile(k):
+
+                print('error: {} '.format(climateseries[k]) +
+                      'time series data are not available')
+                raise
+
+        # open the watershed data structure
+
+        with open(self.watershed, 'rb') as f: w = pickle.load(f)
+
+        # check that land use data for the given year are available
+
+        for subbasin in w.subbasins.values():
+            if landuseyear not in subbasin.landuse:
+                print('error: land use data for year ' +
+                      '{} have not been supplied'.format(landuseyear))
+                raise
+
+        # make a list of all land use categories for the watershed
+
+        lucs = []
+        for subbasin in w.subbasins.values():
+            for luc in subbasin.landuse[landuseyear]:
+                if luc not in lucs: lucs.append(luc)
+
+        # open up the PET time series dictionary
+
+        with open(self.hPETs, 'rb') as f: PETs = pickle.load(f)
+
+        # check that PET time series are available for each land use category
+
+        for luc in lucs:
+            if luc not in PETs: 
+                print('error: potential evapotranspiration time series data ' +
+                      'for {} are not available'.format(luc))
+                raise
+
+        # check that precipitation time series are available for each subbasin
+
+        if self.precip is None:
+            print('error: precipitation directory has not been specified\n')
+            raise
+
+        for comid in w.subbasins:
+            p = '{}/{}'.format(self.precip, comid)
+            if not os.path.isfile(p):
+                print('error: precipitation time series ' +
+                      '{} is missing\n'.format(p))
+                raise
+
+        # create and build the model
+
+        hspfmodel = HSPFModel()
+
+        hspfmodel.build_from_watershed(w, self.hspfmodel, 
+                                       landuseyear = landuseyear,
+                                       verbose = verbose)
+
+        # turn on the air temperature correction modules for each operation
+
+        if atemp: hspfmodel.add_atemp()
+
+        # turn on the snow modules and use observed depth as the initial state
+        # for each operation
+
+        if snow: 
+
+            with open(self.snowdepth, 'rb') as f: s, t, data = pickle.load(f)
+
+            hspfmodel.add_snow(depth = data[0])
+
+            # add the snowdepth and snowfall time series
+
+            hspfmodel.add_timeseries('snowdepth', self.HUC8, s, data, tstep = t)
+
+            with open(self.snowfall, 'rb') as f: s, t, data = pickle.load(f)
+
+            hspfmodel.add_timeseries('snowfall', self.HUC8, s, data, tstep = t)
+
+            # assign the time series to the whole watershed (the HUC8 is the 
+            # name for given to the time series in this case)
+
+            hspfmodel.assign_watershed_timeseries('snowdepth', self.HUC8)
+            hspfmodel.assign_watershed_timeseries('snowfall', self.HUC8)
+
+        # turn on the hydrology modules for each operation
+
+        if hydrology: hspfmodel.add_hydrology()
+
+        # add the hourly watershed-level time series to the model 
+        # (temperature, dewpoint, wind, solar)
+        
+        # open up the temperature time series
+
+        with open(self.htemp, 'rb') as f: s, t, data = pickle.load(f)
+
+        # add it to the HSPFModel
+
+        hspfmodel.add_timeseries('temperature', self.HUC8, s, data)
+
+        # assign it to the whole watershed
+
+        hspfmodel.assign_watershed_timeseries('temperature', self.HUC8)
+
+        # open up and assign the dewpoint time series
+
+        with open(self.hdewpoint, 'rb') as f: s, t, data = pickle.load(f)
+        hspfmodel.add_timeseries('dewpoint', self.HUC8, s, data)
+        hspfmodel.assign_watershed_timeseries('dewpoint', self.HUC8)
+
+        # open up the wind time series
+
+        with open(self.hwind, 'rb') as f: s, t, data = pickle.load(f)
+
+        # have to convert the units from m/s to km/interval (km/hr)
+
+        factor = 60 * t / 1000 / 24
+
+        wind = [w * factor for w in data]
+
+        hspfmodel.add_timeseries('wind', self.HUC8, s, wind)
+
+        # assign to the whole watershed
+
+        hspfmodel.assign_watershed_timeseries('wind', self.HUC8)
+
+        # open up the solar radiation time series
+        
+        with open(self.hsolar, 'rb') as f: s, t, data = pickle.load(f)
+
+        # convert from W-hr/m2 to langley/interval (langley/hr)
+
+        factor = 0.001434
+
+        solar = [s * factor for s in data]
+
+        hspfmodel.add_timeseries('solar', self.HUC8, s, solar)
+
+        hspfmodel.assign_watershed_timeseries('solar', self.HUC8)
+
+        # add land use-specific PET time series to the model
+
+        for k in PETs:
+
+            s, t, PET = PETs[k]
+
+            hspfmodel.add_timeseries('evaporation', k, s, PET, tstep = t)
+
+            # assign the time series to each land use category
+
+            hspfmodel.assign_landuse_timeseries('evaporation', k, k)
+
+            # if the category is developed, also add it to the IMPLNDs
+
+            if k == 'Developed':
+
+                hspfmodel.assign_landuse_timeseries('evaporation', 'Impervious',
+                                                    k)
+
+        # add the subbasin-specific precipitation time series to the model
+
+        for c in w.subbasins:
+            
+            # path to the data file
+
+            p = '{}/{}'.format(self.precip, c)
+
+            # load the data
+
+            with open(p, 'rb') as f: s, t, data = pickle.load(f)
+
+            # add it to the model
+            
+            hspfmodel.add_timeseries('precipitation', c, s, data, tstep = t)
+
+            # assign the data to the subbasin
+
+            hspfmodel.assign_subbasin_timeseries('precipitation', c, c)
+
+        # add the flow gages using the NWIS metadata in the subbasin outlet file
+
+        reader = Reader(self.outletfile)
+
+        comid_index = reader.fields.index(['COMID',   'N',  9, 0]) - 1
+        nwis_index  = reader.fields.index(['SITE_NO', 'C', 15, 0]) - 1
+
+        # add the data from each station to the model
+
+        for r in reader.records():
+
+            comid = '{}'.format(r[comid_index])
+
+            if isinstance(r[nwis_index], bytes): gageid = None
+            else: gageid = r[nwis_index]
+
+            if gageid is not None:
+
+                gagefile = '{}/{}'.format(self.gagedirectory, gageid)
+                with open(gagefile, 'rb') as f: s = pickle.load(f)
+
+                # make a time series from the start to the end date
+
+                data = s.make_timeseries(self.start, self.end)
+
+                # add it to the model
+
+                hspfmodel.add_timeseries('flowgage', gageid, self.start, data, 
+                                         tstep = 1440)
+            
+                # assign it to the corresponding subbasin 
+
+                hspfmodel.assign_subbasin_timeseries('flowgage', comid, gageid)
+            
+        # save the HSPFModel for later
+
+        with open(self.hspfmodel, 'wb') as f: pickle.dump(hspfmodel, f)
+            
     def extract_hydrography(self, plot = True):
         """
         Downloads and extracts NHDPlus, NWIS, and NID data for a HUC8.
@@ -580,6 +885,10 @@ class Preprocessor:
 
         inlets = {}
 
+        # create a dictionary to store subbasin areas
+
+        areas = {}
+
         # read in the flow plane data into an instance of the Subbasin class
 
         sf = Reader(self.subbasinfile, shapeType = 5)
@@ -605,6 +914,7 @@ class Preprocessor:
             subbasin.add_flowplane(length, slope, centroid, elevation)
 
             subbasins[comid] = subbasin
+            areas[comid]     = tot_area
 
         # read in the stream reach data to an instance of the Subbasin class
 
@@ -735,7 +1045,18 @@ class Preprocessor:
 
                 i = comids.index(comid)
 
-                subbasin.add_landuse(year, categories, data[i])
+                # use the fractions from the data file and the subbasin areas
+                # to get the area for each land segment
+
+                segment_areas = [self.make_float(s) * areas[comid] 
+                                 for s in data[i]]
+
+                # add the land segment to the model
+
+                subbasin.add_landuse(year, 
+                                     categories, 
+                                     segment_areas,
+                                     )
 
         # create an instance of the Watershed class
 
@@ -796,7 +1117,7 @@ class Preprocessor:
         its = self.output, self.HUC8
         masslinkplot = '{}/{}/hydrography/masslink'.format(*its)
         if masslink and not os.path.isfile(masslinkplot + '.png'):
-            self.plot_mass_flow(watershed, masslinkplot)
+            watershed.plot_mass_flow(output = masslinkplot)
 
     def climate(self, 
                 plotET = True, 
@@ -960,6 +1281,13 @@ class Preprocessor:
                                                   method = 'IDWA', 
                                                   longitude = lon,
                                                   latitude = lat)
+
+                # convert from in to mm
+
+                data = [d * 25.4 for d in data]
+
+                # save for later
+
                 ts = self.start, 60, data
                 with open(subbasinprecip, 'wb') as f: pickle.dump(ts, f)
 
@@ -1199,187 +1527,3 @@ class Preprocessor:
             # save it
 
             with open(self.hPETs, 'wb') as f: pickle.dump(PETs, f)
-
-    def plot_mass_flow(self,
-                       watershed, 
-                       output, 
-                       title = 'Subbasin Reach Mass Flow Diagram',
-                       fontsize = 6, 
-                       theight = 0.2, 
-                       l = 8.5, 
-                       w = 11, 
-                       verbose = True, 
-                       ):
-        """
-        Makes a schematic of the mass linkages between the various subbasins
-        in a watershed.
-        """
-
-        if os.path.exists(output):
-            if verbose: print('mass link plot {} exists'.format(output))
-            return
-        elif verbose: print('generating a mass linkage plot\n')
-
-        fontheight = fontsize / 72.
-        rheight = 3 * fontheight
-        rwidth  = 12 * fontheight
-        xgap = fontheight
-        ygap = rheight
-        awidth = rheight / 4
-        aheight = rheight / 3
-
-        # set up a sheet to write the image
-
-        fig = pyplot.figure(figsize = (w, l))
-
-        ax  = fig.add_subplot(111, aspect = 'equal')
-        ax.get_xaxis().set_visible(False)
-        ax.get_yaxis().set_visible(False)
-        t = ax.set_title(title)
-
-        # divide the subbasins into rows and put them on the chart
-        # start at the bottom to organize the linkages better
-
-        rows = [watershed.outlets, ['outlet']]
-
-        top = False
-        while not top:
-            row = []
-            for next in rows[0]:
-                for subbasin in watershed.updown:
-                    if watershed.updown[subbasin] == next: row.append(subbasin)
-            if len(row) > 0: 
-                rows.insert(0, row)
-            else: 
-                top = True
-
-        # add an inlet box in the row above each inlet
-
-        for inlet in watershed.inlets: 
-
-            i = 0
-            while i < len(rows) - 1:
-
-                for subbasin in rows[i]:
-
-                    if subbasin == inlet:
-                    
-                        # find the position of the subbasin in the chart
-
-                        j = rows[i].index(inlet)
-
-                        if i > 0:
-
-                            # figure out where the subbasins point
-                        
-                            updowns = [watershed.updown[s] for s in rows[i-1]]
-                            
-                            # if first or last, add it there in the row above
-
-                            if   j == 0:                
-                                rows[i-1].insert(0, 'inlet')
-                            elif j == len(rows[i]) - 1: 
-                                rows[i-1].append('inlet')
-                            else:
-
-                                # find the place to add in the preceeding row 
-
-                                n = updowns.index(rows[i][j-1]) + 1
-                                rows[i-1].insert(n, 'inlet')
-
-                i += 1
-
-        # write the subbasin boxes to the chart
-
-        middle = math.ceil(w // (rwidth + xgap)) // 2
-        last = 0
-
-        # keep track of the bounding box of the plot
-
-        xmin, ymin, xmax, ymax = middle, 0, middle, 0
-
-        for i in range(len(rows)):
-
-            row = rows[i]
-        
-            y = (ygap + rheight) * i + theight
-
-            # figure out which cell to put in the main column
-
-            if i == 0:
-                main = row[(len(row) - 1) // 2]
-            elif i < len(rows) - 1:
-                main = watershed.updown[rows[i-1][last]]
-            else: main = 'outlet'
-
-            start = middle - row.index(main)
-
-            if i < len(rows) - 1: next_row = rows[i + 1]
-
-            for subbasin in row:
-                x = (rwidth + xgap) * (start + row.index(subbasin))
-                r = patches.Rectangle((x, y), rwidth, rheight, fill = False)
-
-                # adjust the bounding box
-
-                if x           < xmin: xmin = x
-                if x + rwidth  > xmax: xmax = x + rwidth
-                if y           < ymin: ymin = y
-                if y + rheight > ymax: ymax = y + rheight
-
-                if subbasin != 'outlet': ax.add_patch(r)
-
-                b = ax.text(x + rwidth / 2, y + rheight / 2, subbasin,
-                            horizontalalignment = 'center',
-                            verticalalignment   = 'center')
-
-                # draw the arrow
-
-                if i < len(rows) - 1:
-
-                    x1 = x + rwidth / 2
-
-                    if i < len(rows) - 2 and subbasin != 'inlet':
-                        next = watershed.updown[subbasin]
-                        next_start = (middle - 
-                                      next_row.index(watershed.updown[main]))
-                        x2 = ((rwidth + xgap) * 
-                              (next_start + next_row.index(next))
-                              + rwidth / 2)
-
-                    elif subbasin == 'inlet':
-                        next = watershed.inlets[0]
-                        next_start = (middle - 
-                                      next_row.index(watershed.updown[main]))
-
-                        x2 = ((rwidth + xgap) * 
-                              (next_start + next_row.index(next))
-                              + rwidth / 2)
-
-                    else:
-                        next_start = middle
-                        x2 = ((rwidth + xgap) * (middle) + rwidth / 2)
-
-                    a = pyplot.arrow(x1, y + rheight, x2 - x1, ygap, 
-                                     head_width = awidth, head_length = aheight,
-                                     fc = 'k', ec = 'k', 
-                                     length_includes_head = True)
-                    ax.add_patch(a)
-
-            last = row.index(main)
-            i += 1
-        
-        pad = 0.02
-
-        xmin = xmin - (xmax - xmin) * pad
-        xmax = xmax + (xmax - xmin) * pad
-        ymin = ymin - (ymax - ymin) * pad
-        ymax = ymax + (ymax - ymin) * pad
-
-        ax.set_xlim(xmin, xmax)
-        ax.set_ylim(ymax, ymin)
-        pyplot.axis('off')
-        pyplot.savefig(output, dpi = 200)
-
-        pyplot.clf()
-        pyplot.close()

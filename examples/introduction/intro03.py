@@ -322,3 +322,8 @@ hspfmodel.add_hydrology()
 with open('example03', 'wb') as f: pickle.dump(hspfmodel, f)
 
 print('\nsuccessfully created new model "example03."\n')
+
+# the Watershed class has a plot method to show the mass linkages for the 
+# model; this case can be useful for complicated networks
+
+watershed.plot_mass_flow(show = True, output = 'masslink')

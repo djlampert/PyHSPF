@@ -336,11 +336,11 @@ class HSPFModel:
 
         # set up the time series specific to each the subbasin
 
-        self.subbasin_timeseries = {s:{} for s in self.subbasins}
+        self.subbasin_timeseries = {}
 
         # set up the time series specific to each landuse category
 
-        self.landuse_timeseries = {l:{} for l in self.landuse}
+        self.landuse_timeseries = {}
 
         # set up the time series specific to each operation
 
@@ -803,7 +803,7 @@ class HSPFModel:
                                  states[o.subbasin][o.landtype]['PACKW']
                                  )
 
-    def add_temp(self):
+    def add_atemp(self):
 
         for o in self.perlnds + self.implnds:
             o.ATMP = True
@@ -904,7 +904,7 @@ class HSPFModel:
                start, 
                days = 365, 
                iterations = 1, 
-               temp = False, 
+               atemp = False, 
                snow = False, 
                hydrology = False, 
                sediment = False,
@@ -929,7 +929,7 @@ class HSPFModel:
 
             # run the simulation
 
-            self.build_uci(warmup, start, end, temp = temp, snow = snow, 
+            self.build_uci(warmup, start, end, atemp = atemp, snow = snow, 
                            hydrology = hydrology, sediment = sediment,
                            verbose = verbose)
             self.run(verbose = verbose)
@@ -945,7 +945,7 @@ class HSPFModel:
             self.set_states(states, hydrology = hydrology, snow = snow)
 
     def build_uci(self, targets, start, end, states = None, hydrology = False, 
-                  temp = False, snow = False, sediment = False, 
+                  atemp = False, snow = False, sediment = False, 
                   verbose = False):
         """Builds the User Control Input (UCI) file for an HSPF Simulation."""
 
@@ -1011,12 +1011,12 @@ class HSPFModel:
         # add the PERLND block
 
         lines = lines + self.perlnd_block(hydrology = hydrology, 
-                                          temp = temp, snow = snow, 
+                                          atemp = atemp, snow = snow, 
                                           sediment = sediment)
 
         # add the IMPLND block
 
-        lines = lines + self.implnd_block(hydrology = hydrology, temp = temp,
+        lines = lines + self.implnd_block(hydrology = hydrology, atemp = atemp,
                                           snow = snow, sediment = sediment)
 
         # add the RCHRES block if needed
@@ -2110,7 +2110,7 @@ class HSPFModel:
 
         return lines
 
-    def perlnd_block(self, hydrology = False, temp = False, snow = False, 
+    def perlnd_block(self, hydrology = False, atemp = False, snow = False, 
                      sediment = False):
         """Makes the "PERLND" block of the UCI file for HSPF. Note that 
         this block is not complete as there are many optional blocks for 
@@ -2436,7 +2436,7 @@ class HSPFModel:
 
         # add the temp (if needed)
 
-        if temp:
+        if atemp:
 
             lines = lines + ['  ATEMP-DAT', '*** <PLS >     ELDAT    AIRTEMP']
 
@@ -2567,7 +2567,7 @@ class HSPFModel:
 
         return lines
 
-    def implnd_block(self, hydrology = True, temp = False, snow = False, 
+    def implnd_block(self, hydrology = True, atemp = False, snow = False, 
                      sediment = False):
         """Adds the block of lines for the implnds to a UCI file."""
 
@@ -2582,7 +2582,7 @@ class HSPFModel:
 
         for i in self.implnds:
 
-            flags = [temp, snow, hydrology, sediment, i.IWG, i.IQAL]
+            flags = [atemp, snow, hydrology, sediment, i.IWG, i.IQAL]
             
             lines.append('%5d%10d%5d%5d%5d%5d%5d' % 
                          ((i.operation,) + tuple(self.bin(f) for f in flags)))
@@ -2731,7 +2731,7 @@ class HSPFModel:
 
         # add the temp (if needed)
 
-        if temp:
+        if atemp:
 
             lines = lines + ['  ATEMP-DAT',
                              '*** <PLS >     ELDAT    AIRTEMP']
@@ -3080,7 +3080,7 @@ class HSPFModel:
 
         return lines
 
-    def ext_sources_block(self, reach = False, temp = False, snow = False, 
+    def ext_sources_block(self, reach = False, atemp = False, snow = False, 
                           hydrology = False, sediment = False, verbose = False):
         """Adds the block of lines for the external data sources (timeseries)
         for an HSPF model."""

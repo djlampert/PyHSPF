@@ -1,6 +1,6 @@
-# File: postprocess.py
+# postprocessor.py
 # 
-# David J. Lampert, PhD, PE (djlampert@gmail.com)
+# David J. Lampert (djlampert@gmail.com)
 #
 # Purpose: This file contains many functions to extract data for postprocessing
 # from an HSPF simulation.
@@ -249,6 +249,7 @@ class Postprocessor:
         operations = self.hspfmodel.perlnds + self.hspfmodel.implnds
 
         for comid in comids:
+
             areas.append(sum([o.area 
                               for o in operations if o.subbasin == comid]))
 
@@ -269,7 +270,8 @@ class Postprocessor:
 
         return upstreams
 
-    def get_segment_timeseries(self, vars, comid, wdm = 'output', dates = None):
+    def get_segment_timeseries(self, variables, comid, wdm = 'output', 
+                               dates = None):
         """Gets the all the timeseries for a given list of variables in the 
         output WDM file for a subbasin identified by "comid." """
 
@@ -290,12 +292,12 @@ class Postprocessor:
         var_dsns, areas = [], []
         for id, staid, desc, dsn in zip(self.idconss, self.staids, 
                                         self.descriptions, self.dsns):
-            if id in vars and staid == comid:
+            if id in variables and staid == comid:
                 areas.append(segment_areas[desc])
                 var_dsns.append(dsn)
 
         if len(areas) == 0:
-            print('error, no segment records found for {}'.format(*vars))
+            print('error, no segment records found for {}'.format(*variables))
             return
 
         vals = [self.wdm.get_data(self.wdmoutfile, n, start = start, end = end)
@@ -303,14 +305,16 @@ class Postprocessor:
 
         return vals, areas
 
-    def get_subbasin_timeseries(self, vars, comids, dates = None):
-        """Returns an area-weighted average of the variables in list "vars" for 
-        each comid in the list "comids" (the idea being to give two variables
-        when IMPLNDs and PERLNDS are different)."""
+    def get_subbasin_timeseries(self, variables, comids, dates = None):
+        """
+        Returns an area-weighted average of the variables in list "variables"
+        for each comid in the list "comids" (the idea being to give two 
+        variables when IMPLNDs and PERLNDS are different).
+        """
 
         subbasin_timeseries = []
         for comid in comids:
-            values, areas = self.get_segment_timeseries(vars, comid, 
+            values, areas = self.get_segment_timeseries(variables, comid, 
                                                         dates = dates)
             subbasin_timeseries.append(sum([v * a for v, a in 
                                             zip(values, areas)]) / sum(areas))

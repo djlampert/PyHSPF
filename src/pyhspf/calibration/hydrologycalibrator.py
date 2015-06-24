@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-#
 # Errors, Parameters, and Calibrator classes for HSPF model development
 #
 # David J. Lampert
@@ -226,7 +224,7 @@ class HydrologyCalibrator:
                                            directory = '{}/{}/hspf'.format(*v),
                                            verbose = vverbose)
 
-            if self.temp: hspfmodel.add_temp()
+            if self.temp: hspfmodel.add_atemp()
 
             if self.snow:
 
@@ -489,7 +487,7 @@ class HydrologyCalibrator:
 
         # add in the modules
 
-        if self.temp: submodel.add_temp()
+        if self.temp: submodel.add_atemp()
 
         if self.snow: 
             
@@ -566,7 +564,6 @@ class HydrologyCalibrator:
         for upcomid in upcomids:
 
             # find the upstream gage number
-
         
             upgage  = [v for k, v in 
                        hspfmodel.subbasin_timeseries['flowgage'].items() 
@@ -663,7 +660,7 @@ class HydrologyCalibrator:
 
         # add in the modules
 
-        submodel.add_temp()
+        submodel.add_atemp()
             
         densities = [o.RDENPF 
                      for o in hspfmodel.perlnds + hspfmodel.implnds]
