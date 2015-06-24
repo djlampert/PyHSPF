@@ -202,6 +202,9 @@ class GageStation:
         pyplot.tight_layout()
         pyplot.savefig(output)
 
+        pyplot.clf()
+        pyplot.close()
+
     def make_timeseries(self, start = None, end = None):
         """returns a time series of daily flows."""
 

@@ -1114,6 +1114,9 @@ class ETCalculator:
 
         if show: pyplot.show()
 
+        pyplot.clf()
+        pyplot.close()
+
     def plotdayofyear(self, 
                       start = None, 
                       end = None, 
@@ -1308,6 +1311,9 @@ class ETCalculator:
         if output is not None: pyplot.savefig(output)
 
         if show: pyplot.show()
+
+        pyplot.clf()
+        pyplot.close()
 
     def calculate_daily_crop(self, 
                              crop, 

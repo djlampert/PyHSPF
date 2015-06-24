@@ -105,3 +105,7 @@ Re-organized examples
 Removed frivolous files
 Added Preprocessor class
 Changed readme files to markdown
+
+Version 0.1.15
+Added preprocessor and examples
+Added links to presentations
