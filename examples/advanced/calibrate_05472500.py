@@ -22,6 +22,7 @@ destination = 'C:/HSPF_data'
 
 from pyhspf.preprocessing import Preprocessor
 from pyhspf               import Postprocessor
+from pyhspf.calibration   import AutoCalibrator
 
 # 8-digit hydrologic unit code of interest (North Skunk River, IA)
 
@@ -57,6 +58,37 @@ landuse = 'lucs.csv'
 # land use year to use for the model
 
 landuseyear = 2001
+
+# HSPF PERLND variables relative to PyHSPF defaults
+
+variables     = {'LZSN':   0.725,
+                 'UZSN':   6.75,
+                 'LZETP':  0.22,   
+                 'INFILT': 1.34,
+                 'INTFW':  0.20,
+                 'AGWRC':  1.004,
+                 'IRC':     0.5,
+                 }
+
+# optimization parameter
+
+optimization = 'Nash-Sutcliffe Product' 
+
+# degrees of perturbation
+
+perturbations = [2, 1, 0.5]
+    
+# parallel flag
+
+parallel = True
+
+# working directory for calibration simulations
+
+directory = '{}/{}/hspf'.format(destination, HUC8)
+
+# file path to place the calibrated model
+
+calibrated = '{}/{}/hspf/calibrated'.format(destination, HUC8)
 
 # Because parallel processing is (optionally) used, the process method has 
 # to be called at runtime as shown below
@@ -101,7 +133,38 @@ if __name__ == '__main__':
     # open the model
 
     with open(processor.hspfmodel, 'rb') as f: hspfmodel = pickle.load(f)
+
+    # make a dictionary that links the nwis gage to the comid
+
+    nwis = {v:k for k,v in hspfmodel.subbasin_timeseries['flowgage'].items()}
+
+    # get the comid of the nwis gage
+
+    comid = nwis[gageid]
+
+    # make an instance of the autocalibrator and give it the model, the start
+    # and end dates, working directory location, the comid of the gage, and 
+    # the modules (ATEMP, SNOW, PWATER, etc)
     
+    calibrator = AutoCalibrator(hspfmodel, start, end, directory, 
+                                comid = comid, atemp = True, snow = True,
+                                hydrology = True)
+
+    # calibrate the model
+
+    calibrator.autocalibrate(calibrated,
+                             variables = variables, 
+                             optimization = optimization,
+                             perturbations = perturbations,
+                             parallel = parallel,
+                             )
+
+    for variable, value in zip(calibrator.variables, calibrator.values):
+
+        print('{:6s} {:5.3f}'.format(variable, value))
+
+    print('\nsaving the calibration results\n')
+
     # build the input WDM file
 
     hspfmodel.build_wdminfile()
@@ -123,14 +186,6 @@ if __name__ == '__main__':
     # run it
 
     hspfmodel.run(verbose = True)
-
-    # make a dictionary that links the nwis gage to the comid
-
-    nwis = {v:k for k,v in hspfmodel.subbasin_timeseries['flowgage'].items()}
-
-    # get the comid of the nwis gage
-
-    comid = nwis[gageid]
 
     # use the Postprocessor to analyze the results
 

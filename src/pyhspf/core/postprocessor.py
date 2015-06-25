@@ -48,6 +48,7 @@ class Postprocessor:
         else:              self.comid = comid
 
         self.upcomids = upcomids
+        self.gagedates = None
 
         # Get the gage flows from the HSPFModel instance
 
@@ -63,8 +64,6 @@ class Postprocessor:
                                       for i in range(len(flows))]
                     self.gageflows = flows
                     self.gagestep  = tstep
-
-        else: self.gagedates = None
 
         self.wdm_parms = None
         self.total_error = None

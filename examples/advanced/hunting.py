@@ -128,7 +128,7 @@ def preprocess():
 
     # extract the HUC8 data for the Patuxent watershed
 
-    nhdplusextractor.extract_HUC8(HUC8, destination)
+    nhdplusextractor.extract_HUC8(HUC8, output)
 
     # create an instance of the NHDPlusDelineator to use to build the Watershed
 
@@ -162,7 +162,7 @@ def preprocess():
     # the data from the export file (*.exp) provided with hspexp need to be 
     # imported into a wdm file. WDMUtil has a method for this.
 
-    hunthour = '{}/hunthour/huntobs.exp'.format(directory)
+    hunthour = 'calibrated/huntobs.exp'.format(directory)
 
     f = 'temp.wdm'
 
@@ -223,7 +223,7 @@ def preprocess():
     hunting.assign_watershed_timeseries('precipitation', 'BWI')
     hunting.assign_watershed_timeseries('evaporation', 'Beltsville')
 
-    # find the subbasin indentfier for the watershed outlet
+    # find the subbasin indentifier for the watershed outlet
 
     subbasin = [up for up, down in w.updown.items() if down == 0][0]
 
@@ -241,13 +241,30 @@ def calibrate():
 
     with open(calibrated, 'rb') as f: hunting = pickle.load(f)
 
-    calibrator = AutoCalibrator(hunting, start, end, hspf)
+    # find the comid of the gage
+
+    flowgages = {v:k 
+                 for k, v in hunting.subbasin_timeseries['flowgage'].items()}
+
+    comid = flowgages['Hunting']
+
+    # create an instance of the autocalibrator and provide it with the 
+    # HSPFModel, the start and end dates, the working directory for the 
+    # calibration testing, the comid for the gage, and turn on the 
+    # hydrology (and other) modules
+
+    calibrator = AutoCalibrator(hunting, start, end, hspf, comid = comid,
+                                hydrology = True)
+
+    # provide the output location for the calibrated model, the variables
+    # to use in the calibration, the optimization parameter, the perturbation
+    # levels, and the parallel flag
 
     calibrator.autocalibrate(calibrated,
                              variables = variables, 
                              optimization = optimization,
                              perturbations = perturbations,
-                             parallel = parallel
+                             parallel = parallel,
                              )
 
     for variable, value in zip(calibrator.variables, calibrator.values):
@@ -334,8 +351,8 @@ if __name__ == '__main__':
 
     st = time.time()
 
-    #preprocess()
-    #calibrate()
+    preprocess()
+    calibrate()
     postprocess()
     
     tot = time.time() - st

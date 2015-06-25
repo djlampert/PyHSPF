@@ -203,8 +203,8 @@ class NHDPlusExtractor:
 
         # NHDPlus NED data content numbers for each VPU (why???)
 
-        self.NEDs = {'01':  '03',
-                     '02':  '03',
+        self.NEDs = {'01':  '01',
+                     '02':  '01',
                      '03N': '02',
                      '03S': '02', 
                      '03W': '02',

@@ -25,18 +25,41 @@ from pyhspf.core import HSPFModel, Postprocessor
 class AutoCalibrator:
     """Autocalibrates an HSPF model."""
 
-    def __init__(self, hspfmodel, start, end, output):
+    def __init__(self, 
+                 hspfmodel, 
+                 start, 
+                 end, 
+                 output, 
+                 comid = None,
+                 atemp = False,
+                 snow = False,
+                 hydrology = False,
+                 ):
 
         self.hspfmodel = hspfmodel
         self.start     = start
         self.end       = end
         self.output    = output
+        self.comid     = comid
+        self.atemp     = atemp
+        self.snow      = snow
+        self.hydrology = hydrology
 
     def copymodel(self, name):
-        """Returns a copy of the HSPFModel."""
+        """
+        Returns a copy of the HSPFModel.
+        """
 
         model = HSPFModel()
         model.build_from_existing(self.hspfmodel, name)
+
+        # turn on the modules
+
+        if self.atemp:     model.add_atemp()
+        if self.snow:      model.add_snow()
+        if self.hydrology: model.add_hydrology()
+
+        # add the time series
 
         for f in self.hspfmodel.flowgages:
             start, tstep, data = self.hspfmodel.flowgages[f]
@@ -50,6 +73,30 @@ class AutoCalibrator:
             start, tstep, data = self.hspfmodel.evaporations[e]
             model.add_timeseries('evaporation', e, start, data, tstep = tstep)
 
+        for t in self.hspfmodel.temperatures:
+            start, tstep, data = self.hspfmodel.temperatures[t]
+            model.add_timeseries('temperature', t, start, data, tstep = tstep)
+
+        for t in self.hspfmodel.dewpoints:
+            start, tstep, data = self.hspfmodel.dewpoints[t]
+            model.add_timeseries('dewpoint', t, start, data, tstep = tstep)
+
+        for t in self.hspfmodel.windspeeds:
+            start, tstep, data = self.hspfmodel.windspeeds[t]
+            model.add_timeseries('wind', t, start, data, tstep = tstep)
+
+        for t in self.hspfmodel.solars:
+            start, tstep, data = self.hspfmodel.solars[t]
+            model.add_timeseries('solar', t, start, data, tstep = tstep)
+
+        for t in self.hspfmodel.snowfalls:
+            start, tstep, data = self.hspfmodel.snowfalls[t]
+            model.add_timeseries('snowfall', t, start, data, tstep = tstep)
+
+        for t in self.hspfmodel.snowdepths:
+            start, tstep, data = self.hspfmodel.snowdepths[t]
+            model.add_timeseries('snowdepth', t, start, data, tstep = tstep)
+
         for tstype, identifier in self.hspfmodel.watershed_timeseries.items():
 
             model.assign_watershed_timeseries(tstype, identifier)
@@ -62,6 +109,12 @@ class AutoCalibrator:
 
                     model.assign_subbasin_timeseries(tstype, subbasin, 
                                                      identifier)
+
+        for tstype, d in self.hspfmodel.landuse_timeseries.items():
+
+            for luc, identifier in d.items():
+
+                model.assign_landuse_timeseries(tstype, luc, identifier)
 
         return model
 
@@ -104,14 +157,16 @@ class AutoCalibrator:
         # build the input files and run
 
         model.build_wdminfile()
-        model.warmup(start, days = warmup, hydrology = True)
-        model.build_uci(targets, start, end, hydrology = True)
+        model.warmup(start, days = warmup, atemp = self.atemp, snow = self.snow,
+                     hydrology = self.hydrology)
+        model.build_uci(targets, start, end, atemp = self.atemp,
+                        snow = self.snow, hydrology = self.hydrology)
         model.run(verbose = verbose)
 
         # get the regression information using the postprocessor
 
-        p = Postprocessor(model, (start, end))
-        p.get_calibration()
+        p = Postprocessor(model, (start, end), comid = self.comid)
+        #p.get_calibration()
         p.calculate_errors(output = None, verbose = False)
 
         dr2, logdr2, dNS, logdNS, mr2, logmr2, mN2, logMS = p.regression
@@ -135,8 +190,7 @@ class AutoCalibrator:
         filename = '{}/{}{:4.3f}'.format(self.output, name, perturbation)
 
         model = self.copymodel(filename)
-        model.add_hydrology()
-                                 
+                                         
         # adjust the values of the parameters
 
         for variable, adjustment in zip(self.variables, adjustments):
@@ -147,10 +201,18 @@ class AutoCalibrator:
         print('running', name, 'perturbation')
         return self.run(model)
 
-    def perturb(self, parallel, timeout = 60):
-        """Performs the perturbation analysis."""
+    def perturb(self, 
+                parallel, 
+                timeout = 300,
+                ):
+        """
+        Performs the perturbation analysis.
+        """
 
-        print('perturbing the model\n')
+        if parallel:
+            print('perturbing the model in parallel\n')
+        else:
+            print('perturbing the model serially\n')
 
         # adjust the parameter values for each variable for each simulation
 
@@ -238,7 +300,9 @@ class AutoCalibrator:
                 self.values[i] = 0.2
 
     def optimize(self, parallel):
-        """Optimizes the objective function for the parameters."""
+        """
+        Optimizes the objective function for the parameters.
+        """
 
         current = self.value - 1
         t = 'increasing {:6s} {:>5.1%} increases {} {:6.3f}'
