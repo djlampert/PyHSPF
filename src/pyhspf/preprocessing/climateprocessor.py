@@ -85,7 +85,7 @@ class ClimateProcessor:
                       bbox,
                       start, 
                       end, 
-                      types = 'all', 
+                      types = 'both', 
                       space = 0.1,
                       GHCND = 'http://www1.ncdc.noaa.gov/pub/data/ghcn/daily',
                       plot = True,

@@ -7,21 +7,162 @@
 # Calculates the land use data from a raster file within each of the shapes
 # in a shapefile.
 
-import os, csv, zipfile, gdal, numpy
+import os, csv, zipfile, time, gdal, numpy
 
-from urllib     import request
-from shapefile  import Reader
-from PIL        import Image, ImageDraw
-from matplotlib import pyplot, patches, path, colors, ticker
+from urllib      import request
+from html.parser import HTMLParser
+from shapefile   import Reader
+from PIL         import Image, ImageDraw
+from matplotlib  import pyplot, patches, path, colors, ticker
 
 from .rasterutils import get_pixel
 from .rasterutils import get_raster
 from .rasterutils import get_raster_table
 from .rasterutils import get_raster_in_poly
 
+class CDLParser(HTMLParser):
+    """
+    A class to parse the metadata on the CDL website.
+    """
+
+    def __init__(self,
+                 ):
+
+        HTMLParser.__init__(self)
+
+        self.data = {}
+
+        # flags for parsing
+
+        self.table = False
+        self.tr    = False
+        self.td    = False
+        self.font  = False
+        self.a     = False
+        self.div   = False
+
+        # 
+        # keep track of states
+
+        self.state = None
+        self.stateyears = {}
+
+        # state name dictionary
+
+        self.statenames = {
+            'Alabama': 'AL',
+            'Alaska': 'AK',
+            'Arizona': 'AZ',
+            'Arkansas': 'AR',
+            'California': 'CA',
+            'Colorado': 'CO',
+            'Connecticut': 'CT',
+            'District of Columbia': 'DC',
+            'Delaware': 'DE',
+            'Florida': 'FL',
+            'Georgia': 'GA',
+            'Hawaii': 'HI',
+            'Idaho': 'ID',
+            'Illinois': 'IL',
+            'Indiana': 'IN',
+            'Iowa': 'IA',
+            'Kansas': 'KS',
+            'Kentucky': 'KY',
+            'Louisiana': 'LA',
+            'Maine': 'ME',
+            'Maryland': 'MD',
+            'Massachusetts': 'MA',
+            'Michigan': 'MI',
+            'Minnesota': 'MN',
+            'Mississippi': 'MS',
+            'Missouri': 'MO',
+            'Montana': 'MT',
+            'Nebraska': 'NE',
+            'Nevada': 'NV',
+            'New Hampshire': 'NH',
+            'New Jersey': 'NJ',
+            'New Mexico': 'NM',
+            'New York': 'NY',
+            'North Carolina': 'NC',
+            'North Dakota': 'ND',
+            'Ohio': 'OH',
+            'Oklahoma': 'OK',
+            'Oregon': 'OR',
+            'Pennsylvania': 'PA',
+            'Rhode Island': 'RI',
+            'South Carolina': 'SC',
+            'South Dakota': 'SD',
+            'Tennessee': 'TN',
+            'Texas': 'TX',
+            'Utah': 'UT',
+            'Vermont': 'VT',
+            'Virginia': 'VA',
+            'Washington': 'WA',
+            'West Virginia': 'WV',
+            'Wisconsin': 'WI',
+            'Wyoming': 'WY',
+            }
+
+    def is_integer(self, i):
+        """
+        Tests if "i" is an integer.
+        """
+
+        try:
+            int(i)
+            return True
+        except:
+            return False
+
+    def handle_starttag(self, tag, attrs):
+
+        if tag == 'table': self.table = True
+        if tag == 'tr':    self.tr    = True
+        if tag == 'td':    self.td    = True
+        if tag == 'font':  self.font  = True
+        if tag == 'a':     self.a     = True
+        if tag == 'div':   self.div   = True
+
+        if all((self.tr, self.td, self.a,
+                )):
+
+            for att, v in attrs:
+                if att == 'href' and v[:8] == 'metadata':
+                    if int(v[11:13]) < 90:
+                        y = int('20' + v[11:13])
+                    else:
+                        y = int('19' + v[11:13])
+                    self.stateyears[self.state].append(y)
+
+    def handle_endtag(self, tag):
+
+        if tag == 'table': self.table = False
+        if tag == 'tr':    self.tr    = False
+        if tag == 'td':    self.td    = False
+        if tag == 'font':  self.font  = False
+        if tag == 'a':     self.a     = False
+        if tag == 'div':   self.div   = False
+
+    def handle_data(self, data):
+
+        if self.table and self.tr and self.td and self.font:
+            if data.strip() in self.statenames:
+                self.state = data.strip()
+                self.stateyears[data.strip()] = []
+
+    def read(self,
+             u = 'http://www.nass.usda.gov/research/Cropland/metadata/meta.htm',
+             ):
+
+        with request.urlopen(u) as f: metadata = f.read().decode()
+
+        self.feed(metadata)
+
 class CDLExtractor:
-    """A class to download and extract data from the Cropland Data Layer for
-     a given state and period of years."""
+    """
+    A class to download and extract data from the Cropland Data Layer for
+    a given state and period of years.
+     """
 
     def __init__(self,
                  destination,
@@ -201,14 +342,38 @@ class CDLExtractor:
                ):
         """Private method to report the status of the file download."""
 
-        if n % 100 == 0:
-            it = block * n / 10**6, size / 10**6
-            print('{:.1f} MB of {:.1f} MB transferred'.format(*it))
+        if n % 200 == 0:
+            it = block * n / 10**6, size / 10**6, time.time() - self.r_start
+            print('{:.1f} MB of {:.1f} MB transferred, {:.1f} '.format(*it) +
+                  'seconds remaining')
 
     def download_data(self, 
                       state,
                       years,
                       ):
+        
+        # read the CDL metadata
+
+        parser = CDLParser()
+
+        try: 
+            
+            parser.read()
+
+            # make a reverse dictionary to look up the state abbreviation
+
+            abb = {v:k for k,v in parser.statenames.items()}
+
+            # get the list of available years
+
+            available_years = parser.stateyears[abb[state]]
+
+            print('CDL data for {} available for years:\n'.format(abb[state]) + 
+                  ', '.join(['{}'.format(y) for y in available_years]) + '\n')
+
+        except:
+
+            print('warning: unable to access CDL metadata\n')
 
         self.state = state
 
@@ -216,11 +381,11 @@ class CDLExtractor:
 
             # compressed filename on the CDL server
 
-            webfile = 'CDL_{}_{}.zip'.format(year, self.statecodes[state])
+            webfile = 'CDL_{}_{}.tif'.format(year, self.statecodes[state])
 
             # path to compressed filename locally
 
-            compressed = '{}/{}'.format(self.destination, webfile)
+            local = '{}/{}'.format(self.destination, webfile)
 
             # url to file on CDL server
 
@@ -229,42 +394,47 @@ class CDLExtractor:
             # download the compressed file if needed
 
             its = year, state
-            if not os.path.isfile(compressed):
+            if not os.path.isfile(local) and year in available_years:
 
-                print('downloading compressed file for {} {} '.format(*its) +
+                print('downloading CDL data for {} {} '.format(*its) +
                       'from {}\n'.format(url))
                 
                 try: 
 
-                    request.urlretrieve(url, compressed, self.report)
+                    self.r_start = time.time()
+                    request.urlretrieve(url, local, self.report)
 
                 except:
 
-                    print('unable to download CDL data')
+                    print('unable to download CDL data for {}'.format(year))
                     print('double-check that data are available for the ' +
                           'requested year')
                     #return
                     
                 print('')
 
-            else: 
+            elif year in available_years:
 
-                print('compressed NASS CDL raster for ' +
+                print('NASS CDL raster for ' +
                       '{} {} exists'.format(*its))
 
-            # decompress the files
+            else:
 
-            its = self.destination, year, self.statecodes[state]
-            decompressed = '{}/CDL_{}_{}.tif'.format(*its)
-            if os.path.isfile(compressed) and not os.path.isfile(decompressed):
+                print('data for {}, {} are not available'.format(state, year))
 
-                print('decompressing {} archive\n'.format(compressed))
-                f = zipfile.ZipFile(compressed)
-                f.extractall(self.destination)
+            # decompress files
+
+            #its = self.destination, year, self.statecodes[state]
+            #decompressed = '{}/CDL_{}_{}.tif'.format(*its)
+            #if os.path.isfile(compressed) and not os.path.isfile(decompressed):
+
+                #print('decompressing {} archive\n'.format(compressed))
+                #f = zipfile.ZipFile(compressed)
+                #f.extractall(self.destination)
 
             # keep track of all the years where the source files exist
 
-            if os.path.isfile(decompressed): self.years.append(year)
+            if os.path.isfile(local): self.years.append(year)
 
     def extract_bbox(self,
                      bbox,

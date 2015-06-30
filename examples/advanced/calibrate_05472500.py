@@ -1,14 +1,15 @@
-# build_05472500.py
+# calibrate_05472500.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# last updated: 05/20/2015
+# last updated: 06/29/2015
 # 
 # Purpose: shows how to use the Preprocessor class to gather all the input
 # data needed to create an HSPF model for an 8-digit hydrologic unit code 
-# (HUC8), then integrate the data to create an HSPFModel class for the HUC8,
-# then create a submodel for the gage for watershed associated with NWIS gage
-# 05472500, then runs a baseline simulation and plots the results.
+# (HUC8), integrate the data to create an HSPFModel class for the HUC8,
+# create a submodel for the gage for watershed associated with NWIS gage
+# 05472500, calibrate the model for given parameters, and postprocess and 
+# plot the results.
 
 import os, pickle, datetime
 
@@ -18,7 +19,15 @@ import os, pickle, datetime
 network     = 'Z:'
 destination = 'C:/HSPF_data'
 
-# import the Preprocessor and the Postprocessor
+if not os.path.isdir(network):
+    print('error, directory {} doesn not exist (please update)'.format(network))
+    raise
+if not os.path.isdir(destination):
+    print('error, directory ' +
+          '{} doesn not exist (please update)'.format(destination))
+    raise
+
+# import the Preprocessor, Postprocessor, and AutoCalibrator
 
 from pyhspf.preprocessing import Preprocessor
 from pyhspf               import Postprocessor
@@ -36,21 +45,21 @@ state = 'ia'
 
 gageid = '05472500'
 
-# start and end dates (2001 to 2010)
+# start and end dates for the model (2001 to 2010)
 
-start = datetime.datetime(2001, 1, 1)
-end   = datetime.datetime(2011, 1, 1)
+start = datetime.datetime(1980, 1, 1)
+end   = datetime.datetime(2009, 1, 1)
 
 # maximum drainage area for subbasins in square kilometers
 
 drainmax = 400
 
-# Comma separated value file linking land use codes from the Cropland Data
+# comma separated value file linking land use codes from the Cropland Data
 # Layer to aggregated land use categories for HSPF land segments
 
 aggregation = 'cdlaggregation.csv'
 
-# Comma separated value file of parameters for the HSPF land use categories
+# comma separated value file of parameters for the HSPF land use categories
 # including RGB values for plots and evapotranspiration crop coefficients
 
 landuse = 'lucs.csv'
@@ -59,36 +68,44 @@ landuse = 'lucs.csv'
 
 landuseyear = 2001
 
-# HSPF PERLND variables relative to PyHSPF defaults
+# HSPF PERLND variables to use for calibration and inital values relative to 
+# the PyHSPF defaults
 
-variables     = {'LZSN':   0.725,
-                 'UZSN':   6.75,
-                 'LZETP':  0.22,   
-                 'INFILT': 1.34,
-                 'INTFW':  0.20,
-                 'AGWRC':  1.004,
-                 'IRC':     0.5,
+variables     = {'LZSN':   0.8,
+                 'UZSN':   4.,
+                 'LZETP':  1.30,   
+                 'INFILT': 0.92,
+                 'INTFW':  1.7,
+                 'AGWRC':  1.,
+                 'IRC':    1.13,
+                 'DEEPFR': 0.30,
                  }
 
-# optimization parameter
+# optimization parameter 
 
 optimization = 'Nash-Sutcliffe Product' 
 
 # degrees of perturbation
 
-perturbations = [2, 1, 0.5]
+#perturbations = [2, 1, 0.5]
+perturbations = [2]
     
-# parallel flag
+# parallel flag and number of processors to use (default uses them all)
 
-parallel = True
+parallel    = True
+nprocessors = 3
 
 # working directory for calibration simulations
 
 directory = '{}/{}/hspf'.format(destination, HUC8)
 
-# file path to place the calibrated model
+# file path to place the calibrated model and results
 
-calibrated = '{}/{}/hspf/calibrated'.format(destination, HUC8)
+calibration = '{}/{}/calibrations'.format(destination, HUC8)
+
+# path where the calibrated model will be saved/located
+
+calibrated = '{}/{}'.format(calibration, gageid)
 
 # Because parallel processing is (optionally) used, the process method has 
 # to be called at runtime as shown below
@@ -130,40 +147,34 @@ if __name__ == '__main__':
     # to the destination/hspf directory named "<landuseyear>baseline" (in this
     # case 2001) stored in the "hspfmodel" attribute of the preprocessor
 
-    # open the model
+    filename = '{}/{}baseline'.format(directory, landuseyear)
 
-    with open(processor.hspfmodel, 'rb') as f: hspfmodel = pickle.load(f)
+    # make the directory for the calibration simulations
 
-    # make a dictionary that links the nwis gage to the comid
+    if not os.path.isdir(calibration): os.mkdir(calibration)
 
-    nwis = {v:k for k,v in hspfmodel.subbasin_timeseries['flowgage'].items()}
+    # make an instance of the autocalibrator and give it the path to the model,
+    # the start and end dates for the calibration period, the working directory 
+    # location to use for simulation input and output files, the NWIS id 
+    # (or comid) of the gage, and the HSPF modules to use (SNOW, PWATER, etc.)
 
-    # get the comid of the nwis gage
-
-    comid = nwis[gageid]
-
-    # make an instance of the autocalibrator and give it the model, the start
-    # and end dates, working directory location, the comid of the gage, and 
-    # the modules (ATEMP, SNOW, PWATER, etc)
-    
-    calibrator = AutoCalibrator(hspfmodel, start, end, directory, 
-                                comid = comid, atemp = True, snow = True,
+    calibrator = AutoCalibrator(filename, start, end, directory, 
+                                gageid = gageid, atemp = True, snow = True,
                                 hydrology = True)
 
-    # calibrate the model
+    # calibrate the model and save it to the "calibrated" location
 
     calibrator.autocalibrate(calibrated,
                              variables = variables, 
                              optimization = optimization,
                              perturbations = perturbations,
                              parallel = parallel,
+                             nprocessors = nprocessors,
                              )
 
-    for variable, value in zip(calibrator.variables, calibrator.values):
-
-        print('{:6s} {:5.3f}'.format(variable, value))
-
     print('\nsaving the calibration results\n')
+
+    with open(calibrated, 'rb') as f: hspfmodel = pickle.load(f)
 
     # build the input WDM file
 
@@ -187,14 +198,16 @@ if __name__ == '__main__':
 
     hspfmodel.run(verbose = True)
 
-    # use the Postprocessor to analyze the results
+    # use the Postprocessor to analyze and save the results
 
     postprocessor = Postprocessor(hspfmodel, (start, end), comid = comid)
 
     postprocessor.get_hspexp_parameters()
-    postprocessor.plot_hydrograph(tstep = 'monthly')
-    postprocessor.plot_calibration()
-    postprocessor.plot_runoff(tstep = 'daily')
+    postprocessor.plot_hydrograph(tstep = 'monthly', 
+                                  output = '{}/hydrography'.format(calibration))
+    postprocessor.plot_calibration(output = '{}/statistics'.format(calibration))
+    postprocessor.plot_runoff(tstep = 'daily', 
+                              output = '{}/runoff'.format(calibration))
 
 # Using the preprocessor in other watersheds/gages *should* be as simple as
 # supplying the parameters above (start and end date, state, 8-digit HUC, 

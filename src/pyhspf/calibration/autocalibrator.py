@@ -17,13 +17,15 @@
 
 # The class should be adaptable to other methodologies.
 
-import os, pickle, datetime
+import os, pickle, datetime, time, numpy
 
 from multiprocessing import Pool, cpu_count
 from pyhspf.core import HSPFModel, Postprocessor
 
 class AutoCalibrator:
-    """Autocalibrates an HSPF model."""
+    """
+    A class to use to autocalibrate an HSPF model.
+    """
 
     def __init__(self, 
                  hspfmodel, 
@@ -31,21 +33,52 @@ class AutoCalibrator:
                  end, 
                  output, 
                  comid = None,
+                 gageid = None,
                  atemp = False,
                  snow = False,
                  hydrology = False,
+                 warmup = 30,
+                 parameter_ranges = {'IRC':    (0.5,   2),
+                                     'LZETP':  (0.2,  1.4),
+                                     'DEEPFR': (0,      1),
+                                     'LZSN':   (0.2,   10),
+                                     'UZSN':   (0.2,   10),
+                                     'INFILT': (0.01,  20),
+                                     'INTFW':  (0.01,  10),
+                                     'AGWRC':  (0.5,    2),
+                                     },
                  ):
 
-        self.hspfmodel = hspfmodel
-        self.start     = start
-        self.end       = end
-        self.output    = output
-        self.comid     = comid
-        self.atemp     = atemp
-        self.snow      = snow
-        self.hydrology = hydrology
+        self.hspfmodel        = hspfmodel
+        self.start            = start
+        self.end              = end
+        self.output           = output
+        self.gageid           = gageid
+        self.comid            = comid
+        self.atemp            = atemp
+        self.snow             = snow
+        self.hydrology        = hydrology
+        self.warmup           = warmup
+        self.parameter_ranges = parameter_ranges
 
-    def copymodel(self, name):
+    def copymodel(self,
+                  name,
+                  verbose = True,
+                  ):
+        """
+        Returns a copy of the HSPFModel.
+        """
+        
+        with open(self.hspfmodel, 'rb') as f: hspfmodel = pickle.load(f)
+
+        hspfmodel.filename = name
+
+        return hspfmodel
+
+    def submodel(self, 
+                  name,
+                  verbose = True,
+                  ):
         """
         Returns a copy of the HSPFModel.
         """
@@ -119,7 +152,11 @@ class AutoCalibrator:
         return model
 
     def adjust(self, model, variable, adjustment):
-        """Adjusts the values of the given parameter by the adjustment.""" 
+        """
+        Adjusts the values of the given parameter for all the PERLNDs in the
+        watershed by the "adjustment." The adjustments can be defined as 
+        values relative to the default (products) or absolute values (sums).
+        """ 
 
         if variable == 'LZSN':
             for p in model.perlnds: p.LZSN   *= adjustment
@@ -135,53 +172,85 @@ class AutoCalibrator:
             for p in model.perlnds: p.IRC    *= adjustment
         if variable == 'AGWRC':
             for p in model.perlnds: p.AGWRC  *= adjustment
+        if variable == 'DEEPFR':
+            for p in model.perlnds: p.DEEPFR += adjustment
     
     def run(self, 
             model,
-            targets = ['reach_outvolume',
-                       'groundwater',
-                       ],
-            start = None,
-            end = None,
-            warmup = 30,
+            targets = ['reach_outvolume'],
             verbose = False,
             ):
-        """Creates a copy of the base model, adjusts a parameter value, runs
-        the simulation, calculates and returns the perturbation."""
-
-        # if dates provided use, otherwise use default
-        
-        if start is None: start = self.start
-        if end   is None: end   = self.end
+        """
+        Creates a copy of the base model, adjusts a parameter value, runs
+        the simulation, calculates and returns the perturbation.
+        """
 
         # build the input files and run
 
         model.build_wdminfile()
-        model.warmup(start, days = warmup, atemp = self.atemp, snow = self.snow,
+        model.warmup(self.start, days = self.warmup, atemp = self.atemp, 
+                     snow = self.snow,
                      hydrology = self.hydrology)
-        model.build_uci(targets, start, end, atemp = self.atemp,
+        model.build_uci(targets, self.start, self.end, atemp = self.atemp,
                         snow = self.snow, hydrology = self.hydrology)
         model.run(verbose = verbose)
 
         # get the regression information using the postprocessor
 
-        p = Postprocessor(model, (start, end), comid = self.comid)
-        #p.get_calibration()
-        p.calculate_errors(output = None, verbose = False)
+        p = Postprocessor(model, (self.start, self.end), comid = self.comid)
 
-        dr2, logdr2, dNS, logdNS, mr2, logmr2, mN2, logMS = p.regression
+        # get the daily flows across the calibration period
+
+        stimes, sflows = p.get_sim_flow(self.comid, tstep = 'daily',
+                                        dates = (self.start, self.end))
+        otimes, oflows = p.get_obs_flow(tstep = 'daily', 
+                                        dates = (self.start, self.end))
+
+        # close the postprocessor
 
         p.close()
 
-        model = None
-        p     = None
-        perturbation = None
+        # remove points with missing data from both simulated and oberved flows
 
-        if self.optimization == 'Nash-Sutcliffe Product':    return dNS * logdNS
-        if self.optimization == 'Nash-Sutcliffe Efficiency': return dNS
+        sflows = [sflows[stimes.index(t)] 
+                  for t, f in zip(otimes, oflows) 
+                  if t in stimes and f is not None]
+        oflows = [oflows[otimes.index(t)] 
+                  for t, f in zip(otimes, oflows) 
+                  if f is not None]
+
+        # return the appropriate performance metric
+
+        if self.optimization == 'Nash-Sutcliffe Product':
+
+            # daily log flows
+
+            log_o = [numpy.log(f) for f in oflows]
+            log_s = [numpy.log(f) for f in sflows]
+
+            logdNS = (1 - sum((numpy.array(log_s) - numpy.array(log_o))**2) /
+                      sum((numpy.array(log_o) - numpy.mean(log_o))**2))
+
+            # daily NS
+
+            dNS  = (1 - sum((numpy.array(sflows) - numpy.array(oflows))**2) /
+                    sum((numpy.array(oflows) - numpy.mean(oflows))**2))
+
+            return dNS * logdNS
+
+        if self.optimization == 'Nash-Sutcliffe Efficiency': 
+
+            # daily NS
+
+            dNS  = (1 - sum((numpy.array(sflows) - numpy.array(oflows))**2) /
+                    sum((numpy.array(oflows) - numpy.mean(oflows))**2))
+
+            return dNS
 
     def simulate(self, simulation):
-        """Performs a simulation and returns the optimization value."""
+        """
+        Performs a simulation and returns the optimization value.
+        """
 
         name, perturbation, adjustments = simulation
 
@@ -202,17 +271,21 @@ class AutoCalibrator:
         return self.run(model)
 
     def perturb(self, 
-                parallel, 
+                parallel,
+                nprocessors,
                 timeout = 300,
+                verbose = True,
                 ):
         """
         Performs the perturbation analysis.
         """
 
-        if parallel:
-            print('perturbing the model in parallel\n')
-        else:
-            print('perturbing the model serially\n')
+        if verbose:
+            st = time.time()
+            if parallel:
+                print('perturbing the model in parallel\n')
+            else:
+                print('perturbing the model serially\n')
 
         # adjust the parameter values for each variable for each simulation
 
@@ -232,11 +305,14 @@ class AutoCalibrator:
 
         if parallel:
 
+            if nprocessors is None: n = cpu_count()
+            else:                   n = nprocessors
+
             try: 
 
                 # create a pool of workers and try parallel
 
-                with Pool(cpu_count(), maxtasksperchild = 4 * cpu_count()) as p:
+                with Pool(n, maxtasksperchild = 4 * cpu_count()) as p:
                     results = p.map_async(self.simulate, simulations)
                     optimizations = results.get(timeout = timeout)
 
@@ -253,7 +329,10 @@ class AutoCalibrator:
 
             optimizations = [self.simulate(s) for s in simulations]
 
-        print('')
+        if verbose: 
+
+            print('\ncompleted perturbation in ' +
+                  '{:.1f} seconds\n'.format(time.time() - st))
 
         # calculate the sensitivities for the perturbations
 
@@ -276,6 +355,7 @@ class AutoCalibrator:
         elif variable == 'INTFW':  return 0.01
         elif variable == 'IRC':    return 0.02
         elif variable == 'AGWRC':  return 0.005
+        elif variable == 'DEEPFR': return 0.01
         else:
             print('error: unknown variable specified\n')
             raise
@@ -288,18 +368,20 @@ class AutoCalibrator:
 
             variable = self.variables[i]
             value    = self.values[i]
+            mi, ma   = self.parameter_ranges[variable]
             
-            if variable == 'IRC' and value < 0.5:
-                print('warning: current {} is below minimum'.format(variable))
-                self.values[i] = 0.5
-            if variable == 'LZETP' and value > 1.4:
-                print('warning: current {} is above maximum'.format(variable))
-                self.values[i] = 1.4
-            if value < 0.2: 
-                print('warning: current {} is below minimum'.format(variable))
-                self.values[i] = 0.2
+            if value < mi:
+                its = variable, value, mi
+                print('warning: current value of ' +
+                      '{} ({}) is below minimum ({})'.format(*its))
+                self.values[i] = mi
+            if value > ma:
+                its = variable, value, ma
+                print('warning: current value of ' +
+                      '{} ({}) is above maximum ({})'.format(*its))
+                self.values[i] = ma
 
-    def optimize(self, parallel):
+    def optimize(self, parallel, nprocessors):
         """
         Optimizes the objective function for the parameters.
         """
@@ -316,7 +398,7 @@ class AutoCalibrator:
 
             # perturb the values positively
 
-            sensitivities = self.perturb(parallel)
+            sensitivities = self.perturb(parallel, nprocessors)
 
             # iterate through the calibration variables and update if they
             # improve the optimization parameter
@@ -337,7 +419,7 @@ class AutoCalibrator:
             # perturb the values negatively
 
             self.perturbations = [-p for p in self.perturbations]
-            sensitivities = self.perturb(parallel)
+            sensitivities = self.perturb(parallel, nprocessors)
 
             # iterate through the calibration variables and update if they
             # improve the optimization parameter
@@ -353,13 +435,19 @@ class AutoCalibrator:
                        self.optimization, sensitivities[i])
                 print(t.format(*its))
 
-            # reset the perturbations
+            # reset the perturbations to positive
 
             self.perturbations = [-p for p in self.perturbations]
 
             # make sure variables are within bounds
 
             self.check_variables()
+
+            # show progress
+
+            print('calibration values relative to default:\n')
+            for variable, adjustment in zip(self.variables, self.values):
+                print('{:6s} {:5.3f}'.format(variable, adjustment))
 
     def autocalibrate(self, 
                       output,
@@ -374,9 +462,33 @@ class AutoCalibrator:
                       optimization = 'Nash-Sutcliffe Efficiency',
                       perturbations = [2, 1, 0.5],
                       parallel = True,
+                      nprocessors = None,
                       ):
-        """Autocalibrates the hydrology for the hspfmodel by modifying the 
-        values of the HSPF PERLND parameters contained in the vars list."""
+        """
+        Autocalibrates the hydrology for the hspfmodel by modifying the 
+        values of the HSPF PERLND parameters contained in the vars list.
+        """
+
+        # find the comid of the calibration gage
+
+        if self.comid is None and self.gageid is not None:
+
+            # open up the base model
+
+            with open(self.hspfmodel, 'rb') as f: hspfmodel = pickle.load(f)
+
+            # make a dictionary to use to find the comid for each gage id
+
+            d = {v:k 
+                 for k, v in hspfmodel.subbasin_timeseries['flowgage'].items()}
+            self.comid = d[self.gageid]
+
+        elif self.comid is None:
+
+            # then just use the outlet
+
+            print('error, no calibration gage specified')
+            raise
 
         # set up the current values of the variables, the amount to perturb
         # them by in each iteration, and the optimization parameter
@@ -391,11 +503,11 @@ class AutoCalibrator:
 
         # perturb until reaching a maximum (start with large perturbations)
 
-        print('\nattempting to calibrate {}'.format(self.hspfmodel.filename))
+        print('\nattempting to calibrate {}'.format(self.hspfmodel))
         for p in perturbations:
 
             self.perturbations = [p * self.get_default(v) for v in variables]
-            self.optimize(parallel)
+            self.optimize(parallel, nprocessors)
 
         print('\noptimization complete, saving model\n')
 
@@ -411,5 +523,6 @@ class AutoCalibrator:
         print('calibration values relative to default:\n')
         for variable, adjustment in zip(self.variables, self.values):
             self.adjust(model, variable, adjustment)
+            print('{:6s} {:5.3f}'.format(variable, adjustment))
 
         with open(output, 'wb') as f: pickle.dump(model, f)

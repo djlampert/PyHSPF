@@ -97,7 +97,8 @@ def find_ghcnd(bbox,
 
                 if (types == 'all' or
                     (gsn == 'GSN' and (types == 'both' or types == 'GSN')) or
-                    (hcn == 'HCN' and (types == 'both' or types == 'GSN'))):
+                    (hcn == 'HCN' and (types == 'both' or types == 'GSN'))
+                    ):
 
                     stations.append(GHCNDStation(station, 
                                                  name.strip(), 
@@ -108,7 +109,7 @@ def find_ghcnd(bbox,
                                                  )
                                     )
 
-                    if verbose: print('found GSN station ' +
+                    if verbose: print('found GHCND station ' +
                                       '{}, {}'.format(station, name.strip()))
 
     else:
