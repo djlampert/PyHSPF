@@ -1,3 +1,7 @@
+## PyHSPF Examples
+
+This folder contains a number of example scripts designed to illustrate different concepts needed to use HSPF and how PyHSPF can help accomplish these tasks. The examples are designed such that the assumptions in a particular script can be modified. For example, start and end dates, watershed HUC, or latitudes/longitudes are intended to be relatively arbitrary choices that are modifiable. Please adapt the assumptions in the scripts and report changes that result in errors. 
+
 The examples in each subdirectory are subdivided into the following groups:
 
 **Introduction:** These examples are designed to illustrate how HSPF organizes information about the world into a computer program and how PyHSPF can be supply this information to HSPF. The data supplied directly in these scripts can be provided using the extraction and processing tools illustrated in the other sections.
