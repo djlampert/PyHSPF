@@ -15,8 +15,14 @@ import os, pickle, datetime
 # Paths to working directories for source NHDPlus, CDL, NWIS, NID datasets
 # (modify as needed for the PC of interest)
 
-network     = 'Z:'
+network     = 'D:'
 destination = 'C:/HSPF_data'
+
+for d in network, destination:
+    if not os.path.isdir(d):
+        print('\ndirectory {} does not exist!'.format(d))
+        print('please make sure that a valid path has been specified\n')
+        raise
 
 # import the Preprocessor and the Postprocessor
 
@@ -29,15 +35,15 @@ HUC8 = '07080106'
 
 # two-digit state abbreviation for the CDL
 
-state = 'ia'
+state = 'Iowa'
 
 # NWIS gage for the calibration
 
 gageid = '05472500'
 
-# start and end dates (2001 to 2010)
+# start and end dates (1981 to 2010)
 
-start = datetime.datetime(2001, 1, 1)
+start = datetime.datetime(1981, 1, 1)
 end   = datetime.datetime(2011, 1, 1)
 
 # maximum drainage area for subbasins in square kilometers
@@ -132,14 +138,25 @@ if __name__ == '__main__':
 
     comid = nwis[gageid]
 
+    # specify the output directory for the simulation results
+
+    output = '{}/{}/initial'.format(destination, HUC8)
+
+    # make the directory if it doesn't exist
+
+    if not os.path.isdir(output): os.mkdir(output)
+
     # use the Postprocessor to analyze the results
 
     postprocessor = Postprocessor(hspfmodel, (start, end), comid = comid)
 
     postprocessor.get_hspexp_parameters()
-    postprocessor.plot_hydrograph(tstep = 'monthly')
-    postprocessor.plot_calibration()
-    postprocessor.plot_runoff(tstep = 'daily')
+    postprocessor.plot_hydrograph(tstep = 'monthly', show = False,
+                                  output = output + '/hydrograph')
+    postprocessor.plot_calibration(show = False, 
+                                   output = output + '/calibration')
+    postprocessor.plot_runoff(tstep = 'daily', show = False,
+                              output = output + '/runoff')
 
 # Using the preprocessor in other watersheds/gages *should* be as simple as
 # supplying the parameters above (start and end date, state, 8-digit HUC, 

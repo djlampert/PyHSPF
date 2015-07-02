@@ -445,7 +445,7 @@ class AutoCalibrator:
 
             # show progress
 
-            print('calibration values relative to default:\n')
+            print('\ncalibration values relative to default:\n')
             for variable, adjustment in zip(self.variables, self.values):
                 print('{:6s} {:5.3f}'.format(variable, adjustment))
 
@@ -520,9 +520,7 @@ class AutoCalibrator:
                                  
         # adjust the values of the parameters
 
-        print('calibration values relative to default:\n')
         for variable, adjustment in zip(self.variables, self.values):
             self.adjust(model, variable, adjustment)
-            print('{:6s} {:5.3f}'.format(variable, adjustment))
 
         with open(output, 'wb') as f: pickle.dump(model, f)

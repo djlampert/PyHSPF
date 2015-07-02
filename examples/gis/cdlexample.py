@@ -9,8 +9,12 @@
 #
 # last updated: 05/10/2015
 
+import os
+
+# adjustable input parameters
+
 output = 'CDL'                  # path to place state CDL source rasters
-state  = 'MD'                   # Maryland (two-digit state abbreviation)
+state  = 'Maryland'             # state name
 years  = [2008, 2009, 2010]     # years to extract data (CDL is annual)
 sfile  = 'data/boundary'        # catchment file for land use calculation
 
@@ -25,6 +29,21 @@ lucfile = 'data/lucs.csv'
 
 # look at these files to understand how the raw categories map to user-specified
 # information for each land use category
+
+# make sure the essential input data files exist
+
+if not os.path.isdir('data'):
+    print('\nerror: please ensure that the "data" directory has been created ' +
+          'and contains the essential files before running the script!\n')
+    raise
+
+required = sfile + '.shp', aggregate, lucfile
+
+for f in required:
+    if not os.path.isfile(f):
+        print('error: to run this script please ensure the file ' +
+              '{} has been placed in the "data" directory'.format(f))
+        raise
 
 # extract cropland data for the state from NASS using the CDLExtractor class
 

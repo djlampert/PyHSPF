@@ -4,7 +4,7 @@
 #
 # the setup file for PyHSPF
 
-_version   = '0.1.15'
+_version   = '0.1.16'
 
 # check for the required and optional dependencies
 

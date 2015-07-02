@@ -550,7 +550,7 @@ class ClimateProcessor:
             if verbose: 
                 
                 its = parameter, k
-                print('fetching the {} time series data from {}'.format(*its))
+                print('fetching {} data from {}'.format(*its))
 
             # read the data into the array
 

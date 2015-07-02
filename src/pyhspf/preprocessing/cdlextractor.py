@@ -166,7 +166,7 @@ class CDLExtractor:
 
     def __init__(self,
                  destination,
-                 website = 'http://nassgeodata.gmu.edu/nass_data_cache/byfips',
+                 website = 'http://nassgeodata.gmu.edu:8080/axis2/services'
                  ):
 
         self.destination = destination  # location of the raw CDL files
@@ -192,6 +192,62 @@ class CDLExtractor:
 
                 print('error, unable to create destination directory\n')
                 raise
+
+        # state name dictionary
+
+        self.statenames = {
+            'Alabama': 'AL',
+            'Alaska': 'AK',
+            'Arizona': 'AZ',
+            'Arkansas': 'AR',
+            'California': 'CA',
+            'Colorado': 'CO',
+            'Connecticut': 'CT',
+            'District of Columbia': 'DC',
+            'Delaware': 'DE',
+            'Florida': 'FL',
+            'Georgia': 'GA',
+            'Hawaii': 'HI',
+            'Idaho': 'ID',
+            'Illinois': 'IL',
+            'Indiana': 'IN',
+            'Iowa': 'IA',
+            'Kansas': 'KS',
+            'Kentucky': 'KY',
+            'Louisiana': 'LA',
+            'Maine': 'ME',
+            'Maryland': 'MD',
+            'Massachusetts': 'MA',
+            'Michigan': 'MI',
+            'Minnesota': 'MN',
+            'Mississippi': 'MS',
+            'Missouri': 'MO',
+            'Montana': 'MT',
+            'Nebraska': 'NE',
+            'Nevada': 'NV',
+            'New Hampshire': 'NH',
+            'New Jersey': 'NJ',
+            'New Mexico': 'NM',
+            'New York': 'NY',
+            'North Carolina': 'NC',
+            'North Dakota': 'ND',
+            'Ohio': 'OH',
+            'Oklahoma': 'OK',
+            'Oregon': 'OR',
+            'Pennsylvania': 'PA',
+            'Rhode Island': 'RI',
+            'South Carolina': 'SC',
+            'South Dakota': 'SD',
+            'Tennessee': 'TN',
+            'Texas': 'TX',
+            'Utah': 'UT',
+            'Vermont': 'VT',
+            'Virginia': 'VA',
+            'Washington': 'WA',
+            'West Virginia': 'WV',
+            'Wisconsin': 'WI',
+            'Wyoming': 'WY',
+            }
 
         # state codes
 
@@ -343,73 +399,127 @@ class CDLExtractor:
         """Private method to report the status of the file download."""
 
         if n % 200 == 0:
-            it = block * n / 10**6, size / 10**6, time.time() - self.r_start
-            print('{:.1f} MB of {:.1f} MB transferred, {:.1f} '.format(*it) +
-                  'seconds remaining')
+            
+            try:
+                t = (time.time() - self.r_start) * (size - block*n) / block / n
+                it = block * n / 10**6, size / 10**6, t
+                print('{:.1f} MB of {:.1f} MB transferred, {:.1f}'.format(*it) +
+                      ' seconds remaining')
+            except:
+
+                pass
 
     def download_data(self, 
                       state,
                       years,
                       ):
-        
-        # read the CDL metadata
-
-        parser = CDLParser()
-
-        try: 
-            
-            parser.read()
-
-            # make a reverse dictionary to look up the state abbreviation
-
-            abb = {v:k for k,v in parser.statenames.items()}
-
-            # get the list of available years
-
-            available_years = parser.stateyears[abb[state]]
-
-            print('CDL data for {} available for years:\n'.format(abb[state]) + 
-                  ', '.join(['{}'.format(y) for y in available_years]) + '\n')
-
-        except:
-
-            print('warning: unable to access CDL metadata\n')
 
         self.state = state
+        self.years = []
+
+        # get the FIPS number for the state
+
+        fips = self.statecodes[self.statenames[self.state]]
+
+        # check that the requested files don't already exist
+
+        exists = True
+        for year in years:
+
+            # local file name for the download
+
+            its = self.destination, year, fips
+            local = '{}/CDL_{}_{}.tif'.format(*its)
+
+            if not os.path.isfile(local): 
+
+                exists = False
+                print('file {} needs to be downloaded'.format(local))
+
+            else: 
+
+                print('CDL raster for {} {} exists'.format(year, state))
+                self.years.append(year)
+
+        print('')
+
+        if not exists:
+
+            # read the CDL metadata from the CDL website
+
+            parser = CDLParser()
+
+            try: 
+            
+                parser.read()
+
+                # make a reverse dictionary to look up the state abbreviation
+
+                abb = {v:k for k,v in parser.statenames.items()}
+
+                # get the list of available years
+
+                available_years = parser.stateyears[state]
+
+                print('CDL data for {} available for years:\n'.format(state) + 
+                      ', '.join(['{}'.format(y) for y in available_years])+'\n')
+
+            except:
+
+                print('warning: unable to access CDL metadata\n')
+
+        else: return
+
+        # download the raster for each year
 
         for year in years:
 
-            # compressed filename on the CDL server
+            # local file name for the download
 
-            webfile = 'CDL_{}_{}.tif'.format(year, self.statecodes[state])
+            its = self.destination, year, fips
+            local = '{}/CDL_{}_{}.tif'.format(*its)
 
-            # path to compressed filename locally
-
-            local = '{}/{}'.format(self.destination, webfile)
-
-            # url to file on CDL server
-
-            url = '{}/{}'.format(self.website, webfile)
-
-            # download the compressed file if needed
-
-            its = year, state
             if not os.path.isfile(local) and year in available_years:
 
-                print('downloading CDL data for {} {} '.format(*its) +
+                print('requesting the file from the NASS server ' +
+                      '(this may take while)...\n')
+
+                # request the file from the CDL server
+
+                its = self.website, year, fips
+                url = '{}/CDLService/GetCDLFile?year={}&fips={}'.format(*its)
+
+                try:
+
+                    with request.urlopen(url) as f: p = f.read().decode()
+
+                except request.HTTPError as error:
+
+                    print('CDL server returned an error')
+                    print(error.read().decode())
+                    raise
+
+                # get the url of the file that is generated
+
+                url = p[p.index('<returnURL>') + 11:p.index('</returnURL>')]
+
+                # retrieve the file and save it to the local destination
+
+                print('downloading CDL data for {} {} '.format(year, state) +
                       'from {}\n'.format(url))
                 
                 try: 
 
                     self.r_start = time.time()
                     request.urlretrieve(url, local, self.report)
+                    self.years.append(year)
 
                 except:
 
                     print('unable to download CDL data for {}'.format(year))
-                    print('double-check that data are available for the ' +
-                          'requested year')
-                    #return
+                    print('check that the requested data are available for ' +
+                          'the requested year on the server')
+                    raise
                     
                 print('')
 
@@ -422,7 +532,8 @@ class CDLExtractor:
 
                 print('data for {}, {} are not available'.format(state, year))
 
-            # decompress files
+            # decompress files (the server seems to produce only tifs now but
+            # the code below may be helpful if that isn't the case)
 
             #its = self.destination, year, self.statecodes[state]
             #decompressed = '{}/CDL_{}_{}.tif'.format(*its)
@@ -432,17 +543,13 @@ class CDLExtractor:
                 #f = zipfile.ZipFile(compressed)
                 #f.extractall(self.destination)
 
-            # keep track of all the years where the source files exist
-
-            if os.path.isfile(local): self.years.append(year)
-
     def extract_bbox(self,
                      bbox,
                      directory,
                      verbose = True,
                      ):
         """Extracts NASS CDL data from the source file for the bounding box."""
-        
+
         # get the extents
 
         xmin, ymin, xmax, ymax = bbox
@@ -455,7 +562,8 @@ class CDLExtractor:
 
         for year in self.years:
 
-            its = self.destination, year, self.statecodes[self.state]
+            s = self.statecodes[self.statenames[self.state]]
+            its = self.destination, year, s
             decompressed = '{}/CDL_{}_{}.tif'.format(*its)
             output       = '{}/{}landuse.tif'.format(directory, year)
 
@@ -520,12 +628,16 @@ class CDLExtractor:
  
                     print('successfully extracted cropland data to new file')
 
+        if verbose: print('')
+
     def extract_shapefile(self, 
                           shapefile,
                           directory,
                           space = 0.05,
                           ):
-        """Extracts the cropland data for the bounding box of the shapefile."""
+        """
+        Extracts the cropland data for the bounding box of the shapefile.
+        """
 
         if not os.path.isdir(directory): 
             print('error, specified output directory does not exist\n')

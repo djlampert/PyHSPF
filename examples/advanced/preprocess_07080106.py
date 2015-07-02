@@ -100,6 +100,12 @@ elif os.name == 'nt':
     network     = 'D:'
     destination = 'C:/HSPF_data'
 
+for d in network, destination:
+    if not os.path.isdir(d):
+        print('\ndirectory {} does not exist!'.format(d))
+        print('please make sure that a valid path has been specified\n')
+        raise
+
 # import the Preprocessor
 
 from pyhspf.preprocessing import Preprocessor
@@ -108,16 +114,16 @@ from pyhspf.preprocessing import Preprocessor
 
 HUC8 = '07080106'
 
-# two-digit state abbreviation for the CDL
+# name of the state
 
-state = 'ia'
+state = 'Iowa'
 
 # If the watershed is in more than one state, this will probably not work 
 # (this is a feature that should be added in the future).
 
-# start and end dates (2001 to 2010)
+# start and end dates (1981 to 2011)
 
-start = datetime.datetime(2001, 1, 1)
+start = datetime.datetime(1981, 1, 1)
 end   = datetime.datetime(2011, 1, 1)
 
 # maximum drainage area for subbasins in square kilometers

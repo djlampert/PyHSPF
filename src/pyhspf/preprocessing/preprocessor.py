@@ -211,7 +211,7 @@ class Preprocessor:
         required = {self.network:      'network directory location', 
                     self.output:       'output directory location', 
                     self.HUC8:         '8-digit hydrologic unit code', 
-                    self.state:        '2-character state abbreviation', 
+                    self.state:        'state name', 
                     self.start:        'start date', 
                     self.end:          'end date', 
                     self.cdlaggregate: 'CDL aggregation file', 
@@ -783,13 +783,11 @@ class Preprocessor:
 
         # download the data for each state for each year
 
-        cdlextractor.download_data(self.state.upper(), self.years)
-        print('')
+        cdlextractor.download_data(self.state, self.years)
 
         # extract the CDL data for the watershed using the boundary shapefile
 
         cdlextractor.extract_shapefile(self.subbasinfile, self.landusedata)
-        print('')
 
         # check to see if CDL data are available for each year
 
@@ -811,6 +809,7 @@ class Preprocessor:
             # csv file of the output
 
             csvfile = '{}/{}landuse.csv'.format(self.landusedata, year)
+
             if not os.path.isfile(csvfile):
 
                 try:

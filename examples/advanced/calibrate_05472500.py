@@ -39,15 +39,15 @@ HUC8 = '07080106'
 
 # two-digit state abbreviation for the CDL
 
-state = 'ia'
+state = 'Iowa'
 
 # NWIS gage for the calibration
 
 gageid = '05472500'
 
-# start and end dates for the model (2001 to 2010)
+# start and end dates for the model (1981 to 2009)
 
-start = datetime.datetime(1980, 1, 1)
+start = datetime.datetime(1981, 1, 1)
 end   = datetime.datetime(2009, 1, 1)
 
 # maximum drainage area for subbasins in square kilometers
@@ -71,19 +71,19 @@ landuseyear = 2001
 # HSPF PERLND variables to use for calibration and inital values relative to 
 # the PyHSPF defaults
 
-variables     = {'LZSN':   0.8,
-                 'UZSN':   4.,
-                 'LZETP':  1.30,   
-                 'INFILT': 0.92,
-                 'INTFW':  1.7,
-                 'AGWRC':  1.,
-                 'IRC':    1.13,
-                 'DEEPFR': 0.30,
-                 }
+variables = {'LZSN':   0.9,
+             'UZSN':   4.7,
+             'LZETP':  1.40,   
+             'INFILT': 0.84,
+             'INTFW':  1.52,
+             'AGWRC':  1.02,
+             'IRC':    1.05,
+             'DEEPFR': 0.54,
+             }
 
 # optimization parameter 
 
-optimization = 'Nash-Sutcliffe Product' 
+optimization = 'Nash-Sutcliffe Efficiency' 
 
 # degrees of perturbation
 
@@ -200,7 +200,8 @@ if __name__ == '__main__':
 
     # use the Postprocessor to analyze and save the results
 
-    postprocessor = Postprocessor(hspfmodel, (start, end), comid = comid)
+    postprocessor = Postprocessor(hspfmodel, (start, end), 
+                                  comid = calibrator.comid)
 
     postprocessor.get_hspexp_parameters()
     postprocessor.plot_hydrograph(tstep = 'monthly', 
