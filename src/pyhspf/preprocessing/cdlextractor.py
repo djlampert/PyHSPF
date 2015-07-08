@@ -1,6 +1,6 @@
 # cdlextractor.py
 #
-# David J. Lampert, PhD, PE
+# David J. Lampert (djlampert@gmail.com)
 #
 # last updated: 10/12/2014
 #
