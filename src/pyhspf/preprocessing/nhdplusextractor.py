@@ -35,9 +35,10 @@ class NHDPlusExtractor:
     def __init__(self, 
                  VPU,
                  destination,
+                 path_to_7zip = r'C:\Program Files\7-Zip\7z.exe',
                  url = 'ec2-54-227-241-43.compute-1.amazonaws.com',
                  ftp = None,
-                 #url ='ftp://www.horizon-systems.com/NHDPlus/NHDPlusV21/Data',
+                 timeout = 3600,
                  ):
 
         # NHDPlus vector processing units (VPUs) in each drainage area
@@ -107,151 +108,12 @@ class NHDPlusExtractor:
 
         self.url          = url
         self.destination  = destination
+        self.path_to_7zip = path_to_7zip
         self.DA           = self.vpu_to_da[VPU]
         self.VPU          = VPU
         self.ftp          = ftp
-
-
-        # NHDPlus catchment data content numbers for each VPU (why???)
-
-        #self.catchments = {'01':  '01',
-        #                   '02':  '01',
-        #                   '03N': '01',
-        #                   '03S': '01', 
-        #                   '03W': '01',
-        #                   '04':  '05',
-        #                   '05':  '01',
-        #                   '06':  '05',
-        #                   '07':  '01',
-        #                   '08':  '01',
-        #                   '09':  '01',
-        #                   '10L': '01',
-        #                   '10U': '02',
-        #                   '11':  '01',
-        #                   '12':  '01',
-        #                   '13':  '02',
-        #                   '14':  '01',
-        #                   '15':  '01',
-        #                   '16':  '01',
-        #                   '17':  '02',
-        #                   '18':  '01',
-        #                   }
-
-       # # NHDPlus NHD snapshot data content numbers for each VPU (why???)
-
-       # self.snapshots = {'01':  '03',
-        #                  '02':  '03',
-        #                  '03N': '03',
-        #                  '03S': '03', 
-        #                  '03W': '03',
-        #                  '04':  '07',
-        #                  '05':  '05',
-        #                  '06':  '06',
-        #                  '07':  '04',
-        #                  '08':  '03',
-        #                  '09':  '04',
-        #                  '10L': '05',
-        #                  '10U': '06',
-        #                  '11':  '05',
-        #                  '12':  '04',
-        #                  '13':  '04',
-        #                  '14':  '04',
-        #                  '15':  '03',
-        #                  '16':  '05',
-        #                  '17':  '04',
-        #                  '18':  '04',
-        #                  }
-
-       # # NHDPlus NHD attribute data content numbers for each VPU (why???)
-
-       # self.attributes = {'01':  '03',
-        #                   '02':  '03',
-        #                   '03N': '02',
-        #                   '03S': '02', 
-        #                   '03W': '02',
-        #                   '04':  '08',
-        #                   '05':  '04',
-        #                   '06':  '06',
-        #                   '07':  '06',
-        #                   '08':  '03',
-        #                   '09':  '03',
-        #                   '10L': '08',
-        #                   '10U': '06',
-        #                   '11':  '03',
-        #                   '12':  '04',
-        #                   '13':  '02',
-        #                   '14':  '05',
-        #                   '15':  '04',
-        #                   '16':  '02',
-        #                   '17':  '04',
-        #                   '18':  '03',
-        #                   }
-
-       # # NHDPlus EROM data content numbers for each VPU (why???)
-
-       # self.EROMs = {'01':  '03',
-        #              '02':  '03',
-        #              '03N': '02',
-        #              '03S': '02', 
-        #              '03W': '02',
-        #              '04':  '07',
-        #              '05':  '04',
-        #              '06':  '05',
-        #              '07':  '04',
-        #              '08':  '02',
-        #              '09':  '03',
-        #              '10L': '05',
-        #              '10U': '05',
-        #              '11':  '02',
-        #              '12':  '03',
-        #              '13':  '02',
-        #              '14':  '02',
-        #              '15':  '04',
-        #              '16':  '02',
-        #              '17':  '05',
-        #              '18':  '04',
-        #              }
-
-       # # NHDPlus NED data content numbers for each VPU (why???)
-
-       # self.NEDs = {'01':  '01',
-        #             '02':  '01',
-        #             '03N': '02',
-        #             '03S': '02', 
-        #             '03W': '02',
-        #             '04':  '07',
-        #             '05':  '04',
-        #             '06':  '05',
-        #             '07':  '01',
-        #             '08':  '02',
-        #             '09':  '03',
-        #             '10L': '05',
-        #             '10U': '05',
-        #             '11':  '02',
-        #             '12':  '03',
-        #             '13':  '02',
-        #             '14':  '02',
-        #             '15':  '04',
-        #             '16':  '02',
-        #             '17':  '05',
-        #             '18':  '04',
-        #             }
-
-    #def report(self, 
-    #           n, 
-    #           block, 
-    #           size,
-    #           ):
-    #
-    #    if n % 200 == 0:
-    #
-    #        t = (time.time() - self.r_start) * (size - block*n) / block / n
-    #        it = block * n / 10**6, size / 10**6, t
-    #        print('{:.1f} MB of {:.1f} MB transferred, {:.1f}'.format(*it) +
-    #              ' seconds remaining')
-    #
-    #        #it = block * n / 10**6, size / 10**6
-    #        #print('{:.1f} MB of {:.1f} MB transferred'.format(*it))
+        self.start        = time.time()
+        self.timeout      = timeout
 
     def decompress(self, filename):
         """
@@ -268,13 +130,18 @@ class NHDPlusExtractor:
 
     def decompress_windows(self, 
                            filename, 
-                           path_to_7zip = r'C:\Program Files\7-Zip\7z.exe',
                            ):
         """
         Spawns a subprocess to use 7zip to decompress the file.
         """
 
-        args = [path_to_7zip, 'x', '-o{}'.format(self.destination), filename]
+        if not os.path.isfile(self.path_to_7zip):
+            print('error: specified path to 7zip ' +
+                  '{} does not exist!\n'.format(self.path_to_7zip))
+            raise
+
+        args = [self.path_to_7zip, 'x', '-o{}'.format(self.destination), 
+                filename]
 
         with subprocess.Popen(args, stdout = subprocess.PIPE).stdout as s:
 
@@ -289,9 +156,7 @@ class NHDPlusExtractor:
 
         try:
 
-            with subprocess.Popen(args, stdout = subprocess.PIPE).stdout as s:
-
-                print(s.read().decode())
+            with subprocess.Popen(args) as p: pass
 
         except:
 
@@ -304,18 +169,20 @@ class NHDPlusExtractor:
         """
         
         self.count += 1
+        self.downloaded += len(chunk)
+
+        if time.time() - self.start > self.timeout - 60:
+
+            print('error: connection timeout\nresume or increase timeout\n')
+            raise
 
         # report ever 1000 chunks (approximately 8 MB with 10-bit chunksize)
 
         if self.count % 1000 == 0:
-            
-            if self.count * self.blocksize < self.filesize:
 
-                t = ((time.time() - self.start) * 
-                     (self.filesize - self.blocksize * self.count) / 
-                     self.blocksize / self.count)
+            if self.downloaded < self.filesize:
 
-                its = self.blocksize * self.count / 10**6, self.filesize / 10**6
+                its = self.downloaded / 10**6, self.filesize / 10**6
                 print('{:<5.1f} MB of {:<5.1f}'.format(*its), 
                       'MB transferred')
 
@@ -347,7 +214,6 @@ class NHDPlusExtractor:
             self.blocksize  = blocksize
             self.downloaded = 0
             self.count      = 0
-            self.start = time.time()
 
             # download the file
 
@@ -443,7 +309,7 @@ class NHDPlusExtractor:
 
                 # create an FTP handler to use to get the data
 
-                self.ftp = FTP(self.url)
+                self.ftp = FTP(self.url, timeout = self.timeout)
 
                 # anonymous login
 
@@ -819,8 +685,6 @@ class NHDPlusExtractor:
         8-digit hydrologic unit code from the NHDPlus Version 2 source data.
         Output shapefiles are written to the optional "output" directory.
         """
-
-        self.start = time.time()
 
         # if the source data doesn't exist locally, download it
 
