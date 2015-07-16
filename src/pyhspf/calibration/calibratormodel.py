@@ -208,72 +208,6 @@ class CalibratorModel(HSPFModel):
 
         self.build_from_existing(hspfmodel, name)
 
-        # turn on the modules
-
-        #if self.atemp:     model.add_atemp()
-        #if self.snow:      model.add_snow()
-        #if self.hydrology: model.add_hydrology()
-
-        # add the time series
-
-        #for f in self.hspfmodel.flowgages:
-        #    start, tstep, data = self.hspfmodel.flowgages[f]
-        #    model.add_timeseries('flowgage', f, start, data, tstep = tstep)
-
-        #for p in self.hspfmodel.precipitations: 
-        #    start, tstep, data = self.hspfmodel.precipitations[p]
-        #    model.add_timeseries('precipitation', p, start, data, tstep = tstep)
-
-        #for e in self.hspfmodel.evaporations: 
-        #    start, tstep, data = self.hspfmodel.evaporations[e]
-        #    model.add_timeseries('evaporation', e, start, data, tstep = tstep)
-
-        #for t in self.hspfmodel.temperatures:
-        #    start, tstep, data = self.hspfmodel.temperatures[t]
-        #    model.add_timeseries('temperature', t, start, data, tstep = tstep)
-
-        #for t in self.hspfmodel.dewpoints:
-        #    start, tstep, data = self.hspfmodel.dewpoints[t]
-        #    model.add_timeseries('dewpoint', t, start, data, tstep = tstep)
-
-        #for t in self.hspfmodel.windspeeds:
-        #    start, tstep, data = self.hspfmodel.windspeeds[t]
-        #    model.add_timeseries('wind', t, start, data, tstep = tstep)
-
-        #for t in self.hspfmodel.solars:
-        #    start, tstep, data = self.hspfmodel.solars[t]
-        #    model.add_timeseries('solar', t, start, data, tstep = tstep)
-
-        #for t in self.hspfmodel.snowfalls:
-        #    start, tstep, data = self.hspfmodel.snowfalls[t]
-        #    model.add_timeseries('snowfall', t, start, data, tstep = tstep)
-
-        #for t in self.hspfmodel.snowdepths:
-        #    start, tstep, data = self.hspfmodel.snowdepths[t]
-        #    model.add_timeseries('snowdepth', t, start, data, tstep = tstep)
-
-        #for tstype, identifier in self.hspfmodel.watershed_timeseries.items():
-
-        #    model.assign_watershed_timeseries(tstype, identifier)
-
-        #for tstype, d in self.hspfmodel.subbasin_timeseries.items():
-
-        #    for subbasin, identifier in d.items():
-                
-        #        if subbasin in model.subbasins:
-
-        #            model.assign_subbasin_timeseries(tstype, subbasin, 
-        #                                             identifier)
-
-        #for tstype, d in self.hspfmodel.landuse_timeseries.items():
-
-        #    for luc, identifier in d.items():
-
-        #        model.assign_landuse_timeseries(tstype, luc, identifier)
-
-        #return model
-
-
         # find the subbasins between the outlet and the upstream comids and
         # store in an updown dictionary
 
@@ -322,28 +256,6 @@ class CalibratorModel(HSPFModel):
         self.rchreses = [r for r in self.rchreses 
                              if r.subbasin in self.subbasins]
         
-        # build with the updated model subbasin info
-
-        #submodel.build()
-
-        # add in the modules
-
-        #if self.temp: submodel.add_temp()
-
-        #if self.snow: 
-        #    
-        #    densities = [o.RDENPF 
-        #                 for o in hspfmodel.perlnds + hspfmodel.implnds]
-        #    depths    = [o.packsnow / o.RDENPF 
-        #                 for o in hspfmodel.perlnds + hspfmodel.implnds]
-        #
-        #    depth   = sum(depths) / len(depths)
-        #    density = sum(densities) / len(densities)
-        #
-        #    submodel.add_snow(depth = depth, density = density)            
-        #
-        #if self.hydrology: submodel.add_hydrology()
-        
         # add the flowgage data to the model
 
         for identifier in hspfmodel.flowgages:
@@ -365,14 +277,6 @@ class CalibratorModel(HSPFModel):
                       'evaporation':   hspfmodel.evaporations,
                       'flowgage':      hspfmodel.flowgages,
                       }
-
-        #for tstype, d in timeseries.items():
-        #    for identifier in d: 
-        #        start_date, tstep, data = d[identifier]
-        #        self.add_timeseries(tstype, identifier, start_date, data, 
-        #                                tstep = tstep)
-
-        # add and assign all the watershed timeseries
 
         for tstype, identifier in hspfmodel.watershed_timeseries.items():
             ts = timeseries[tstype]
@@ -417,112 +321,3 @@ class CalibratorModel(HSPFModel):
 
             print('warning: input flow time series for subbasin ' +
                   '{} must be specified'.format(upcomid))
-
-
-
-        # add the subbasin timeseries as needed
-
-        #for identifier in hspfmodel.subbasin_timeseries:
-        #    if identifier in submodel.subbasins.keys():
-        #        start_date, tstep, data = hspfmodel.precipitations[identifier]
-        #        submodel.add_timeseries('precipitation', identifier, start_date,
-        #                                data, tstep = tstep)
-
-        # add the landuse timeseries as needed
-
-        #landuse_keys = {'Corn':          'cereals',
-        #                'Soybeans':      'legumes',
-        #                'Pasture/grass': 'pasture',
-        #                'Other grain':   'cereals',
-        #                'Hay/alfalfa':   'alfalfa',
-        #                'Water/wetland': 'wetlands',
-        #                'Fallow land':   'fallow',
-        #                'Forest':        'others',
-        #                'Developed':     'others',
-        #                'Impervious':    'others',
-        #                'Other':         'others',
-        #                }
-
-        #ltypes = [landuse_keys[i] for i in hspfmodel.landuse]
-
-        #for identifier in hspfmodel.evaporations:
-        #    if identifier in ltypes:
-        #        start_date, tstep, data = hspfmodel.evaporations[identifier]
-        #        submodel.add_timeseries('evaporation', identifier, start_date,
-        #                                data, tstep = tstep)
-
-
-
-
-        # add the influent flows as needed
-             
-        #for upcomid in upcomids:
-
-            # find the upstream gage number
-
-        
-        #    upgage  = [v for k, v in 
-        #               hspfmodel.subbasin_timeseries['flowgage'].items() 
-        #               if k == upcomid][0]
-        #    incomid = hspfmodel.updown[upcomid]
-
-            # find the outlet flows from the previous upstream calibration
-
-        #    t = (self.directory, self.HUC8, upgage)
-        #    flowfile = '{}/{}/calibrations/{}/outletflows'.format(*t)
-            
-            # get the time series and add it to the model
-
-        #    if not os.path.isfile(flowfile): 
-        #        raise RuntimeError('warning: upstream calibration of gage ' +
-        #                           '{} does not exist\n'.format(upgage))
-        #    with open(flowfile, 'rb') as f: times, data = pickle.load(f)
-
-        #    tstep = math.ceil((times[1] - times[0]).total_seconds() / 60)
-
-        #    submodel.add_timeseries('inflow', '{}'.format(incomid), times[0], 
-        #                            data, tstep = tstep)
-
-            # assign the inflows from upstream to any subbasins
-
-        #    otype = 'Reach'
-
-        #    submodel.assign_operation_timeseries('inflow', incomid, 'Reach', 
-        #                                         '{}'.format(incomid))
-            
-        # assign as needed
-
-        #for tstype, identifier in hspfmodel.watershed_timeseries.items():
-        #    
-        #    submodel.assign_watershed_timeseries(tstype, identifier)
-
-        #for tstype, d in hspfmodel.subbasin_timeseries.items():
-
-        #    for subbasin, identifier in d.items():
-            
-        #        if subbasin in submodel.subbasins:
-
-        #            submodel.assign_subbasin_timeseries(tstype, subbasin,
-        #                                                identifier)
-
-        #for tstype, d in hspfmodel.landuse_timeseries.items():
-
-        #    for landtype, identifier in d.items():
-            
-        #        if landtype in submodel.landuse:
-
-        #            submodel.assign_landuse_timeseries(tstype, landtype,
-        #                                               identifier)
-
-        #for tstype, d1 in hspfmodel.operation_timeseries.items():
-
-        #    for subbasin, d2 in d1.items():
-
-        #        for otype, identifier in d2.items():
-
-        #            if subbasin in submodel.subbasins:
-
-        #                submodel.assign_operation_timeseries(tstype, subbasin,
-        #                                                     otype, identifier)
-
-        #with open(picklefile, 'wb') as f: pickle.dump(submodel, f)
