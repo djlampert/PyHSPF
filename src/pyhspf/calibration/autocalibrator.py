@@ -8,12 +8,14 @@
 # autocalibrate, and it takes a list of HSPF variables, perturbations (as a
 # percentage, optimization parameter, and flag for parallelization as 
 # keyword arguments. The calibration routine can be summarized as follows:
-# 1. Set up a series of simulations with a small perturbation to the current
-#    parameter values for the parameters of interest
-# 2. Make copies of the input HSPFModel and adjust the parameter values
-# 3. Run the simulations and get the effect of the optimization parameter
-# 4. Adjust the baseline parameter values if they improve performance
-# 5. Repeat until a maximum is achieved.
+#
+#   1. Set up a series of simulations with a small perturbation to the current
+#      parameter values for the parameters of interest
+#   2. Make copies of the input HSPFModel and adjust the parameter values
+#   3. Run the simulations and get the effect of the optimization parameter
+#   4. Adjust the baseline parameter values if they improve performance
+#   5. Repeat until a maximum is achieved.
+#
 
 # The class should be adaptable to other methodologies.
 
@@ -74,82 +76,6 @@ class AutoCalibrator:
         hspfmodel.filename = name
 
         return hspfmodel
-
-    def submodel(self, 
-                  name,
-                  verbose = True,
-                  ):
-        """
-        Returns a copy of the HSPFModel.
-        """
-
-        model = HSPFModel()
-        model.build_from_existing(self.hspfmodel, name)
-
-        # turn on the modules
-
-        if self.atemp:     model.add_atemp()
-        if self.snow:      model.add_snow()
-        if self.hydrology: model.add_hydrology()
-
-        # add the time series
-
-        for f in self.hspfmodel.flowgages:
-            start, tstep, data = self.hspfmodel.flowgages[f]
-            model.add_timeseries('flowgage', f, start, data, tstep = tstep)
-
-        for p in self.hspfmodel.precipitations: 
-            start, tstep, data = self.hspfmodel.precipitations[p]
-            model.add_timeseries('precipitation', p, start, data, tstep = tstep)
-
-        for e in self.hspfmodel.evaporations: 
-            start, tstep, data = self.hspfmodel.evaporations[e]
-            model.add_timeseries('evaporation', e, start, data, tstep = tstep)
-
-        for t in self.hspfmodel.temperatures:
-            start, tstep, data = self.hspfmodel.temperatures[t]
-            model.add_timeseries('temperature', t, start, data, tstep = tstep)
-
-        for t in self.hspfmodel.dewpoints:
-            start, tstep, data = self.hspfmodel.dewpoints[t]
-            model.add_timeseries('dewpoint', t, start, data, tstep = tstep)
-
-        for t in self.hspfmodel.windspeeds:
-            start, tstep, data = self.hspfmodel.windspeeds[t]
-            model.add_timeseries('wind', t, start, data, tstep = tstep)
-
-        for t in self.hspfmodel.solars:
-            start, tstep, data = self.hspfmodel.solars[t]
-            model.add_timeseries('solar', t, start, data, tstep = tstep)
-
-        for t in self.hspfmodel.snowfalls:
-            start, tstep, data = self.hspfmodel.snowfalls[t]
-            model.add_timeseries('snowfall', t, start, data, tstep = tstep)
-
-        for t in self.hspfmodel.snowdepths:
-            start, tstep, data = self.hspfmodel.snowdepths[t]
-            model.add_timeseries('snowdepth', t, start, data, tstep = tstep)
-
-        for tstype, identifier in self.hspfmodel.watershed_timeseries.items():
-
-            model.assign_watershed_timeseries(tstype, identifier)
-
-        for tstype, d in self.hspfmodel.subbasin_timeseries.items():
-
-            for subbasin, identifier in d.items():
-                
-                if subbasin in model.subbasins:
-
-                    model.assign_subbasin_timeseries(tstype, subbasin, 
-                                                     identifier)
-
-        for tstype, d in self.hspfmodel.landuse_timeseries.items():
-
-            for luc, identifier in d.items():
-
-                model.assign_landuse_timeseries(tstype, luc, identifier)
-
-        return model
 
     def adjust(self, model, variable, adjustment):
         """

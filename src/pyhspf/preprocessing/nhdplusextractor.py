@@ -143,9 +143,14 @@ class NHDPlusExtractor:
         args = [self.path_to_7zip, 'x', '-o{}'.format(self.destination), 
                 filename]
 
-        with subprocess.Popen(args, stdout = subprocess.PIPE).stdout as s:
+        try:
 
-            print(s.read().decode())
+            with subprocess.Popen(args) as p: pass
+
+        except:
+
+            print('error: unable to decompress files')
+            print('is 7zip installed?')
 
     def decompress_linux(self, filename):
         """
@@ -710,7 +715,8 @@ class NHDPlusExtractor:
 
         f = '{}/{}'.format(output, flowlinefile)
         if not os.path.isfile(f + '.shp'):
-            if verbose: print('extracting flowline shapefile\n')
+            if verbose: 
+                print('extracting flowline shapefile for {}\n'.format(HUC8))
             self.extract_flowlines(self.flowlinefile, f, HUC8,
                                    verbose = vverbose)
 
@@ -718,7 +724,8 @@ class NHDPlusExtractor:
 
         p = '{}/{}'.format(output, catchmentfile)
         if not os.path.isfile(p + '.shp'):
-            if verbose: print('extracting catchment shapefile\n')
+            if verbose: 
+                print('extracting catchment shapefile for {}\n'.format(HUC8))
             self.extract_catchments(self.catchmentfile, p, f,
                                     verbose = vverbose)
 
@@ -734,7 +741,9 @@ class NHDPlusExtractor:
             flowattributes = ['ComID', 'Hydroseq', 'DnHydroseq', 'UpHydroseq', 
                               'TotDASqKM', 'AreaSqKM', 'DivDASqKM','ReachCode']
     
-            if verbose: print('reading flowline value added attributes\n')
+            if verbose: 
+                print('reading flowline value added attributes for ' +
+                      '{}\n'.format(HUC8))
             flowvalues = read_dbf(self.PlusFlowlineVAAfile, 
                                   attributes = flowattributes, 
                                   comids = comids, 
@@ -745,7 +754,9 @@ class NHDPlusExtractor:
             slopeattributes = ['COMID', 'MAXELEVSMO', 'MINELEVSMO', 
                                'SLOPELENKM']
     
-            if verbose: print('reading slope and elevation attributes\n')
+            if verbose: 
+                print('reading slope and elevation attributes for ' +
+                      '{}\n'.format(HUC8))
             slopevalues = read_dbf(self.elevslopefile, 
                                    attributes = slopeattributes, 
                                    comids = comids, 
@@ -755,7 +766,8 @@ class NHDPlusExtractor:
     
             eromattributes = ['Comid', 'Q0001E', 'V0001E', 'SMGageID']
 
-            if verbose: print('reading EROM model attributes\n')
+            if verbose: print('reading EROM model attributes for ' +
+                              '{}\n'.format(HUC8))
             eromvalues = read_dbf(self.eromfile, 
                                   attributes = eromattributes, 
                                   comids = comids, 
@@ -788,7 +800,8 @@ class NHDPlusExtractor:
 
         f = '{}/{}'.format(output, elevfile)
         if not os.path.isfile(f):
-            if verbose: print('extracting the NED raster file\n')
+            if verbose: 
+                print('extracting the NED raster file for {}\n'.format(HUC8))
             cfile = '{}/{}'.format(output, catchmentfile)
             NED = self.find_NED(cfile)
             self.extract_NED(NED, cfile, f, verbose = vverbose)
@@ -798,8 +811,8 @@ class NHDPlusExtractor:
 
         if verbose: 
 
-            print('successfully queried NHDPlus data in ' +
-                  '{:.1f} seconds\n'.format(t))
+            print('successfully queried NHDPlus data for {} '.format(HUC8) +
+                  'in {:.1f} seconds\n'.format(t))
     
         # merge the shapes into a watershed
 

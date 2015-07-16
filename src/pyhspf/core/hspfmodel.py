@@ -5,9 +5,10 @@
 # Purpose: Builds an instance of the HSPFModel class that can be used to
 # generate UCI files for an HSPF simulation.
 #
-# last updated: 08/27/2013
+# last updated: 07/15/2015
 
 from .wdmutil        import WDMUtil
+from .postprocessor  import Postprocessor
 from .perlnd         import Perlnd
 from .implnd         import Implnd
 from .rchres         import Rchres
@@ -16,12 +17,15 @@ from .specialactions import SpecialAction
 import os, sys, datetime, time, math, hspf
 
 class HSPFModel:
-    """A class that stores all pertinent information about a watershed for
-    building a model for the Hydrologic Simulation Program in Fortran (HSPF)
-    User Control Input (UCI) file."""
+    """
+    A class that stores all pertinent information about a watershed for
+    building a model for the Hydrologic Simulation Program in Fortran (HSPF).
+    """
 
     def __init__(self, units = 'Metric'):
-        """Initialize the model and point to the lib3.0 library."""
+        """
+        Initialize the model and point to the lib3.0 library.
+        """
 
         # unit system (English or Metric)
 
@@ -50,11 +54,21 @@ class HSPFModel:
 
         self.specialactions = []
 
-    def build_from_watershed(self, watershed, filename, directory = None,
-                             print_file = None, binary_file = None, tstep = 60, 
-                             outlev = 4, spout = 2, units = 2, print_level = 5, 
-                             ifraction = 0.5, evap_multiplier = 1., 
-                             landuseyear = None, verbose = False):
+    def build_from_watershed(self, 
+                             watershed, 
+                             filename,
+                             print_file = None, 
+                             binary_file = None, 
+                             tstep = 60, 
+                             outlev = 4, 
+                             spout = 2, 
+                             units = 2, 
+                             print_level = 5, 
+                             ifraction = 0.5, 
+                             evap_multiplier = 1., 
+                             landuseyear = None, 
+                             verbose = False,
+                             ):
         """
         Builds a model from an instance of the Watershed class.
 
@@ -80,9 +94,6 @@ class HSPFModel:
         self.description = watershed.name[:33]
 
         # paths to working directory for the simulation
-
-        if directory is None: self.filepath = ''
-        else:                 self.filepath = directory + '/'
 
         self.filename = filename
 
@@ -126,10 +137,19 @@ class HSPFModel:
 
         self.build()
 
-    def build_from_existing(self, hspfmodel, filename, directory = None,
-                             print_file = None, binary_file = None, tstep = 60, 
-                             outlev = 4, spout = 2, units = 2, print_level = 5, 
-                             landuseyear = None, verbose = False):
+    def build_from_existing(self, 
+                            hspfmodel, 
+                            filename, 
+                            print_file = None, 
+                            binary_file = None, 
+                            tstep = 60, 
+                            outlev = 4, 
+                            spout = 2, 
+                            units = 2, 
+                            print_level = 5, 
+                            landuseyear = None, 
+                            verbose = False,
+                            ):
         """
         Builds a model from another instance of the HSPFModel class (for 
         running similar models or submodels).
@@ -157,9 +177,6 @@ class HSPFModel:
 
         # paths to working directory for the simulation
 
-        if directory is None: self.filepath  = ''
-        else:                 self.filepath  = directory + '/'
-
         self.filename = filename
 
         # path to the messagefile
@@ -175,6 +192,10 @@ class HSPFModel:
         self.print_level = print_level
         self.print_file  = print_file
         self.binary_file = binary_file
+
+        # set the time stepping
+
+        self.tcode, self.tsstep = self.get_timestep(self.tstep)
 
         # set up the parameters for the perlnds
 
@@ -202,9 +223,35 @@ class HSPFModel:
 
         self.specialactions = hspfmodel.specialactions
 
-        # build it
+        # specify the perlnds, implnds, rchreses, landtypes, landuse
 
-        self.build()
+        self.perlnds   = hspfmodel.perlnds
+        self.implnds   = hspfmodel.implnds
+        self.rchreses  = hspfmodel.rchreses
+        self.landtypes = hspfmodel.landtypes
+        self.landuse   = hspfmodel.landuse
+
+        # specify the network
+
+        self.updown = hspfmodel.updown
+
+        # set up the time series
+
+        # set up the time series for the whole watershed
+
+        self.watershed_timeseries = {}
+
+        # set up the time series specific to each the subbasin
+
+        self.subbasin_timeseries = {}
+
+        # set up the time series specific to each landuse category
+
+        self.landuse_timeseries = {}
+
+        # set up the time series specific to each operation
+
+        self.operation_timeseries = {}
 
     def build(self):
         """Calculates everything needed to run HSPF."""
@@ -344,14 +391,21 @@ class HSPFModel:
 
         # set up the time series specific to each operation
 
-        self.operation_timeseries = {comid:{l:{} for l in dict} 
-                                     for comid, dict in self.landtypes.items()}
+        self.operation_timeseries = {}
 
-    def add_timeseries(self, tstype, identifier, start_date, data, tstep = 60):
-        """Adds a timeseries of type "tstype" with a unique "identifier"
+    def add_timeseries(self, 
+                       tstype, 
+                       identifier, 
+                       start_date, 
+                       data, 
+                       tstep = 60,
+                       ):
+        """
+        Adds a timeseries of type "tstype" with a unique "identifier"
         and list of data with time step "tstep" (in minutes) and a list of
         data "data" to the model. The units should be appropriate for the
-        model simulation or comparison."""
+        model simulation or comparison.
+        """
 
         # inflow is assumed to be volumetric; e.g., Mm3 (ROVOL) not m3/s (RO)
 
@@ -398,6 +452,8 @@ class HSPFModel:
 
         if tstype not in self.operation_timeseries:
             self.operation_timeseries[tstype] = {}
+        if subbasin not in self.operation_timeseries[tstype]:
+            self.operation_timeseries[tstype] = {}
         self.operation_timeseries[tstype][subbasin][otype] = identifier
 
     def add_special_action(self, action, subbasin, landtype, date, 
@@ -436,7 +492,7 @@ class HSPFModel:
 
         # file path
 
-        self.wdminfile = self.filepath + '%s_in.wdm'  % self.filename
+        self.wdminfile = '{}_in.wdm'.format(self.filename)
 
         # keep track of the dsns
 
@@ -910,11 +966,11 @@ class HSPFModel:
                sediment = False,
                verbose = False
                ):
-        """warms up the values of the state variables by running the several
+        """
+        Warms up the values of the state variables by running the several
         iterations of the specified number of days (default runs the first year
-        twice). Requires the Postprocessor class."""
-
-        from .postprocessor import Postprocessor
+        twice).
+        """
 
         warmup = []
 
@@ -944,10 +1000,20 @@ class HSPFModel:
 
             self.set_states(states, hydrology = hydrology, snow = snow)
 
-    def build_uci(self, targets, start, end, states = None, hydrology = False, 
-                  atemp = False, snow = False, sediment = False, 
-                  verbose = False):
-        """Builds the User Control Input (UCI) file for an HSPF Simulation."""
+    def build_uci(self, 
+                  targets, 
+                  start, 
+                  end, 
+                  states = None, 
+                  atemp = False, 
+                  snow = False, 
+                  hydrology = False, 
+                  sediment = False, 
+                  verbose = False,
+                  ):
+        """
+        Builds the User Control Input (UCI) file for an HSPF Simulation.
+        """
 
         if verbose: print('generating the UCI file from the watershed data\n')
 
@@ -956,8 +1022,8 @@ class HSPFModel:
         # funits are the Fortran numbers assigned to the files (10-98)
         # fnames are the names or paths to the files
 
-        self.ucifile    = self.filepath + '%s.uci'     % self.filename
-        self.wdmoutfile = self.filepath + '%s_out.wdm' % self.filename
+        self.ucifile    = '{}.uci'.format(self.filename)
+        self.wdmoutfile = '{}_out.wdm'.format(self.filename)
 
         # echo file for input file processing name (assumed same as uci)
 
@@ -967,9 +1033,9 @@ class HSPFModel:
 
         self.targets = targets
 
-        self.ftypes = ['MESSU',  'WDM1',  'WDM2']
+        self.ftypes = ['MESSU',               'WDM1',          'WDM2']
         self.fnames = [self.echofile, self.wdminfile, self.wdmoutfile]
-        self.funits = [10,       11,      12]
+        self.funits = [10,                        11,              12]
 
         if self.print_file is not None: 
             self.ftypes.append('')
@@ -1106,9 +1172,15 @@ class HSPFModel:
 
         return lines
 
-    def ext_targets_block(self, targets, year, verbose = False):
-        """Adds the EXT TARGETS block to a UCI file and creates the output WDM 
-        file."""
+    def ext_targets_block(self, 
+                          targets, 
+                          year, 
+                          verbose = False,
+                          ):
+        """
+        Adds the EXT TARGETS block to a UCI file and creates the output WDM 
+        file.
+        """
         
         lines = ['EXT TARGETS',
                  '<-Volume-> <-Grp> <-Member-><--Mult-->Tran <-Volume->' +
@@ -2044,7 +2116,7 @@ class HSPFModel:
         elif self.units == 'Metric':  u = 2
         
         return  ['GLOBAL',
-                 '  UCI created by HSPpy for %s at %s' % 
+                 '  UCI created by PyHSPF for %s at %s' % 
                  (self.description, str(datetime.datetime.now())[:-10]),
                  '  START       %s  END    %s' % 
                  (self.time_format(start), 

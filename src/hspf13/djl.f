@@ -152,6 +152,7 @@ C
 C
       CLOSE(UNIT=99)
       CLOSE(UNIT=11)
+      CLOSE(UNIT=12)
       RETURN
       END
 C

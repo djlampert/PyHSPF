@@ -10,6 +10,7 @@ __all__ = ['hydrologycalibrator',
            'calibrate', 
            'validate',
            'autocalibrator',
+           'calibratormodel',
            ]
 
 #from .hydrologycalibrator import HydrologyCalibrator
@@ -20,3 +21,4 @@ __all__ = ['hydrologycalibrator',
 #from .calibrate           import sediment
 #from .validate            import validate
 from .autocalibrator      import AutoCalibrator
+from .calibratormodel     import CalibratorModel

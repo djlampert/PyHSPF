@@ -495,8 +495,11 @@ class CDLExtractor:
 
                 except request.HTTPError as error:
 
-                    print('CDL server returned an error')
-                    print(error.read().decode())
+                    e = '{}/NASSerror.html'.format(self.destination)
+                    print('the CDL server returned an error; the response ' +
+                          'can be viewed with a web browser in file:' +
+                          '\n\n{}\n'.format(e))
+                    with open(e, 'w') as f: f.write(error.read().decode())
                     raise
 
                 # get the url of the file that is generated

@@ -5,7 +5,7 @@
 # Purpose: This file contains many functions to extract data for postprocessing
 # from an HSPF simulation.
 #
-# Last updated: 09/20/2014
+# Last updated: 07/15/2015
 
 import os, pickle, numpy, datetime, calendar, csv
 
@@ -16,18 +16,21 @@ from .wdmutil import WDMUtil
 class Postprocessor:
     """A class for post processing HSPF simulation data."""
 
-    def __init__(self, hspfmodel, dates, comid = None, upcomids = [], 
-                 verbose = False):
+    def __init__(self, 
+                 hspfmodel, 
+                 dates, 
+                 comid = None, 
+                 upcomids = [], 
+                 verbose = False,
+                 ):
 
         self.hspfmodel = hspfmodel
         self.verbose   = verbose
 
         # path to the files
 
-        self.wdminfile   = '{0}{1}_in.wdm'.format(hspfmodel.filepath, 
-                                                  hspfmodel.filename)
-        self.wdmoutfile  = '{0}{1}_out.wdm'.format(hspfmodel.filepath, 
-                                                   hspfmodel.filename)
+        self.wdminfile   = '{}_in.wdm'.format(hspfmodel.filename)
+        self.wdmoutfile  = '{}_out.wdm'.format(hspfmodel.filename)
 
         # open up the files
 

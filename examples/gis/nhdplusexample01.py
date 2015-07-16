@@ -34,6 +34,10 @@ HUC8    = '02060006'  # 8-digit HUC
 
 HUC8output = '{}/{}'.format(output, HUC8)
 
+# path for a plot of the output
+
+plotfile = '{}/watershed'.format(HUC8output)
+
 # create an instance of the NHDPlus extractor
 
 nhdplusextractor = NHDPlusExtractor(VPU, NHDPlus)
@@ -46,4 +50,4 @@ nhdplusextractor.download_data()
 # extract the HUC8 data for the Patuxent watershed. same thing here--if any of
 # these files already exist the extraction step will be skipped.
 
-nhdplusextractor.extract_HUC8(HUC8, HUC8output)
+nhdplusextractor.extract_HUC8(HUC8, HUC8output, plotfile = plotfile)
