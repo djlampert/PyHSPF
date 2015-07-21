@@ -1,10 +1,10 @@
 HSPF Category,Red,Green,Blue,Plant Month,Plant Day,Emergence Days,Growth Days,Full Days,Late Days,Initial Crop Coefficient,Mid Season Crop Coefficient,Late Season Crop Coefficient
-Corn,255,211,0,4,15,30,50,60,40,0.3,1.15,0.4
-Soybeans,38,112,0,5,15,20,30,60,30,0.4,1.15,0.55
-Hay/alfalfa,255,165,226,5,15,10,10,120,10,0.3,0.95,0.9
+Corn,255,211,0,4,15,30,50,60,40,0.3,1.2,0.5
+Soybeans,38,112,0,5,15,20,30,60,30,0.4,1.15,0.5
+Hay/alfalfa,255,165,226,5,15,10,10,120,10,0.4,0.95,0.9
 Other grain,255,221,165,4,15,20,30,60,40,0.3,1.15,0.4
-Fallow land,191,191,119,3,1,10,10,240,10,0.3,0.3,0.3
-Pasture/grass,232,255,191,3,1,10,10,120,10,0.3,0.85,0.3
+Fallow land,191,191,119,3,1,10,10,240,10,0.3,0.75,0.75
+Pasture/grass,232,255,191,3,1,10,10,120,10,0.4,0.95,0.85
 Forest,147,204,147,3,1,10,10,120,10,1,1,1
 Developed,155,155,155,3,1,10,10,120,10,1,1,1
 Water/wetland,76,112,163,3,1,10,10,120,10,1,1.2,1

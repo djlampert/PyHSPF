@@ -994,7 +994,8 @@ class Postprocessor:
             if id == 'SNOF':
                 if staid in comids and staid not in dsns:
                     dsns[staid] = {}
-                dsns[staid][desc] = dsn
+                if staid in comids:
+                    dsns[staid][desc] = dsn
 
         if len(dsns) == 0:
             print('warning: no snowfall simulation results present')
@@ -2626,6 +2627,8 @@ class Postprocessor:
                   '{:>8.1f}{:>12.1f}'.format(*storms))
             print('')
 
+        self.calculate_errors(verbose = verbose, vverbose = vverbose)
+
     def calibration_report(self, output = 'calibration_report.csv'):
         """Makes a report of the calibration errors in a csv file."""
 
@@ -2699,9 +2702,9 @@ class Postprocessor:
                      '{:>8.1f}'.format(self.obs_storm_peaks),
                      '{:>12.1f}'.format(self.sim_storm_peaks),
                      '{:9.1%}'.format(self.storm_peak_error)])
-        rows.append(['Total simulated storm interflow ({})'.format(u),
+        rows.append(['Total simulated storm interflow ({})'.format(u), '',
                      '{:>8.1f}'.format(self.storm_interflow)])
-        rows.append(['Total simulated storm surface runoff ({})'.format(u),
+        rows.append(['Total simulated storm surface runoff ({})'.format(u), '',
                      '{:>8.1f}'.format(self.storm_surface_runoff)])
         rows.append([''])
 

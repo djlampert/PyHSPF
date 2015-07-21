@@ -1,33 +1,24 @@
-# build_05472500.py
+# preprocess_05472500.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# last updated: 05/20/2015
+# last updated: 07/21/2015
 # 
 # Purpose: shows how to use the Preprocessor class to gather all the input
 # data needed to create an HSPF model for an 8-digit hydrologic unit code 
-# (HUC8), then integrate the data to create an HSPFModel class for the HUC8,
-# then create a submodel for the gage for watershed associated with NWIS gage
-# 05472500, then runs a baseline simulation and plots the results.
+# (HUC8) and integrate the data to create an HSPFModel class for the HUC8,
+# then runs the baseline model and saves/shows the simulation results.
 
 import os, pickle, datetime
+
+from pyhspf.preprocessing import Preprocessor
+from pyhspf               import Postprocessor
 
 # Paths to working directories for source NHDPlus, CDL, NWIS, NID datasets
 # (modify as needed for the PC of interest)
 
-network     = 'D:'
+network     = 'Z:'
 destination = 'C:/HSPF_data'
-
-for d in network, destination:
-    if not os.path.isdir(d):
-        print('\ndirectory {} does not exist!'.format(d))
-        print('please make sure that a valid path has been specified\n')
-        raise
-
-# import the Preprocessor and the Postprocessor
-
-from pyhspf.preprocessing import Preprocessor
-from pyhspf               import Postprocessor
 
 # 8-digit hydrologic unit code of interest (North Skunk River, IA)
 
@@ -41,21 +32,21 @@ state = 'Iowa'
 
 gageid = '05472500'
 
-# start and end dates (1981 to 2010)
+# start and end dates for the model (1981 to 2009)
 
 start = datetime.datetime(1981, 1, 1)
-end   = datetime.datetime(2011, 1, 1)
+end   = datetime.datetime(2009, 1, 1)
 
 # maximum drainage area for subbasins in square kilometers
 
 drainmax = 400
 
-# Comma separated value file linking land use codes from the Cropland Data
+# comma separated value file linking land use codes from the Cropland Data
 # Layer to aggregated land use categories for HSPF land segments
 
 aggregation = 'cdlaggregation.csv'
 
-# Comma separated value file of parameters for the HSPF land use categories
+# comma separated value file of parameters for the HSPF land use categories
 # including RGB values for plots and evapotranspiration crop coefficients
 
 landuse = 'lucs.csv'
@@ -64,10 +55,28 @@ landuse = 'lucs.csv'
 
 landuseyear = 2001
 
+# warmup time (model output for this number of days is ignored)
+
+warmup = 365
+
+# make sure the directory paths exist
+
+if not os.path.isdir(network):
+    print('error, directory {} doesn not exist (please update)'.format(network))
+    raise
+if not os.path.isdir(destination):
+    print('error, directory ' +
+          '{} doesn not exist (please update)'.format(destination))
+    raise
+
 # Because parallel processing is (optionally) used, the process method has 
 # to be called at runtime as shown below
 
 if __name__ == '__main__': 
+
+    # working directory for calibration simulations
+
+    directory = '{}/{}/hspf'.format(destination, HUC8)
 
     # make an instance of the Preprocessor
 
@@ -104,13 +113,30 @@ if __name__ == '__main__':
     # to the destination/hspf directory named "<landuseyear>baseline" (in this
     # case 2001) stored in the "hspfmodel" attribute of the preprocessor
 
-    # open the model
+    filename = '{}/{}baseline'.format(directory, landuseyear)
 
-    with open(processor.hspfmodel, 'rb') as f: hspfmodel = pickle.load(f)
-    
+    # make a directory for the preliminary calibration
+
+    preliminary = '{}/{}/preliminary'.format(destination, HUC8)
+
+    # make the directory for the calibration simulations
+
+    if not os.path.isdir(preliminary): os.mkdir(preliminary)
+
+    print('saving the preliminary (uncalibrated) results\n')
+
+    with open(filename, 'rb') as f: hspfmodel = pickle.load(f)
+
+    # get the comid of the gage
+
+    d = {v:k for k, v in hspfmodel.subbasin_timeseries['flowgage'].items()}
+    comid = d[gageid]
+
     # build the input WDM file
 
     hspfmodel.build_wdminfile()
+
+    # output variables
 
     # output variables
 
@@ -119,6 +145,9 @@ if __name__ == '__main__':
                'evaporation', 
                'runoff', 
                'groundwater',
+               'snow_state', 
+               'snowpack', 
+               'snowfall',
                 ]
 
     # build the UCI and output WDM files
@@ -130,33 +159,25 @@ if __name__ == '__main__':
 
     hspfmodel.run(verbose = True)
 
-    # make a dictionary that links the nwis gage to the comid
+    # use the Postprocessor to analyze and save the results
 
-    nwis = {v:k for k,v in hspfmodel.subbasin_timeseries['flowgage'].items()}
+    dates = start + datetime.timedelta(days = warmup), end
 
-    # get the comid of the nwis gage
+    postprocessor = Postprocessor(hspfmodel, dates, comid = comid)
 
-    comid = nwis[gageid]
-
-    # specify the output directory for the simulation results
-
-    output = '{}/{}/initial'.format(destination, HUC8)
-
-    # make the directory if it doesn't exist
-
-    if not os.path.isdir(output): os.mkdir(output)
-
-    # use the Postprocessor to analyze the results
-
-    postprocessor = Postprocessor(hspfmodel, (start, end), comid = comid)
-
-    postprocessor.get_hspexp_parameters()
+    postprocessor.get_hspexp_parameters(verbose = False)
     postprocessor.plot_hydrograph(tstep = 'monthly', show = False,
-                                  output = output + '/hydrograph')
-    postprocessor.plot_calibration(show = False, 
-                                   output = output + '/calibration')
+                                  output = '{}/hydrography'.format(preliminary))
+    postprocessor.plot_calibration(output = '{}/statistics'.format(preliminary),
+                                   show = False)
     postprocessor.plot_runoff(tstep = 'daily', show = False,
-                              output = output + '/runoff')
+                              output = '{}/runoff'.format(preliminary))
+    output = '{}/calibration_report.csv'.format(preliminary)
+    postprocessor.calibration_report(output = output)
+    postprocessor.plot_snow(output = '{}/snow'.format(preliminary), 
+                            show = False)
+    postprocessor.plot_dayofyear(output = '{}/dayofyear'.format(preliminary),
+                                 show = False)
 
 # Using the preprocessor in other watersheds/gages *should* be as simple as
 # supplying the parameters above (start and end date, state, 8-digit HUC, 
