@@ -32,10 +32,10 @@ state = 'Iowa'
 
 gageid = '05472500'
 
-# start and end dates for the model (1981 to 2009)
+# start and end dates for the model (1980 to 2011)
 
-start = datetime.datetime(1981, 1, 1)
-end   = datetime.datetime(2009, 1, 1)
+start = datetime.datetime(1980, 1, 1)
+end   = datetime.datetime(2011, 1, 1)
 
 # maximum drainage area for subbasins in square kilometers
 
@@ -57,7 +57,7 @@ landuseyear = 2001
 
 # warmup time (model output for this number of days is ignored)
 
-warmup = 365
+warmup = 366
 
 # make sure the directory paths exist
 
@@ -138,8 +138,6 @@ if __name__ == '__main__':
 
     # output variables
 
-    # output variables
-
     targets = ['water_state', 
                'reach_outvolume', 
                'evaporation', 
@@ -179,7 +177,3 @@ if __name__ == '__main__':
     postprocessor.plot_dayofyear(output = '{}/dayofyear'.format(preliminary),
                                  show = False)
 
-# Using the preprocessor in other watersheds/gages *should* be as simple as
-# supplying the parameters above (start and end date, state, 8-digit HUC, 
-# NWIS gage ID, land use year, maximum drainage area); if you try and 
-# get an error please report it!

@@ -42,14 +42,15 @@ class AutoCalibrator:
                  hydrology = False,
                  submodel = None,
                  warmup = 30,
-                 parameter_ranges = {'IRC':    (0.5,   2),
-                                     'LZETP':  (0.2,  1.4),
+                 parameter_ranges = {'IRC':    (0.5,    2),
+                                     'LZETP':  (0.2,  1.5),
                                      'DEEPFR': (0,      1),
-                                     'LZSN':   (0.2,   10),
+                                     'LZSN':   (0.2,    2),
                                      'UZSN':   (0.2,   10),
                                      'INFILT': (0.01,  20),
-                                     'INTFW':  (0.01,   2),
+                                     'INTFW':  (0.01, 2.5),
                                      'AGWRC':  (0.5,    2),
+                                     'KVARY':  (0,    0.1),
                                      },
                  ):
 
@@ -69,7 +70,7 @@ class AutoCalibrator:
     def create_submodel(self, 
                         filepath, 
                         name,
-                        overwrite = False,
+                        overwrite = True,
                         verbose = True,
                         ):
         """
@@ -127,6 +128,8 @@ class AutoCalibrator:
             for p in model.perlnds: p.IRC    *= adjustment
         if variable == 'AGWRC':
             for p in model.perlnds: p.AGWRC  *= adjustment
+        if variable == 'KVARY':
+            for p in model.perlnds: p.KVARY  = max(0, p.KVARY + adjustment)
         if variable == 'DEEPFR':
             for p in model.perlnds: p.DEEPFR += adjustment
     
@@ -190,8 +193,8 @@ class AutoCalibrator:
 
             sflows = [d * conv / 86400 for d in data]
 
-        stimes = [self.start + (i + self.warmup) * datetime.timedelta(days = 1)
-                  for i in range((self.end - self.start).days - self.warmup)]
+        stimes = [self.start + i * datetime.timedelta(days = 1)
+                  for i in range(self.warmup, (self.end - self.start).days)]
 
         otimes = self.otimes
         oflows = self.oflows
@@ -335,12 +338,13 @@ class AutoCalibrator:
         The defaults are based on experience with parameter sensitivity."""
 
         if   variable == 'LZSN':   return 0.05
-        elif variable == 'UZSN':   return 0.05
+        elif variable == 'UZSN':   return 0.10
         elif variable == 'LZETP':  return 0.02
-        elif variable == 'INFILT': return 0.04
+        elif variable == 'INFILT': return 0.02
         elif variable == 'INTFW':  return 0.01
         elif variable == 'IRC':    return 0.02
         elif variable == 'AGWRC':  return 0.005
+        elif variable == 'KVARY':  return 0.002
         elif variable == 'DEEPFR': return 0.01
         else:
             print('error: unknown variable specified\n')
@@ -383,6 +387,7 @@ class AutoCalibrator:
 
         t1 = 'increasing {:6s} {:>5.1%} increases {} {:7.4f}'
         t2 = 'decreasing {:6s} {:>5.1%} increases {} {:7.4f}'
+
         while current < self.value:
 
             # update the current value of the optimization parameter
@@ -538,11 +543,13 @@ class AutoCalibrator:
 
         self.submodel = None
 
-        model = self.copymodel('calibrated')
+        model = self.copymodel(output)
                                  
         # adjust the values of the parameters
 
         for variable, adjustment in zip(self.variables, self.values):
             self.adjust(model, variable, adjustment)
+
+        # adjust the filename
 
         with open(output, 'wb') as f: pickle.dump(model, f)
