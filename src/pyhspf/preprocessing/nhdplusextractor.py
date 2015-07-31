@@ -444,7 +444,9 @@ class NHDPlusExtractor:
                 self.decompress('{}/{}'.format(self.destination, compressed))
 
     def get_comids(self, flowlinefile):
-        """Finds the comids from the flowline file."""
+        """
+        Finds the comids from the flowline file.
+        """
 
         # open the file
 
@@ -460,9 +462,16 @@ class NHDPlusExtractor:
 
         return comids
 
-    def extract_flowlines(self, source, destination, HUC8, verbose = True):
-        """Extracts flowlines from the source datafile to the destination using
-        the HUC8 for the query."""
+    def extract_flowlines(self, 
+                          source, 
+                          destination, 
+                          HUC8, 
+                          verbose = True,
+                          ):
+        """
+        Extracts flowlines from the source datafile to the destination using
+        the HUC8 for the query.
+        """
 
         # open the flowline file
     
@@ -518,10 +527,16 @@ class NHDPlusExtractor:
             l = len(indices)
             print('queried {} flowlines from original shapefile\n'.format(l))
 
-    def extract_catchments(self, source, destination, flowlinefile, 
-                           verbose = True):
-        """Extracts the catchments from the source data file to the destination
-        using the list of comids for the query."""
+    def extract_catchments(self, 
+                           source, 
+                           destination, 
+                           flowlinefile, 
+                           verbose = True,
+                           ):
+        """
+        Extracts the catchments from the source data file to the destination
+        using the list of comids for the query.
+        """
 
         # make a list of the comids
 
@@ -570,7 +585,9 @@ class NHDPlusExtractor:
         w.save(destination)
 
     def overlaps(self, bbox1, bbox2):
-        """Tests if the two bounding boxes overlap."""
+        """
+        Tests if the two bounding boxes overlap.
+        """
 
         xmin1, ymin1, xmax1, ymax1 = bbox1
         xmin2, ymin2, xmax2, ymax2 = bbox2
@@ -582,38 +599,46 @@ class NHDPlusExtractor:
 
         else: return False
 
-    def find_NED(self, catchmentfile):
-        """Parses the elevation rasters to find the one where the HUC8 is
-        located."""
-
-        shapefile = Reader(catchmentfile)
-
-        f = None
-        for nedfile in self.nedfiles:
-
-            t,v = get_raster_table(nedfile, shapefile.bbox, 'int32', 
-                                   quiet = True)
-
-            if t is not None: 
-                f = nedfile
-                break
-
-        if f is not None: 
-            return f
-        else:
-            print('warning: unable to find NED file')
-            raise
+    #def find_NED(self, catchmentfile):
+    #    """
+    #    Parses the elevation rasters to find the one where the HUC8 is
+    #    located.
+    #    """
+    #
+    #    shapefile = Reader(catchmentfile)
+    #
+    #    f = None
+    #    for nedfile in self.nedfiles:
+    #
+    #        t,v = get_raster_table(nedfile, shapefile.bbox, 'int32', 
+    #                               quiet = True)
+    #
+    #        if t is not None: 
+    #            f = nedfile
+    #            break
+    #
+    #    if f is not None: 
+    #        return f
+    #    else:
+    #        print('warning: unable to find NED file')
+    #        raise
 
     def extract_NED(self, 
-                    NED, 
+                    nedfiles,
                     catchmentfile, 
-                    output, 
+                    destination,
+                    #NED, 
+                    #output, 
+                    zmin = -100000,
                     space = 0.05, 
                     verbose = True,
                     quiet = True,
                     ):
-        """Extracts elevation data as a raster file from the National Elevation
-        Dataset located in the NHDPlus directory.
+        """
+        Extracts elevation data as a raster file from the National Elevation
+        Dataset located in the NHDPlus directory. Because NED data are 
+        distributed in multiple files, each must be parsed and then combined
+        into the final file.
         """
 
         if verbose: print('copying the elevation data from NED\n')
@@ -626,37 +651,60 @@ class NHDPlusExtractor:
 
         if quiet: gdal.PushErrorHandler('CPLQuietErrorHandler') 
 
-        #adjust to make the map just larger than the extents
+        # adjust to make the map just larger than the extents
 
         xmin = xmin - space * (xmax - xmin)
         ymin = ymin - space * (ymax - ymin)
         xmax = xmax + space * (xmax - xmin)
         ymax = ymax + space * (ymax - ymin)
 
-        # extract the values of the DEM raster and the origin from the NED
+        # get data for each file and store the values
 
-        values, corner = get_raster_table(NED, [xmin, ymin, xmax, ymax], 
-                                          dtype = 'int32')
+        values = None
+        for NED in nedfiles:
 
-        # open the file
+            print('reading data from {}'.format(NED))
+            try:
 
-        source = gdal.Open(NED)
+                # get the values of the DEM raster as an array and origin
 
-        # set the transform to the new origin
+                array, corner = get_raster_table(NED, 
+                                                 [xmin, ymin, xmax, ymax], 
+                                                 dtype = 'int32')
 
-        transform = source.GetGeoTransform()
-        transform = (corner[0], transform[1], transform[2], corner[1],
-                     transform[4], transform[1])
+                if values is None: values = array
 
-        # get the source band
+                else:
 
-        band = source.GetRasterBand(1)
+                    # find the indices of the missing data
+
+                    missing = numpy.where(values < zmin)
+
+                    # fill in the values
+
+                    values[missing] = array[missing]
+
+                # open the file
+
+                source = gdal.Open(NED)
+
+                # set the transform to the new origin
+
+                transform = source.GetGeoTransform()
+                transform = (corner[0], transform[1], transform[2], 
+                             corner[1], transform[4], transform[1])
+
+                # get the source band
+
+                band = source.GetRasterBand(1)
+
+            except: pass
 
         # get a driver and make the new file
 
         driver = gdal.GetDriverByName('GTiff')
 
-        dest = driver.Create(output, len(values[0]), len(values), 1,  
+        dest = driver.Create(destination, len(values[0]), len(values), 1,  
                              gdal.GDT_UInt16)
 
         dest.SetProjection(source.GetProjection())
@@ -664,6 +712,7 @@ class NHDPlusExtractor:
         dest.SetGeoTransform(transform)
     
         dest.GetRasterBand(1).WriteArray(values, 0, 0)
+        dest.GetRasterBand(1).SetNoDataValue(band.GetNoDataValue())
         #dest.GetRasterBand(1).SetStatistics(*band.GetStatistics(0,1))
 
         # close the files
@@ -705,28 +754,29 @@ class NHDPlusExtractor:
 
         if vverbose: print('\ncopying the projections from NHDPlus\n')
 
-        f = '{}/{}.prj'.format(output, flowlinefile)
-        if not os.path.isfile(f): shutil.copy(self.projection, f)
+        p = '{}/{}.prj'.format(output, flowlinefile)
+        if not os.path.isfile(p): shutil.copy(self.projection, p)
 
-        f = '{}/{}.prj'.format(output, catchmentfile)
-        if not os.path.isfile(f): shutil.copy(self.projection, f)
+        p = '{}/{}.prj'.format(output, catchmentfile)
+        if not os.path.isfile(p): shutil.copy(self.projection, p)
 
         # extract the flowlines and get the NHDPlus comids
 
-        f = '{}/{}'.format(output, flowlinefile)
-        if not os.path.isfile(f + '.shp'):
+        p = '{}/{}'.format(output, flowlinefile)
+        if not os.path.isfile(p + '.shp'):
             if verbose: 
                 print('extracting flowline shapefile for {}\n'.format(HUC8))
-            self.extract_flowlines(self.flowlinefile, f, HUC8,
+            self.extract_flowlines(self.flowlinefile, p, HUC8,
                                    verbose = vverbose)
 
         # extract the different files from the sources sequentially
 
         p = '{}/{}'.format(output, catchmentfile)
         if not os.path.isfile(p + '.shp'):
+            ffile = '{}/{}'.format(output, flowlinefile)
             if verbose: 
                 print('extracting catchment shapefile for {}\n'.format(HUC8))
-            self.extract_catchments(self.catchmentfile, p, f,
+            self.extract_catchments(self.catchmentfile, p, ffile,
                                     verbose = vverbose)
 
         p = '{}/{}'.format(output, VAAfile)
@@ -798,13 +848,13 @@ class NHDPlusExtractor:
 
         # find the right NED DEM and extract the elevation raster
 
-        f = '{}/{}'.format(output, elevfile)
-        if not os.path.isfile(f):
+        p = '{}/{}'.format(output, elevfile)
+        if not os.path.isfile(p):
             if verbose: 
                 print('extracting the NED raster file for {}\n'.format(HUC8))
             cfile = '{}/{}'.format(output, catchmentfile)
-            NED = self.find_NED(cfile)
-            self.extract_NED(NED, cfile, f, verbose = vverbose)
+            #NED = self.find_NED(cfile)
+            self.extract_NED(self.nedfiles, cfile, p, verbose = vverbose)
 
         end = time.time()
         t = end - start

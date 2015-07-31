@@ -43,7 +43,7 @@ class AutoCalibrator:
                  submodel = None,
                  warmup = 30,
                  parameter_ranges = {'IRC':    (0.5,    2),
-                                     'LZETP':  (0.2,  1.5),
+                                     'LZETP':  (0.2,  1.4),
                                      'DEEPFR': (0,      1),
                                      'LZSN':   (0.2,    2),
                                      'UZSN':   (0.2,   10),
@@ -51,6 +51,8 @@ class AutoCalibrator:
                                      'INTFW':  (0.01, 2.5),
                                      'AGWRC':  (0.5,    2),
                                      'KVARY':  (0,    0.1),
+                                     'CCFACT': (1,     10),
+                                     'MGMELT': (0,     25),
                                      },
                  ):
 
@@ -132,6 +134,12 @@ class AutoCalibrator:
             for p in model.perlnds: p.KVARY  = max(0, p.KVARY + adjustment)
         if variable == 'DEEPFR':
             for p in model.perlnds: p.DEEPFR += adjustment
+        if variable == 'CCFACT':
+            for o in model.perlnds + model.implnds: 
+                o.CCFACT = min(10, max(1, o.CCFACT + adjustment))
+        if variable == 'MGMELT':
+            for o in model.perlnds + model.implnds: 
+                o.MGMELT = min(25, max(0, o.MGMELT + adjustment))           
     
     def run(self, 
             model,
@@ -346,6 +354,8 @@ class AutoCalibrator:
         elif variable == 'AGWRC':  return 0.005
         elif variable == 'KVARY':  return 0.002
         elif variable == 'DEEPFR': return 0.01
+        elif variable == 'CCFACT': return 0.2
+        elif variable == 'MGMELT': return 0.2
         else:
             print('error: unknown variable specified\n')
             raise

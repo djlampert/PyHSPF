@@ -409,6 +409,74 @@ class CDLExtractor:
 
                 pass
 
+    def download_shapefile(self,
+                           shapefile,
+                           year,
+                           space = 0.05,
+                           ):
+        """
+        Downloads the CDL data for the given year for the bounding box of the
+        shapefile.
+        """
+
+        r = Reader(shapefile)
+
+        xmin, ymin, xmax, ymax = r.bbox
+
+        # adjust to make the map just larger than the extents
+
+        xmin, xmax = xmin - space * (xmax - xmin), xmax + space * (xmax - xmin)
+        ymin, ymax = ymin - space * (ymax - ymin), ymax + space * (ymax - ymin)
+
+        # figure out the pixel numbers in NAD83
+
+        x1 = 1570000
+        y1 = 1870000
+        x2 = 1820000
+        y2 = 2070000
+        
+        # request the file from the CDL server
+
+        its = self.website, year, x1, y1, x2, y2
+        url = '{}/CDLService/GetCDLFile?year={}&bbox={}{}{}{}'.format(*its)
+
+        try:
+
+            with request.urlopen(url) as f: p = f.read().decode()
+
+        except request.HTTPError as error:
+
+            e = '{}/NASSerror.html'.format(self.destination)
+            print('the CDL server returned an error; the response ' +
+                  'can be viewed with a web browser in file:' +
+                  '\n\n{}\n'.format(e))
+            with open(e, 'w') as f: f.write(error.read().decode())
+            raise
+
+        # get the url of the file that is generated
+
+        url = p[p.index('<returnURL>') + 11:p.index('</returnURL>')]
+
+        # retrieve the file and save it to the local destination
+
+        print('downloading CDL data for {} {} '.format(year, state) +
+              'from {}\n'.format(url))
+                
+        try: 
+
+            self.r_start = time.time()
+            request.urlretrieve(url, local, self.report)
+            self.years.append(year)
+
+        except:
+
+            print('unable to download CDL data for {}'.format(year))
+            print('check that the requested data are available for ' +
+                  'the requested year on the server')
+            raise
+                    
+        print('')
+
     def download_data(self, 
                       state,
                       years,
@@ -534,17 +602,6 @@ class CDLExtractor:
             else:
 
                 print('data for {}, {} are not available'.format(state, year))
-
-            # decompress files (the server seems to produce only tifs now but
-            # the code below may be helpful if that isn't the case)
-
-            #its = self.destination, year, self.statecodes[state]
-            #decompressed = '{}/CDL_{}_{}.tif'.format(*its)
-            #if os.path.isfile(compressed) and not os.path.isfile(decompressed):
-
-                #print('decompressing {} archive\n'.format(compressed))
-                #f = zipfile.ZipFile(compressed)
-                #f.extractall(self.destination)
 
     def extract_bbox(self,
                      bbox,

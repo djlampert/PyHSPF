@@ -9,7 +9,7 @@ import gdal, osr, ogr, gdalnumeric, time
 
 from gdalconst       import GA_ReadOnly
 from itertools       import chain
-from numpy           import empty, array, append as npappend
+from numpy           import empty, array, where
 from PIL             import Image, ImageDraw
 from matplotlib.path import Path
 
@@ -169,8 +169,14 @@ def get_raster(filename, points, quiet = False):
 
     return values
 
-def get_raster_table(filename, extent, dtype, locations = False, quiet = False):
-    """Gets the values of a DEM raster over a rectangular plot with corners 
+def get_raster_table(filename, 
+                     extent, 
+                     dtype, 
+                     locations = False, 
+                     quiet = False,
+                     ):
+    """
+    Gets the values of a DEM raster over a rectangular plot with corners 
     located at longmin, latmin, longmin, and latmax as specified by extents.
     Returns a matrix of values and the corresponding latitude and longitude.
     """
@@ -230,7 +236,6 @@ def get_raster_table(filename, extent, dtype, locations = False, quiet = False):
 
     latitudes  = empty((height, width), dtype = 'float')
     longitudes = empty((height, width), dtype = 'float')
-    values     = empty((height, width), dtype = 'uint16')
 
     # read the band
         
@@ -261,11 +266,14 @@ def get_raster_table(filename, extent, dtype, locations = False, quiet = False):
         # just return the location of the origin
 
         try: 
+
             for row in range(height):
-                values[height - row - 1] = \
-                    band.ReadAsArray(pxmin, pymin + row, width, 1) 
+                b = band.ReadAsArray(pxmin, pymin + row, width, 1) 
+                values[height - row - 1] = b
+                    
         except: 
-            if not quiet: print('unable to read data\n')
+
+            if not quiet: print('warning: unable to read data\n')
             values = None
 
         return values, [origin[0] - rx, origin[1] - ry]
