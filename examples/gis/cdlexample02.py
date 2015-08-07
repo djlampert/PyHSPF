@@ -1,22 +1,22 @@
-# cdlexample01.py
+# cdlexample02.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# illustrates how to download data from the Cropland Data Layer (CDL),
-# extract a Geotiff for a HUC8 from the source, and calculate the landuse
-# data for each polygon in the shapefile. Example utilizes the subbasin 
-# shapefile for the Patuxent River Watershed (HUC 02060006), in Maryland.
+# illustrates how to download data for a bounding box for a year from the 
+# Cropland Data Layer (CDL) and then calculate the landuse data for each 
+# polygon in the shapefile utilizing the subbasin shapefile for the 
+# Patuxent River Watershed (HUC 02060006), in Maryland (similar to the last
+# but downloads the clipped file directly rather than the state)
 #
-# last updated: 08/03/2015
+# last updated: 07/31/2015
 
 import os
 
 # adjustable input parameters
 
-output = 'CDL'                  # path to place state CDL source rasters
-state  = 'Maryland'             # state name
-years  = [2008, 2009, 2010]     # years to extract data (CDL is annual)
-sfile  = 'data/boundary'        # catchment file for land use calculation
+output = 'CDL'             # path to place state CDL source rasters
+year   = 2008              # year to extract data (CDL is annual)
+sfile  = 'data/catchments' # catchment file for land use calculation
 
 # the aggregate file (CSV); maps integers in the CDL raster to landuse groups
 
@@ -53,23 +53,17 @@ from pyhspf.preprocessing import CDLExtractor
 
 cdlextractor = CDLExtractor(output)
 
-# download the data for the state for each year to the "output" location
+# download the data for the extent of the bounding box for the given year to 
+# the "output" location
 
-cdlextractor.download_data(state, years)
-
-# extract the data for the bounding box of the patuxent catchment shapefile 
-# that is located in the "output" directory in the previous step and place it 
-# in the "output" directory (in this case the same directory is used for both)
-
-cdlextractor.extract_shapefile(sfile, output)
+cdlextractor.download_shapefile(sfile, year)
 
 # calculate the 2008 land use fraction for each category in each shape in the 
 # catchmentfile using the "FEATUREID" feature attribute, and then make an 
 # (optional) csv file of the output
 
-year = 2008
 extracted = '{}/{}landuse.tif'.format(output, year)
-csvfile   = 'basin_landuse.csv'
+csvfile   = 'catchment_landuse.csv'
 attribute = 'FEATUREID'
 
 landuse = cdlextractor.calculate_landuse(extracted, sfile, aggregate, 
@@ -97,21 +91,11 @@ landuse = cdlextractor.calculate_landuse(extracted, sfile, aggregate,
 cdlextractor.plot_landuse(extracted, sfile, attribute, lucfile,
                           output = '{}/{}raw'.format(output, year),
                           datatype = 'raw')
-cdlextractor.plot_landuse(extracted, sfile, attribute, lucfile,
-                          output = '{}/{}results'.format(output, year),
-                          datatype = 'results')
 
-# now repeat it using the catchment rather than just the boundary
-
-sfile   = 'data/catchments'
-csvfile = 'catchment_landuse.csv'
-landuse = cdlextractor.calculate_landuse(extracted, sfile, aggregate, 
-                                         attribute, csvfile = csvfile)
-
-# this WILL take a while (adjust the border linewidth for clarity)
+# and make the land use image file
 
 print('this will take a while...\n')
 
 cdlextractor.plot_landuse(extracted, sfile, attribute, lucfile, lw = 0.1,
-                          output = 'catchmentresults'.format(extracted), 
+                          output = '{}/results'.format(output, extracted), 
                           datatype = 'results')

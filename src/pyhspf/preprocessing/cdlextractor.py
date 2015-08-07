@@ -2,7 +2,7 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# last updated: 10/12/2014
+# last updated: 08/01/2015
 #
 # Calculates the land use data from a raster file within each of the shapes
 # in a shapefile.
@@ -19,6 +19,7 @@ from .rasterutils import get_pixel
 from .rasterutils import get_raster
 from .rasterutils import get_raster_table
 from .rasterutils import get_raster_in_poly
+from .rasterutils import get_cdl_meters
 
 class CDLParser(HTMLParser):
     """
@@ -416,29 +417,42 @@ class CDLExtractor:
                            ):
         """
         Downloads the CDL data for the given year for the bounding box of the
-        shapefile.
+        shapefile provided.
         """
+
+        # local file name for the download
+
+        its = self.destination, year
+        local = '{}/{}landuse.tif'.format(*its)
+
+        # open the shapefile and get the extent
 
         r = Reader(shapefile)
 
         xmin, ymin, xmax, ymax = r.bbox
 
-        # adjust to make the map just larger than the extents
+        # adjust to make the image a bit larger than the extent
 
         xmin, xmax = xmin - space * (xmax - xmin), xmax + space * (xmax - xmin)
         ymin, ymax = ymin - space * (ymax - ymin), ymax + space * (ymax - ymin)
 
-        # figure out the pixel numbers in NAD83
+        # transform the coordinates to NAD83
 
-        x1 = 1570000
-        y1 = 1870000
-        x2 = 1820000
-        y2 = 2070000
-        
+        extent = xmin, ymin, xmax, ymax
+
+        transformed = get_cdl_meters(extent)
+
+        # round to integers
+
+        x1 = round(transformed[0])
+        y1 = round(transformed[1])
+        x2 = round(transformed[2])
+        y2 = round(transformed[3])
+                
         # request the file from the CDL server
 
         its = self.website, year, x1, y1, x2, y2
-        url = '{}/CDLService/GetCDLFile?year={}&bbox={}{}{}{}'.format(*its)
+        url = '{}/CDLService/GetCDLFile?year={}&bbox={},{},{},{}'.format(*its)
 
         try:
 
@@ -446,21 +460,22 @@ class CDLExtractor:
 
         except request.HTTPError as error:
 
-            e = '{}/NASSerror.html'.format(self.destination)
+            e = '{}/NASSerror{}.html'.format(self.destination, year)
             print('the CDL server returned an error; the response ' +
                   'can be viewed with a web browser in file:' +
                   '\n\n{}\n'.format(e))
             with open(e, 'w') as f: f.write(error.read().decode())
             raise
 
-        # get the url of the file that is generated
+        # get the url of the processed file that is generated
 
         url = p[p.index('<returnURL>') + 11:p.index('</returnURL>')]
 
         # retrieve the file and save it to the local destination
 
-        print('downloading CDL data for {} {} '.format(year, state) +
-              'from {}\n'.format(url))
+        print('downloading {} CDL data within '.format(year) +
+              '{:.4f}, {:.4f}, {:.4f}, {:.4f}\n'.format(*extent) +
+              'from {}\nto {}\n'.format(url, local))
                 
         try: 
 
@@ -563,7 +578,7 @@ class CDLExtractor:
 
                 except request.HTTPError as error:
 
-                    e = '{}/NASSerror.html'.format(self.destination)
+                    e = '{}/NASSerror{}.html'.format(self.destination, year)
                     print('the CDL server returned an error; the response ' +
                           'can be viewed with a web browser in file:' +
                           '\n\n{}\n'.format(e))

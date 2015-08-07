@@ -663,7 +663,8 @@ class NHDPlusExtractor:
         values = None
         for NED in nedfiles:
 
-            print('reading data from {}'.format(NED))
+            if verbose: print('reading data from {}'.format(NED))
+
             try:
 
                 # get the values of the DEM raster as an array and origin
@@ -699,6 +700,8 @@ class NHDPlusExtractor:
                 band = source.GetRasterBand(1)
 
             except: pass
+
+        if verbose: print('')
 
         # get a driver and make the new file
 
@@ -782,9 +785,10 @@ class NHDPlusExtractor:
         p = '{}/{}'.format(output, VAAfile)
         if not os.path.isfile(p):
 
-            # get the comids
+            # get the comids using the flowline shapefile
 
-            comids = self.get_comids(f)
+            ffile = '{}/{}'.format(output, flowlinefile)
+            comids = self.get_comids(ffile)
 
             # read hydrologic sequence and drainage attributes from the database
     

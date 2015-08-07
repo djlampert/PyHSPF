@@ -15,7 +15,7 @@ from shapefile               import Reader, Writer
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pyhspf.core             import Watershed, Subbasin
 
-from .vectorutils import format_shape, combine_shapes, merge_shapes
+from .vectorutils import combine_shapes, merge_shapes
 from .rasterutils import get_raster, get_raster_on_poly, get_raster_in_poly
 
 class NHDPlusDelineator:
@@ -1308,7 +1308,8 @@ class NHDPlusDelineator:
         pyplot.close()
 
 class HUC8Delineator(NHDPlusDelineator):
-    """An NHDPlusDelineator subclass to perform watershed delineation with 
+    """
+    An NHDPlusDelineator child to perform watershed delineation with 
     NHDPlus data from a HUC8 that builds subbasins based on a maximum area, 
     location of dams, and location of NWIS gages following extraction with
     the NHDPlusExtractor.
@@ -1322,6 +1323,7 @@ class HUC8Delineator(NHDPlusDelineator):
                  elevations,
                  gagefile, 
                  damfile,
+                 VAAs = None,
                  landuse = None,
                  ):
 
@@ -1336,6 +1338,7 @@ class HUC8Delineator(NHDPlusDelineator):
                                    landuse  = landuse,
                                    )
         self.HUC8 = HUC8
+        self.VAAs = VAAs
 
     def combine_flowlines(self, 
                           inputfile,
@@ -1343,7 +1346,8 @@ class HUC8Delineator(NHDPlusDelineator):
                           overwrite = False,
                           verbose = True
                           ):
-        """Merges the major flowlines in the input shapefile into a single
+        """
+        Merges the major flowlines in the input shapefile into a single
         shape (the principal stream) and writes it to the output shapefile.
         """
 
@@ -1356,9 +1360,9 @@ class HUC8Delineator(NHDPlusDelineator):
 
         shutil.copy(inputfile + '.prj', outputfile + '.prj')
 
-        # get the flowline attributes
+        if self.VAAs is None: self.get_flowlines(verbose = False)
 
-        with open(self.attributes, 'rb') as f: flowlines = pickle.load(f)
+        flowlines = self.VAAs
 
         # all the fields for the combined flowline feature class
 
@@ -1397,16 +1401,36 @@ class HUC8Delineator(NHDPlusDelineator):
         downup = {f: flowlines[f].up   for f in flowlines
                   if flowlines[f].comid in all_comids}
 
-        # pick a flowline and follow it to the end of the watershed
+        # check if there is an influent line
 
-        current = list(updown.keys())[0]
+        inlets = []
+        for f in downup:
+            if downup[f] != 0:
+                if flowlines[downup[f]].comid not in all_comids: 
+                    inlets.append(f)
 
-        while updown[current] in updown: current = updown[current]
+        if len(inlets) == 0:
 
-        primary = [current]
-        while downup[current] in downup:
-            current = downup[current]
-            primary.insert(0, current)
+            # then pick a flowline and follow it to the end of the watershed
+
+            current = list(updown.keys())[0]
+
+            while updown[current] in updown: current = updown[current]
+
+            primary = [current]
+            while downup[current] in downup:
+                current = downup[current]
+                primary.insert(0, current)
+
+        else:
+
+            # start at the inlet and follow it to the outlet
+
+            current = inlets[0]
+            primary = [inlets[0]]
+            while updown[current] in updown:
+                current = updown[current]
+                primary.append(current)
 
         inlet_comid = flowlines[primary[0]].comid
         last_comid  = flowlines[primary[-1]].comid
@@ -1472,7 +1496,8 @@ class HUC8Delineator(NHDPlusDelineator):
                            verbose = True,
                            vverbose = False,
                            ):
-        """Combines together all the catchments in a basin catchment shapefile.
+        """
+        Combines together all the catchments in a basin catchment shapefile.
         Creates a new shapefile called "combined" in the same directory as the 
         original file.  Uses the elevation data from the raster file and the 
         flow data file to estimate the length and average slope of the 
@@ -1515,40 +1540,42 @@ class HUC8Delineator(NHDPlusDelineator):
         records = [] 
         bboxes  = []
 
-        try: 
+        combined = combine_shapes(c.shapes(), verbose = vverbose)
 
-            for i in range(n):
-                catchment = c.shape(i)
-                record = c.record(i)
-
-                shape_list = format_shape(catchment.points)
-                for s in shape_list:
-                    shapes.append(s)
-                    records.append(record)
-                    bboxes.append(catchment.bbox)
-
-            try:    combined = combine_shapes(shapes, bboxes, verbose =vverbose)
-            except: combined = combine_shapes(shapes, bboxes, skip = True, 
-                                              verbose = vverbose)
-
-        except: 
-
-            shapes  = []
-            records = [] 
-            bboxes  = []
-            for i in range(n):
-                catchment = c.shape(i)
-                record = c.record(i)
-
-                shape_list = format_shape(catchment.points, omit = True)
-                for s in shape_list:
-                    shapes.append(s)
-                    records.append(record)
-                    bboxes.append(catchment.bbox)
-
-            try:    combined = combine_shapes(shapes, bboxes, verbose =vverbose)
-            except: combined = combine_shapes(shapes, bboxes, skip = True,
-                                              verbose = vverbose)
+        #try: 
+        #
+        #    for i in range(n):
+        #        catchment = c.shape(i)
+        #        record = c.record(i)
+        #
+        #        shape_list = format_shape(catchment.points)
+        #        for s in shape_list:
+        #            shapes.append(s)
+        #            records.append(record)
+        #            bboxes.append(catchment.bbox)
+        #
+        #    try:   combined = combine_shapes(shapes, bboxes, verbose =vverbose)
+        #    except: combined = combine_shapes(shapes, bboxes, skip = True, 
+        #                                      verbose = vverbose)
+        #
+        #except: 
+        #
+        #    shapes  = []
+        #    records = [] 
+        #    bboxes  = []
+        #    for i in range(n):
+        #        catchment = c.shape(i)
+        #        record = c.record(i)
+        #
+        #        shape_list = format_shape(catchment.points, omit = True)
+        #        for s in shape_list:
+        #            shapes.append(s)
+        #            records.append(record)
+        #            bboxes.append(catchment.bbox)
+        #
+        #    try:   combined = combine_shapes(shapes, bboxes, verbose =vverbose)
+        #    except: combined = combine_shapes(shapes, bboxes, skip = True,
+        #                                      verbose = vverbose)
 
         # iterate through the catchments and get the elevation data from NED
         # then estimate the value of the overland flow plane length and slope
@@ -1583,14 +1610,7 @@ class HUC8Delineator(NHDPlusDelineator):
                 closest.append(flowpoints[j])
 
             closest = numpy.array(closest)
-            #closest = numpy.empty((len(catchpoints), 3), dtype = 'float')
 
-            #for point, j in zip(catchpoints, range(len(catchpoints))):
-            #    closest[j] = flowpoints[numpy.dot(flowpoints[:, :2], 
-            #                                      point[:2]).argmin()]
-
-            #print(closest.shape)
-            #exit()
             # estimate the slope and overland flow plane length
 
             length, slope = self.get_overland(catchpoints, closest)
@@ -1655,6 +1675,70 @@ class HUC8Delineator(NHDPlusDelineator):
         if vverbose: print('\ncompleted catchment combination in ' +
                            '{:.1f} seconds\n'.format(time.time() - t0))
 
+    def get_flowlines(self,
+                      verbose = True):
+        """
+        Returns the (formatted) flowline value added attributes.
+        """
+
+        # open the catchment file to make sure only flowlines with a catchment
+        # are used as subbasins
+
+        cfile = Reader(self.catchments)        
+        i = [f[0] for f in cfile.fields].index('FEATUREID') - 1
+        catchments = [r[i] for r in cfile.records()]
+
+        # open up the flowline data in a dictionary using hydroseqs as keys 
+        # and make a dictionary linking the comids to hydroseqs
+
+        with open(self.attributes, 'rb') as f: flowlines = pickle.load(f)
+
+        # find flowlines without catchments but with flow in and out
+
+        missing = [f for f in flowlines 
+                   if flowlines[f].comid not in catchments]
+
+        for f in missing:
+
+            up = [o for o in flowlines 
+                  if flowlines[o].down == f]
+            down = [o for o in flowlines 
+                    if flowlines[o].up == f]
+
+            branches = [o for o in flowlines 
+                        if flowlines[o].up == flowlines[f].up and
+                        flowlines[o].up != 0 and o != f]
+
+            if len(branches) == 0 and flowlines[f].up != 0:
+
+                its = [flowlines[f].comid, flowlines[flowlines[f].up].comid, 
+                       flowlines[flowlines[f].down].comid]
+                if verbose:
+
+                    print('{} is in between {} and {}'.format(*its) +
+                          ', short-circuiting {}'.format(its[0]))
+
+                # short-circuit the problem reach
+
+                flowlines[flowlines[f].up].down        = flowlines[f].down
+                flowlines[flowlines[f].up].length     += flowlines[f].length
+                flowlines[flowlines[f].up].traveltime += flowlines[f].traveltime
+                flowlines[flowlines[f].up].minelev     = flowlines[f].minelev
+                flowlines[flowlines[f].down].up        = flowlines[f].up
+
+                # remove flowlines without catchments
+
+                flowlines.pop(f, None)
+
+            else:
+
+                if verbose:
+
+                    i = flowlines[f].comid
+                    print('{} is not between streams, ignoring'.format(i))
+
+        self.VAAs = flowlines
+
     def make_subbasin_outlets(self,
                               extras   = None,
                               years    = None,
@@ -1666,6 +1750,7 @@ class HUC8Delineator(NHDPlusDelineator):
         for HSPF simulations.
         """
 
+        verbose = True
         if verbose: print('subdividing watershed\n')
 
         # use subbasin delineation criteria to make a list of inlets and outlets
@@ -1674,11 +1759,14 @@ class HUC8Delineator(NHDPlusDelineator):
 
         if extras is None: outlets = []
         else:              outlets = extras
+        
+        # get the flowline value-added attributes
 
-        # open up the flowline data in a dictionary using hydroseqs as keys 
-        # and make a dictionary linking the comids to hydroseqs
+        if self.VAAs is None: self.get_flowlines()
 
-        with open(self.attributes, 'rb') as f: flowlines = pickle.load(f)
+        flowlines = self.VAAs
+
+        # map comids to hydrological sequence
 
         hydroseqs  = {flowlines[f].comid: f for f in flowlines}
 
@@ -1747,16 +1835,14 @@ class HUC8Delineator(NHDPlusDelineator):
                     first_gage = int(str(record[day1_index])[:4])
                     last_gage  = int(str(record[dayn_index])[:4])
 
-                    year_criteria = (first_gage <= last_criteria or
-                                     last_gage >= first_criteria)
+                    year_criteria = (first_gage <= last_criteria and
+                                     last_gage  >= first_criteria)
 
                 else: year_criteria = True
 
                 # make sure it is not an inlet and that it's in the watershed
             
-                watershed_criteria = (flowlines[hydroseqs[comid]].up in 
-                                      flowlines and record[HUC8_index] == 
-                                      self.HUC8)
+                watershed_criteria = (record[HUC8_index] == self.HUC8)
 
                 existing = comid not in outlets
 
@@ -1767,21 +1853,22 @@ class HUC8Delineator(NHDPlusDelineator):
 
                     if verbose:
  
-                        print('adding outlet %d for gage station %s' % 
-                              (comid, record[site_index]))
+                        i = comid, record[site_index]
+                        print('adding outlet {} for gage station {}'.format(*i))
 
         else: gage_outlets = []
 
         # add the gage stations meeting the criteria as outlets
 
-        for comid in gage_outlets:
-            outlets.append(comid)
-            if verbose: print('adding outlet {} for gage station'.format(comid))
+        for comid in gage_outlets: outlets.append(comid)
 
         # find all the inlets
 
         for f in flowlines:
             if flowlines[f].up not in flowlines and flowlines[f].up != 0:
+                if verbose:
+                    its = flowlines[f].comid, flowlines[f].up
+                    print('found inlet {} ({}) not in watershed'.format(*its))
                 inlets.append(flowlines[f].comid)
 
         # find the watershed outlet using the drainage area
@@ -1797,7 +1884,7 @@ class HUC8Delineator(NHDPlusDelineator):
         for k, v in flowlines.items():
             if (v.down == flowlines[hydroseqs[last_comid]].down and
                 v.comid != last_comid):
-                print('adding outlet for second watershed outlet at', 
+                print('adding outlet for additional watershed outlet at', 
                       v.comid, '\n')
                 outlets.append(v.comid)
 
@@ -1805,10 +1892,10 @@ class HUC8Delineator(NHDPlusDelineator):
 
         main = []
         for inlet in inlets:
-            flowline = flowlines[hydroseqs[inlet]]
+            flowline = hydroseqs[inlet]
             if flowline not in main: main.append(flowline)
-            while flowline.down in flowlines:
-                flowline = flowlines[flowline.down]
+            while flowlines[f].down in flowlines:
+                flowline = flowlines[flowlines[f].down]
                 if flowline not in main: main.append(flowline)
 
         # make the main channel if there is no inlet
@@ -1822,47 +1909,131 @@ class HUC8Delineator(NHDPlusDelineator):
 
         # add outlets to connect outlets to the main channel as needed
 
+        disconnected = []
         for outlet in outlets:
 
-            flowline = flowlines[hydroseqs[outlet]]
+            # make sure the downstream reach is still in the watershed
 
-            # check that it isn't the watershed outlet
+            if flowlines[hydroseqs[outlet]].down in flowlines:
 
-            if flowline.down in flowlines:
+                # check if the downstream flowline is included
 
-                # check if it's connected
+                if flowlines[flowlines[hydroseqs[outlet]].down] not in main: 
+                    
+                    disconnected.append(outlet)
 
-                if flowline not in main:
+        while len(disconnected) > 0:
 
-                    if verbose: print(flowline.comid, 'is not connected')
+            # go downstream and add outlets to connect
 
-                    # then need to add outlets to connect to the main line
+            for outlet in disconnected:
 
-                    while flowlines[flowline.down] not in main:
-                        main.append(flowline)
-                        flowline = flowlines[flowline.down]
-                        if flowline.down not in flowlines: 
-                            if verbose: print('reached the watershed outlet')
-                            break
+                flowline = flowlines[hydroseqs[outlet]]
 
-                    if flowline.comid not in outlets: 
-                        outlets.append(flowline.comid)
-                        main.append(flowline)
-                        if verbose: print('adding outlet %d for connectivity' % 
-                                          flowline.comid)
+                if verbose: print(flowline.comid, 'is not connected')
 
-                    # add outlets for any others streams at the junction
+                # then need to add outlets to connect to the main line
 
-                    others = [v for k,v in flowlines.items() 
-                              if (v.down == flowline.down and v != flowline)]
+                while flowlines[flowline.down] not in main:
+                    main.append(flowline)
+                    flowline = flowlines[flowline.down]
+                    if flowline.down not in flowlines: 
+                        if verbose: print('reached the watershed outlet')
+                        break
 
-                    for other in others:
+                if flowline.comid not in outlets: 
+                    outlets.append(flowline.comid)
+                    main.append(flowline)
 
-                        if other.comid not in outlets:
-                            outlets.append(other.comid)
-                            if verbose: print('adding another outlet ' +
-                                              '%d for connectivity' % 
-                                              other.comid)
+                    if verbose: 
+
+                        print('adding outlet ' +
+                              '{} for connectivity'.format(flowline.comid))
+
+                # add outlets for any others streams at the new junction
+
+                others = [v for k, v in flowlines.items() 
+                          if (v.down == flowline.down and v != flowline)]
+
+                for other in others:
+
+                    if other.comid not in outlets:
+
+                        outlets.append(other.comid)
+                        main.append(other)
+
+                        if verbose: 
+
+                            print('adding another outlet ' +
+                                  '{} for connectivity'.format(other.comid))
+
+            # check to see if any of the outlets are still disconnected
+
+            disconnected = []
+            for outlet in outlets:
+
+                # make sure the downstream reach is still in the watershed
+
+                if flowlines[hydroseqs[outlet]].down in flowlines:
+
+                    # check if the downstream flowline is included
+
+                    down = flowlines[flowlines[hydroseqs[outlet]].down]
+                    if down not in main and down.comid not in outlets:
+                    
+                        disconnected.append(outlet)
+
+                        if verbose:
+
+                            print(outlet, 'is still disconnected')
+                            print('')
+
+                            time.sleep(5)
+#                            exit()
+
+#        #for outlet in outlets:
+#
+#            flowline = flowlines[hydroseqs[outlet]]
+#
+#            # check that it isn't the watershed outlet
+#
+#            if flowline.down in flowlines:
+#
+#                # check if it's connected
+#
+#                if flowline not in main:
+#
+#                    if verbose: print(flowline.comid, 'is not connected')
+#
+#                    # then need to add outlets to connect to the main line
+#
+#                    while flowlines[flowline.down] not in main:
+#                        main.append(flowline)
+#                        flowline = flowlines[flowline.down]
+#                        if flowline.down not in flowlines: 
+#                            if verbose: print('reached the watershed outlet')
+#                            break
+#
+#                    if flowline.comid not in outlets: 
+#                        outlets.append(flowline.comid)
+#                        main.append(flowline)
+#                        if verbose: print('adding outlet %d for connectivity' % 
+#                                          flowline.comid)
+#
+#                    # add outlets for any others streams at the junction
+#
+#                    others = [v for k,v in flowlines.items() 
+#                              if (v.down == flowline.down and v != flowline)]
+#
+#                    for other in others:
+#
+#                        if other.comid not in outlets:
+#                            outlets.append(other.comid)
+#                            if verbose: print('adding another outlet ' +
+#                                              '%d for connectivity' % 
+#                                              other.comid)
+#
+#                elif verbose: print(flowline.comid, 'is connected')
     
         # check the drainage areas to make sure subbasins are not too large
         # start at the main outlet and move upstream adding outlets as needed
@@ -1872,7 +2043,7 @@ class HUC8Delineator(NHDPlusDelineator):
         n = -1
         while len(outlets) != n:
 
-            if verbose: print('checking outlet conditions\n')
+            if verbose: print('\nchecking outlet conditions\n')
 
             # move upstream and look at the changes in drainage area for 
             # each outlet
@@ -2339,7 +2510,7 @@ class HUC8Delineator(NHDPlusDelineator):
                 if record[1] == 65 * ' ': record[1] = ''
                 l.record(*record)
 
-            elif verbose: print('unable to locate %s\n' % filename)
+            elif verbose: print('unable to locate {}\n'.format(filename))
 
         # save the merged file
 
@@ -2557,6 +2728,7 @@ class HUC8Delineator(NHDPlusDelineator):
                   output,
                   extra_outlets  = None,
                   drainmax       = None,
+                  years          = None,
                   parallel       = True,
                   watershedplots = True,
                   form           = 'png',
@@ -2607,8 +2779,9 @@ class HUC8Delineator(NHDPlusDelineator):
             # previous outlet
 
             self.make_subbasin_outlets(drainmax = drainmax, 
-                                       extras = extra_outlets, 
-                                       verbose = vverbose
+                                       extras   = extra_outlets,
+                                       years    = years,
+                                       verbose  = vverbose,
                                        )
 
             # divide the flowline shapefile into subbasin flowline shapefiles 

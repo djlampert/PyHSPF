@@ -2,7 +2,8 @@ The examples provided in this folder illustrate how to use some of tools in PyHS
 
 - **nhdplusexample01.py:** download and extracts NHDPlus data
 - **nhdplusexample02.py:** delineate the watershed for a point using NHDPlus data
-- **cdlexample.py:**       download and work with landuse data from the CDL
+- **cdlexample01.py:**     download and work with state-level land use data from the CDL
+- **cdlexample02.py:**     download and work with bounding box data from the CDL
 - **nidexample.py:**       download and work with NID data
 - **huc8example.py:**      divide a HUC8 into subbasins based on user-defined criteria
 

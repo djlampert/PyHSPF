@@ -693,8 +693,8 @@ class Preprocessor:
 
         # download all the gage time series data to the gagepath directory
 
-        nwisextractor.download_all(self.start, self.end, 
-                                   output = self.gagedirectory)
+        #nwisextractor.download_all(self.start, self.end, 
+        #                           output = self.gagedirectory)
 
         # create an instance of the NIDExtractor to extract data for the HUC8
 
@@ -733,6 +733,7 @@ class Preprocessor:
                              parallel       = parallel,
                              drainmax       = drainmax, 
                              extra_outlets  = extra_outlets,
+                             years          = (self.start.year, self.end.year),
                              watershedplots = False,
                              verbose        = verbose,
                              vverbose       = vverbose,
@@ -779,15 +780,31 @@ class Preprocessor:
             print('CDL data for {} exist\n'.format(self.HUC8))
             return
 
-        cdlextractor = CDLExtractor(self.CDL)
+        # make an instance of the CDLExtractor to use to get the data
+
+        cdlextractor = CDLExtractor(self.landusedata)
+
+        #cdlextractor = CDLExtractor(self.CDL)
 
         # download the data for each state for each year
 
-        cdlextractor.download_data(self.state, self.years)
+        #cdlextractor.download_data(self.state, self.years)
 
         # extract the CDL data for the watershed using the boundary shapefile
 
-        cdlextractor.extract_shapefile(self.subbasinfile, self.landusedata)
+        #cdlextractor.extract_shapefile(self.subbasinfile, self.landusedata)
+
+        # download the CDL data for the watershed for each year
+
+        for year in self.years:
+                
+            try:
+
+                cdlextractor.download_shapefile(self.subbasinfile, year)
+
+            except:
+
+                print('warning: data for {} are not available'.format(year))
 
         # check to see if CDL data are available for each year
 

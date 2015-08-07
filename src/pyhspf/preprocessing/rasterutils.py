@@ -39,8 +39,10 @@ def inside_box(p1, p2, p3, space = 0):
     else: return False
 
 def get_NAD1983_transform(dataset):
-    """Gets a GDAL transform to convert coordinate northings and eastings 
-    associated with the NAD 1983 projection to latitudes and longitudes."""
+    """
+    Gets a GDAL transform to convert coordinate northings and eastings 
+    associated with the NAD 1983 projection to latitudes and longitudes.
+    """
 
     # get the old coordinate system
 
@@ -49,17 +51,20 @@ def get_NAD1983_transform(dataset):
 
     # create the new coordinate system
 
-    nad83_wkt = \
-        """GEOGCS["NAD83",
-    DATUM["North_American_Datum_1983",
+    nad83_wkt = (
+        """
+        GEOGCS["NAD83",
+        DATUM["North_American_Datum_1983",
         SPHEROID["GRS 1980",6378137,298.257222101,
-            AUTHORITY["EPSG","7019"]],
+        AUTHORITY["EPSG","7019"]],
         AUTHORITY["EPSG","6269"]],
-    PRIMEM["Greenwich",0,
+        PRIMEM["Greenwich",0,
         AUTHORITY["EPSG","8901"]],
-    UNIT["degree",0.0174532925199433,
+        UNIT["degree",0.0174532925199433,
         AUTHORITY["EPSG","9108"]],
-    AUTHORITY["EPSG","4269"]]"""
+        AUTHORITY["EPSG","4269"]]
+        """
+        )
 
     new = osr.SpatialReference()
     new.ImportFromWkt(nad83_wkt)
@@ -71,8 +76,10 @@ def get_NAD1983_transform(dataset):
     return transform
 
 def get_degree_transform(dataset):
-    """Gets a GDAL transform to convert coordinate latitudes and longitudes
-    to northings and eastings associated with the NAD 1983 projection."""
+    """
+    Gets a GDAL transform to convert coordinate latitudes and longitudes
+    to northings and eastings associated with the NAD 1983 projection.
+    """
 
     # get the old coordinate system
 
@@ -81,17 +88,20 @@ def get_degree_transform(dataset):
 
     # create the new coordinate system
 
-    nad83_wkt = \
-        """GEOGCS["NAD83",
-    DATUM["North_American_Datum_1983",
+    nad83_wkt = (
+        """
+        GEOGCS["NAD83",
+        DATUM["North_American_Datum_1983",
         SPHEROID["GRS 1980",6378137,298.257222101,
-            AUTHORITY["EPSG","7019"]],
+        AUTHORITY["EPSG","7019"]],
         AUTHORITY["EPSG","6269"]],
-    PRIMEM["Greenwich",0,
+        PRIMEM["Greenwich",0,
         AUTHORITY["EPSG","8901"]],
-    UNIT["degree",0.0174532925199433,
+        UNIT["degree",0.0174532925199433,
         AUTHORITY["EPSG","9108"]],
-    AUTHORITY["EPSG","4269"]]"""
+        AUTHORITY["EPSG","4269"]]
+        """
+        )
 
     new = osr.SpatialReference()
     new.ImportFromWkt(nad83_wkt)
@@ -108,12 +118,91 @@ def get_pixel(x, x0, width):
     return int((x - x0) // width)
 
 def get_remainder(x, x0, width):
-    """returns the remainder for the pixel."""
+    """
+    returns the remainder for the pixel.
+    """
 
     return (x - x0) % width
+
+def get_cdl_meters(extent):
+    """
+    returns the bounding box coordinates in m for the Cropland Data Layer
+    for a given extent in longitude/latitude.
+    """
+
+    nad1983 = (
+        """
+        PROJCS["unnamed",
+        GEOGCS["NAD83",
+        DATUM["North_American_Datum_1983",
+        SPHEROID["GRS 1980",6378137,298.2572221010002,
+        AUTHORITY["EPSG","7019"]],
+        TOWGS84[0,0,0,0,0,0,0],
+        AUTHORITY["EPSG","6269"]],
+        PRIMEM["Greenwich",0],
+        UNIT["degree",0.0174532925199433],
+        AUTHORITY["EPSG","4269"]],
+        PROJECTION["Albers_Conic_Equal_Area"],
+        PARAMETER["standard_parallel_1",29.5],
+        PARAMETER["standard_parallel_2",45.5],
+        PARAMETER["latitude_of_center",23],
+        PARAMETER["longitude_of_center",-96],
+        PARAMETER["false_easting",0],
+        PARAMETER["false_northing",0],
+        UNIT["metre",1,AUTHORITY["EPSG","9001"]]]
+        """
+        ) 
+
+    # new coordinate system
+
+    degrees = (
+        """
+        GEOGCS["NAD83",
+        DATUM["North_American_Datum_1983",
+        SPHEROID["GRS 1980",6378137,298.257222101,
+        AUTHORITY["EPSG","7019"]],
+        AUTHORITY["EPSG","6269"]],
+        PRIMEM["Greenwich",0,
+        AUTHORITY["EPSG","8901"]],
+        UNIT["degree",0.0174532925199433,
+        AUTHORITY["EPSG","9108"]],
+        AUTHORITY["EPSG","4269"]]
+        """
+        )
+
+    # create a transform object to convert between the coordinate systems
+
+    old = osr.SpatialReference()
+    old.ImportFromWkt(degrees)
+
+    new = osr.SpatialReference()
+    new.ImportFromWkt(nad1983)
+
+    transform = osr.CoordinateTransformation(old, new) 
+
+    # transform the extent into the new coordinates
+
+    lonmin, latmin, lonmax, latmax = extent
+
+    points = zip([lonmin] * 2 + [lonmax] * 2, [latmin, latmax] * 2)
+
+    xs, ys = [], []
+
+    for p in points:
+
+        x, y, z = transform.TransformPoint(*p)
+
+        xs.append(x)
+        ys.append(y)
+
+    transformed = [min(xs), min(ys), max(xs), max(ys)]
+
+    return transformed
   
 def get_raster(filename, points, quiet = False):
-    """Reads the value of attributes in a raster file at a list of points."""
+    """
+    Reads the value of attributes in a raster file at a list of points.
+    """
 
     if quiet: gdal.PushErrorHandler('CPLQuietErrorHandler') 
 
