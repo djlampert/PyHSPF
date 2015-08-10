@@ -425,72 +425,81 @@ class CDLExtractor:
         its = self.destination, year
         local = '{}/{}landuse.tif'.format(*its)
 
-        # open the shapefile and get the extent
+        # local name for the error file
 
-        r = Reader(shapefile)
+        e = '{}/NASSerror{}.html'.format(self.destination, year)
 
-        xmin, ymin, xmax, ymax = r.bbox
+        # if the file has not been downloaded (or attempted), try to get it
 
-        # adjust to make the image a bit larger than the extent
+        if not os.path.isfile(local) and not os.path.isfile(e):
 
-        xmin, xmax = xmin - space * (xmax - xmin), xmax + space * (xmax - xmin)
-        ymin, ymax = ymin - space * (ymax - ymin), ymax + space * (ymax - ymin)
+            # open the shapefile and get the extent
 
-        # transform the coordinates to NAD83
+            r = Reader(shapefile)
 
-        extent = xmin, ymin, xmax, ymax
+            xmin, ymin, xmax, ymax = r.bbox
 
-        transformed = get_cdl_meters(extent)
+            # adjust to make the image a bit larger than the extent
 
-        # round to integers
+            d = xmax - xmin
+            xmin, xmax = xmin - space * d, xmax + space * d
+            d = ymax - ymin
+            ymin, ymax = ymin - space * d, ymax + space * d
 
-        x1 = round(transformed[0])
-        y1 = round(transformed[1])
-        x2 = round(transformed[2])
-        y2 = round(transformed[3])
+            # transform the coordinates to NAD83
+
+            extent = xmin, ymin, xmax, ymax
+
+            transformed = get_cdl_meters(extent)
+
+            # round to integers
+
+            x1 = round(transformed[0])
+            y1 = round(transformed[1])
+            x2 = round(transformed[2])
+            y2 = round(transformed[3])
                 
-        # request the file from the CDL server
+            # request the file from the CDL server
 
-        its = self.website, year, x1, y1, x2, y2
-        url = '{}/CDLService/GetCDLFile?year={}&bbox={},{},{},{}'.format(*its)
+            i = self.website, year, x1, y1, x2, y2
+            url = '{}/CDLService/GetCDLFile?year={}&bbox={},{},{},{}'.format(*i)
 
-        try:
+            try:
 
-            with request.urlopen(url) as f: p = f.read().decode()
+                with request.urlopen(url) as f: p = f.read().decode()
 
-        except request.HTTPError as error:
+            except request.HTTPError as error:
 
-            e = '{}/NASSerror{}.html'.format(self.destination, year)
-            print('the CDL server returned an error; the response ' +
-                  'can be viewed with a web browser in file:' +
-                  '\n\n{}\n'.format(e))
-            with open(e, 'w') as f: f.write(error.read().decode())
-            raise
+                print('the CDL server returned an error; the response ' +
+                      'can be viewed with a web browser in file:' +
+                      '\n\n{}\n'.format(e))
+                with open(e, 'w') as f: f.write(error.read().decode())
+                raise
 
-        # get the url of the processed file that is generated
+            # get the url of the processed file that is generated
 
-        url = p[p.index('<returnURL>') + 11:p.index('</returnURL>')]
+            url = p[p.index('<returnURL>') + 11:p.index('</returnURL>')]
 
-        # retrieve the file and save it to the local destination
+            # retrieve the file and save it to the local destination
 
-        print('downloading {} CDL data within '.format(year) +
-              '{:.4f}, {:.4f}, {:.4f}, {:.4f}\n'.format(*extent) +
-              'from {}\nto {}\n'.format(url, local))
+            print('downloading {} CDL data within '.format(year) +
+                  '{:.4f}, {:.4f}, {:.4f}, {:.4f}\n'.format(*extent) +
+                  'from {}\nto {}\n'.format(url, local))
                 
-        try: 
+            try: 
 
-            self.r_start = time.time()
-            request.urlretrieve(url, local, self.report)
-            self.years.append(year)
+                self.r_start = time.time()
+                request.urlretrieve(url, local, self.report)
+                self.years.append(year)
 
-        except:
+            except:
 
-            print('unable to download CDL data for {}'.format(year))
-            print('check that the requested data are available for ' +
-                  'the requested year on the server')
-            raise
+                print('unable to download CDL data for {}'.format(year))
+                print('check that the requested data are available for ' +
+                      'the requested year on the server')
+                raise
                     
-        print('')
+            print('')
 
     def download_data(self, 
                       state,

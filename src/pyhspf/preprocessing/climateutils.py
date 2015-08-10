@@ -65,7 +65,7 @@ def find_ghcnd(bbox,
         if verbose: 
 
             print('looking for GHCND stations in ' +
-                  '{}, {}, {}, {}...\n'.format(*bbox))
+                  '{:.4f}, {:.4f}, {:.4f}, {:.4f}...\n'.format(*bbox))
 
         filename = 'ghcnd-stations.txt'
 

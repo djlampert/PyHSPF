@@ -1,11 +1,11 @@
-# preprocess_07100008.py
+# preprocess_02040101.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# last updated: 05/25/2015
+# last updated: 08/09/2015
 # 
 # Purpose: Extracts GIS data from sources and builds the input file for HSPF
-# for a given set of assumptions for HUC 07100008, Lake Red Rock, IA.
+# for a given set of assumptions for HUC 02040101, Delaware River, NY + DE.
 
 import os, datetime
 

@@ -592,7 +592,8 @@ def merge_shapes(inputfile,
     if outputfile is None: output = '{}/merged'.format(os.getcwd())
 
     if os.path.isfile(outputfile + '.shp') and not overwrite:
-        if verbose: print('combined watershed shapefile %s exists' % outputfile)
+        if verbose: 
+            print('combined watershed shapefile {} exists'.format(outputfile))
         return
    
     if verbose: print('combining shapes from {}\n'.format(inputfile) + 
@@ -614,55 +615,6 @@ def merge_shapes(inputfile,
 
         print('error: unable to combine shapes')
         raise
-
-#    n = len(r.records())
-#
-#    try: 
-#        shapes  = []
-#        records = [] 
-#        bboxes  = []
-#
-#        for i in range(n):
-#            shape = r.shape(i)
-#            record = r.record(i)
-#
-#            shape_list = format_shape(shape.points)
-#
-#            for sh in shape_list:
-#                shapes.append(sh)
-#                records.append(record)
-#                bboxes.append(shape.bbox)
-#
-#        try: combined = combine_shapes(shapes, bboxes, 
-#                                       verbose = vverbose)
-#        except: 
-#            if verbose: print('trying alternate trace method')
-#            combined = combine_shapes(shapes, bboxes, skip = True, 
-#                                      verbose = vverbose)
-#
-#    except:
-#
-#        if verbose: print('trying alternate trace method')
-#        shapes  = []
-#        records = [] 
-#        bboxes  = []
-#        for i in range(n):
-#            shape = r.shape(i)
-#            record = r.record(i)
-#
-#            shape_list = format_shape(shape.points, omit = True)
-#
-#            for sh in shape_list:
-#                shapes.append(sh)
-#                records.append(record)
-#                bboxes.append(shape.bbox)
-#
-#        try:    combined = combine_shapes(shapes, bboxes, verbose = vverbose)
-#        except: 
-#            if verbose: print('trying alternate trace method')
-#            combined = combine_shapes(shapes, bboxes, skip = True,
-#                                      verbose = vverbose)
-#
 
     # create the new file with the merged shapes
 

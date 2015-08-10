@@ -2,7 +2,7 @@
 #                                                                             
 # David J. Lampert (djlampert@gmail.com)
 #                                                                             
-# last updated: 01/21/2014
+# last updated: 08/09/2015
 #                                                                              
 # Purpose: Contains the NHDPlusDelineator class to analyze the NHDPlus data 
 # for a watershed and subdivide it according to the criteria specified.
@@ -19,7 +19,9 @@ from .vectorutils import combine_shapes, merge_shapes
 from .rasterutils import get_raster, get_raster_on_poly, get_raster_in_poly
 
 class NHDPlusDelineator:
-    """A class to delineate a watershed using the NHDPlus data."""
+    """
+    A class to delineate a watershed using the NHDPlus data.
+    """
 
     def __init__(self, 
                  attributes, 
@@ -43,17 +45,23 @@ class NHDPlusDelineator:
         self.gagecomid  = None
         self.updown     = None
         
-    def get_distance2(self, p1, p2):
-        """Returns the square of the distance between two points."""
+    def get_distance2(self, 
+                      p1, 
+                      p2,
+                      ):
+        """
+        Returns the square of the distance between two points.
+        """
 
         return((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
 
     def closest_index(self, 
                       point, 
                       shapes, 
-                      warning = False
+                      warning = False,
                       ):
-        """Determines the index of the shape in the shapefile that is 
+        """
+        Determines the index of the shape in the shapefile that is 
         closest to the point.
         """
 
@@ -117,8 +125,12 @@ class NHDPlusDelineator:
             return None
         else: return matches[0]
 
-    def get_distance(self, p1, p2):
-        """Approximates the distance in kilometers between two points on the 
+    def get_distance(self, 
+                     p1, 
+                     p2,
+                     ):
+        """
+        Approximates the distance in kilometers between two points on the 
         Earth's surface designated in decimal degrees using an ellipsoidal 
         projection. per CFR 73.208 it is applicable for up to 475 kilometers.
         p1 and p2 are listed as (longitude, latitude).
@@ -140,10 +152,12 @@ class NHDPlusDelineator:
 
     def get_distance_vector(self, 
                             catchpoints, 
-                            closest
+                            closest,
                             ):
-        """Vectorized version of get_distance method 
-        (for computational efficiency)."""
+        """
+        Vectorized version of get_distance method 
+        (for computational efficiency).
+        """
 
         deg_rad = numpy.pi / 180
           
@@ -159,8 +173,12 @@ class NHDPlusDelineator:
     
         return numpy.sqrt(k1s**2 * dphis**2 + k2s**2 * dlams**2)
 
-    def get_centroid(self, points):
-        """Calculates the centroid of a polygon with paired x-y values."""
+    def get_centroid(self, 
+                     points,
+                     ):
+        """
+        Calculates the centroid of a polygon with paired x-y values.
+        """
 
         xs, ys = points[:, 0], points[:, 1]
 
@@ -179,9 +197,11 @@ class NHDPlusDelineator:
 
     def get_boundaries(self, 
                        shapefile, 
-                       space = 0.1
+                       space = 0.1,
                        ):
-        """Gets the boundaries for the plot."""
+        """
+        Gets the boundaries for the plot.
+        """
 
         boundaries = shapefile.bbox
 
@@ -200,7 +220,8 @@ class NHDPlusDelineator:
                    colormap, 
                    scale,
                    ):
-        """adds a rectangular raster image with corners located at the extents
+        """
+        Adds a rectangular raster image with corners located at the extents
         to a plot.
         """
 
@@ -248,7 +269,9 @@ class NHDPlusDelineator:
                    hatch = None, 
                    label = None,
                    ):
-        """Uses a list or array of points to generate a matplotlib patch."""
+        """
+        Uses a list or array of points to generate a matplotlib patch.
+        """
 
         vertices = [(point[0], point[1]) for point in points]
         vertices.append((points[0][0], points[0][1]))
@@ -265,8 +288,11 @@ class NHDPlusDelineator:
                                   label = label)
         return patch
 
-    def find_flowlines(self, points):
-        """Determines the comids of the flowlines in the flowline shapefile 
+    def find_flowlines(self, 
+                       points,
+                       ):
+        """
+        Determines the comids of the flowlines in the flowline shapefile 
         that correspond to the points argument.
         """
 
@@ -297,7 +323,9 @@ class NHDPlusDelineator:
     def find_comid(self, 
                    point,
                    ):
-        """Finds the comid of the flowline closest to the point."""
+        """
+        Finds the comid of the flowline closest to the point.
+        """
 
         # open the flowline shapefile
 
@@ -313,8 +341,12 @@ class NHDPlusDelineator:
 
         return flowlines.record(i)[comid_index]
 
-    def find_gagepoint(self, gageid):
-        """Finds the location of a gage in the gage file."""
+    def find_gagepoint(self, 
+                       gageid,
+                       ):
+        """
+        Finds the location of a gage in the gage file.
+        """
 
         # open the gage file
 
@@ -341,7 +373,9 @@ class NHDPlusDelineator:
     def find_gagecomid(self, 
                        gageid,
                        ):
-        """Finds the comid of the gage."""
+        """
+        Finds the comid of the gage.
+        """
         
         if self.gageid is not None:
 
@@ -373,7 +407,9 @@ class NHDPlusDelineator:
                              outletcomid, 
                              verbose = True
                              ):
-        """Finds the comids of all the flowlines upstream of the outletcomid."""
+        """
+        Finds the comids of all the flowlines upstream of the outletcomid.
+        """
 
         # open up the attribute file
 
@@ -424,7 +460,9 @@ class NHDPlusDelineator:
                                  plotfile     = 'watershed',
                                  verbose      = True,
                                  ):
-        """Delineates the watershed for the provided NWIS gage id."""
+        """
+        Delineates the watershed for the provided NWIS gage id.
+        """
 
         if output is None:              output = os.getcwd()
         elif not os.path.isdir(output): os.mkdir(output)
@@ -589,8 +627,10 @@ class NHDPlusDelineator:
                             plot         = None,
                             verbose      = True,
                             ):
-        """Delineates the watershed for the provided point using the NHDPlus
-        data for the given longitude, latitude."""
+        """
+        Delineates the watershed for the provided point using the NHDPlus
+        data for the given longitude, latitude.
+        """
 
         if output is None:              output = os.getcwd()
         elif not os.path.isdir(output): os.mkdir(output)
@@ -747,11 +787,13 @@ class NHDPlusDelineator:
                      tol = 0.1, 
                      min_slope = 0.00001
                      ):
-        """Returns the slope of the z-coordinate in the x-y plane between points
+        """
+        Returns the slope of the z-coordinate in the x-y plane between points
         p1 and p2.  Returns the min_slope if the points are too close together
         as specified by the tolerance (m).  Also return half the average length
         from the catchment boundary to the flowline (since the average length 
-        across each line is half the total length)."""
+        across each line is half the total length).
+        """
 
         length = self.get_distance_vector(catchpoints, closest)
         slope  = (catchpoints[:,2] - closest[:,2]) / length / 100000
@@ -764,9 +806,10 @@ class NHDPlusDelineator:
     def calculate_flowplane(self, 
                             flowline, 
                             catchment, 
-                            verbose = False
+                            verbose = False,
                             ):
-        """Gets the elevation data from the NED raster then estimates the value 
+        """
+        Gets the elevation data from the NED raster then estimates the value 
         of the overland flow plane length and slope.
         """
 
@@ -796,8 +839,13 @@ class NHDPlusDelineator:
 
         return f
 
-    def add_basin_landuse(self, year, landuse):
-        """Adds basin-wide land use data to the extractor."""
+    def add_basin_landuse(self, 
+                          year, 
+                          landuse,
+                          ):
+        """
+        Adds basin-wide land use data to the extractor.
+        """
 
         self.landuseyear = year
         self.landuse     = landuse
@@ -809,6 +857,9 @@ class NHDPlusDelineator:
                              landuseyear = 1988,
                              masslinkplot = None,
                              ):
+        """
+        Uses the data to build an instance of the Watershed class.
+        """
 
         # set the outlet comid
 
@@ -886,7 +937,7 @@ class NHDPlusDelineator:
             # calculate the centroid
 
             combined = [[float(x), float(y)] for x, y in catchment.points]
-            centroid = self.get_centroid(numpy.array(combined))
+            centroid = self.get_centroid(numpy.array(combined + [combined[0]]))
 
             # calculate the average elevation
 
@@ -986,7 +1037,8 @@ class NHDPlusDelineator:
                        verbose = False, 
                        overwrite = False,
                        ):
-        """Makes a schematic of the mass linkages between the various subbasins
+        """
+        Makes a schematic of the mass linkages between the various subbasins
         in a watershed.
         """
 
@@ -1147,6 +1199,7 @@ class NHDPlusDelineator:
         pyplot.axis('off')
 
         pyplot.savefig(output, dpi = 200)
+        pyplot.clf()
         pyplot.close()
 
     def plot_delineated_watershed(self,
@@ -1159,7 +1212,9 @@ class NHDPlusDelineator:
                                   show       = False,
                                   verbose    = True,
                                   ):
-        """Makes a plot of the delineated watershed."""
+        """
+        Makes a plot of the delineated watershed.
+        """
 
         if verbose: 
             print('generating plot of watershed for point\n')
@@ -1401,13 +1456,12 @@ class HUC8Delineator(NHDPlusDelineator):
         downup = {f: flowlines[f].up   for f in flowlines
                   if flowlines[f].comid in all_comids}
 
-        # check if there is an influent line
+        # check if there is an inlet
 
         inlets = []
         for f in downup:
-            if downup[f] != 0:
-                if flowlines[downup[f]].comid not in all_comids: 
-                    inlets.append(f)
+            if downup[f] != 0 and downup[f] not in downup:
+                inlets.append(f)
 
         if len(inlets) == 0:
 
@@ -1542,41 +1596,6 @@ class HUC8Delineator(NHDPlusDelineator):
 
         combined = combine_shapes(c.shapes(), verbose = vverbose)
 
-        #try: 
-        #
-        #    for i in range(n):
-        #        catchment = c.shape(i)
-        #        record = c.record(i)
-        #
-        #        shape_list = format_shape(catchment.points)
-        #        for s in shape_list:
-        #            shapes.append(s)
-        #            records.append(record)
-        #            bboxes.append(catchment.bbox)
-        #
-        #    try:   combined = combine_shapes(shapes, bboxes, verbose =vverbose)
-        #    except: combined = combine_shapes(shapes, bboxes, skip = True, 
-        #                                      verbose = vverbose)
-        #
-        #except: 
-        #
-        #    shapes  = []
-        #    records = [] 
-        #    bboxes  = []
-        #    for i in range(n):
-        #        catchment = c.shape(i)
-        #        record = c.record(i)
-        #
-        #        shape_list = format_shape(catchment.points, omit = True)
-        #        for s in shape_list:
-        #            shapes.append(s)
-        #            records.append(record)
-        #            bboxes.append(catchment.bbox)
-        #
-        #    try:   combined = combine_shapes(shapes, bboxes, verbose =vverbose)
-        #    except: combined = combine_shapes(shapes, bboxes, skip = True,
-        #                                      verbose = vverbose)
-
         # iterate through the catchments and get the elevation data from NED
         # then estimate the value of the overland flow plane length and slope
 
@@ -1636,7 +1655,7 @@ class HUC8Delineator(NHDPlusDelineator):
         # get the centroid and the average elevation
 
         combined = [[float(x), float(y)] for x, y in combined]
-        centroid = self.get_centroid(numpy.array(combined))
+        centroid = self.get_centroid(numpy.array(combined + [combined[0]]))
 
         Cx, Cy = round(centroid[0], 4), round(centroid[1], 4)
 
@@ -1676,7 +1695,8 @@ class HUC8Delineator(NHDPlusDelineator):
                            '{:.1f} seconds\n'.format(time.time() - t0))
 
     def get_flowlines(self,
-                      verbose = True):
+                      verbose = True
+                      ):
         """
         Returns the (formatted) flowline value added attributes.
         """
@@ -1697,6 +1717,10 @@ class HUC8Delineator(NHDPlusDelineator):
 
         missing = [f for f in flowlines 
                    if flowlines[f].comid not in catchments]
+
+        # keep track of removed flowlines
+
+        self.removed = {}
 
         for f in missing:
 
@@ -1728,7 +1752,8 @@ class HUC8Delineator(NHDPlusDelineator):
 
                 # remove flowlines without catchments
 
-                flowlines.pop(f, None)
+                removed = flowlines.pop(f)
+                self.removed[removed.hydroseq] = removed
 
             else:
 
@@ -1892,10 +1917,10 @@ class HUC8Delineator(NHDPlusDelineator):
 
         main = []
         for inlet in inlets:
-            flowline = hydroseqs[inlet]
+            flowline = flowlines[hydroseqs[inlet]]
             if flowline not in main: main.append(flowline)
-            while flowlines[f].down in flowlines:
-                flowline = flowlines[flowlines[f].down]
+            while flowline.down in flowlines:
+                flowline = flowlines[flowline.down]
                 if flowline not in main: main.append(flowline)
 
         # make the main channel if there is no inlet
@@ -1988,52 +2013,10 @@ class HUC8Delineator(NHDPlusDelineator):
                             print(outlet, 'is still disconnected')
                             print('')
 
-                            time.sleep(5)
-#                            exit()
+        # remove any outlets that are inlets (since this makes no sense)
 
-#        #for outlet in outlets:
-#
-#            flowline = flowlines[hydroseqs[outlet]]
-#
-#            # check that it isn't the watershed outlet
-#
-#            if flowline.down in flowlines:
-#
-#                # check if it's connected
-#
-#                if flowline not in main:
-#
-#                    if verbose: print(flowline.comid, 'is not connected')
-#
-#                    # then need to add outlets to connect to the main line
-#
-#                    while flowlines[flowline.down] not in main:
-#                        main.append(flowline)
-#                        flowline = flowlines[flowline.down]
-#                        if flowline.down not in flowlines: 
-#                            if verbose: print('reached the watershed outlet')
-#                            break
-#
-#                    if flowline.comid not in outlets: 
-#                        outlets.append(flowline.comid)
-#                        main.append(flowline)
-#                        if verbose: print('adding outlet %d for connectivity' % 
-#                                          flowline.comid)
-#
-#                    # add outlets for any others streams at the junction
-#
-#                    others = [v for k,v in flowlines.items() 
-#                              if (v.down == flowline.down and v != flowline)]
-#
-#                    for other in others:
-#
-#                        if other.comid not in outlets:
-#                            outlets.append(other.comid)
-#                            if verbose: print('adding another outlet ' +
-#                                              '%d for connectivity' % 
-#                                              other.comid)
-#
-#                elif verbose: print(flowline.comid, 'is connected')
+        outlets = [outlet for outlet in outlets
+                   if outlet not in inlets]
     
         # check the drainage areas to make sure subbasins are not too large
         # start at the main outlet and move upstream adding outlets as needed
@@ -2042,8 +2025,6 @@ class HUC8Delineator(NHDPlusDelineator):
 
         n = -1
         while len(outlets) != n:
-
-            if verbose: print('\nchecking outlet conditions\n')
 
             # move upstream and look at the changes in drainage area for 
             # each outlet
@@ -2056,8 +2037,8 @@ class HUC8Delineator(NHDPlusDelineator):
                 drain_area     = flowline.divarea
 
                 # check until reaching another outlet or the top of the 
-                # watershed additional checks for max basin drainage area 
-                # and major tributary
+                # watershed; additional checks for max basin drainage area 
+                # and major tributaries
 
                 while flowline.up not in boundaries:
 
@@ -2192,7 +2173,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
                 if inlet in gage_outlets:
 
-                    distances = [self.distance2(point, p) 
+                    distances = [self.get_distance(point, p) 
                                  for p in gagepoints]
                     closest   = distances.index(min(distances))
 
@@ -2352,12 +2333,15 @@ class HUC8Delineator(NHDPlusDelineator):
 
         shutil.copy(self.flowlines + '.prj', self.outletfile + '.prj')
 
+        if verbose: print('successfully subdivided watershed\n')
+
     def extract_flowlines(self, 
                           comids, 
                           output, 
-                          verbose = True
+                          verbose = True,
                           ):
-        """Makes a shapefile containing the major flowlines above a USGS gage
+        """
+        Makes a shapefile containing the major flowlines above a USGS gage
         within a HUC8.
         """
 
@@ -2416,9 +2400,10 @@ class HUC8Delineator(NHDPlusDelineator):
     def extract_catchments(self, 
                            comids, 
                            output, 
-                           verbose = True
+                           verbose = True,
                            ):
-        """Iterates through a catchment shapefile for a basin and makes a new
+        """
+        Iterates through a catchment shapefile for a basin and makes a new
         shapefile containing only catchments with comids from the "comids" list.
         """
 
@@ -2464,7 +2449,7 @@ class HUC8Delineator(NHDPlusDelineator):
     def combine_subbasin_flowlines(self,
                                    output,
                                    overwrite = False, 
-                                   verbose = True
+                                   verbose = True,
                                    ):
         """
         Combines outlet subbasin flowlines for an 8-digit hydrologic unit 
@@ -2529,9 +2514,11 @@ class HUC8Delineator(NHDPlusDelineator):
                        vverbose = False, 
                        form     = 'png',
                        ):
-        """Extracts catchments from the watershed catchment file for each 
+        """
+        Extracts catchments from the watershed catchment file for each 
         subbasin and then combines the catchments together and calculates 
-        slope parameters."""
+        slope parameters.
+        """
 
         if verbose: print('aggregating catchments into subbasins\n')
 
@@ -2670,9 +2657,10 @@ class HUC8Delineator(NHDPlusDelineator):
 
     def combine_subbasins(self, 
                           output,
-                          verbose = True
+                          verbose = True,
                           ):
-        """Combines outlet subbasins for an 8-digit hydrologic unit into a 
+        """
+        Combines outlet subbasins for an 8-digit hydrologic unit into a 
         single shapefile.  Assumes directory structure of:
 
         directory\HUC8\comids\combined.shp 
@@ -2883,8 +2871,10 @@ class HUC8Delineator(NHDPlusDelineator):
                        show = False, 
                        verbose = True,
                        ):
-        """Makes a plot of all the flowlines and catchments of a basin on top 
-        of a raster image file."""
+        """
+        Makes a plot of all the flowlines and catchments of a basin on top 
+        of a raster image file.
+        """
 
         if verbose: print('generating plot of watershed {}\n'.format(self.HUC8))
 
@@ -3190,4 +3180,5 @@ class HUC8Delineator(NHDPlusDelineator):
 
         if show: pyplot.show()
 
+        pyplot.clf()
         pyplot.close()

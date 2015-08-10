@@ -4,7 +4,7 @@
 #                                                                             #
 # David J. Lampert                                                            #
 #                                                                             #
-# last updated: 05/20/2015                                                    #
+# last updated: 08/09/2015                                                    #
 #                                                                             #
 # Purpose: Extracts hydrography, land use, and climate data from online       #
 # databases, spatially aggregates data, constructs precipitation and          #
@@ -66,7 +66,6 @@ class Preprocessor:
                  network      = None, 
                  output       = None, 
                  HUC8         = None,
-                 state        = None,
                  start        = None,
                  end          = None,
                  cdlaggregate = None,
@@ -89,7 +88,6 @@ class Preprocessor:
         self.network      = network
         self.output       = output
         self.HUC8         = HUC8
-        self.state        = state
         self.start        = start
         self.end          = end
         self.cdlaggregate = cdlaggregate
@@ -146,7 +144,6 @@ class Preprocessor:
 
     def set_parameters(self,
                        HUC8         = None,
-                       state        = None,
                        start        = None,
                        end          = None,
                        cdlaggregate = None,
@@ -157,7 +154,6 @@ class Preprocessor:
         """
 
         if HUC8         is not None:  self.HUC8         = HUC8
-        if state        is not None:  self.state        = state
         if start        is not None:  self.start        = start
         if end          is not None:  self.end          = end
         if cdlaggregate is not None:  self.cdlaggregate = cdlaggregate
@@ -211,7 +207,6 @@ class Preprocessor:
         required = {self.network:      'network directory location', 
                     self.output:       'output directory location', 
                     self.HUC8:         '8-digit hydrologic unit code', 
-                    self.state:        'state name', 
                     self.start:        'start date', 
                     self.end:          'end date', 
                     self.cdlaggregate: 'CDL aggregation file', 
@@ -693,8 +688,8 @@ class Preprocessor:
 
         # download all the gage time series data to the gagepath directory
 
-        #nwisextractor.download_all(self.start, self.end, 
-        #                           output = self.gagedirectory)
+        nwisextractor.download_all(self.start, self.end, 
+                                   output = self.gagedirectory)
 
         # create an instance of the NIDExtractor to extract data for the HUC8
 
@@ -784,27 +779,34 @@ class Preprocessor:
 
         cdlextractor = CDLExtractor(self.landusedata)
 
-        #cdlextractor = CDLExtractor(self.CDL)
-
-        # download the data for each state for each year
-
-        #cdlextractor.download_data(self.state, self.years)
-
-        # extract the CDL data for the watershed using the boundary shapefile
-
-        #cdlextractor.extract_shapefile(self.subbasinfile, self.landusedata)
-
         # download the CDL data for the watershed for each year
 
         for year in self.years:
                 
-            try:
+            p = '{}/{}landuse.tif'.format(self.landusedata, year)
+            e = '{}/NASSerror{}.html'.format(self.landusedata, year)
 
-                cdlextractor.download_shapefile(self.subbasinfile, year)
+            # if the file has not been downloaded (or attempted), try to get it
 
-            except:
+            if os.path.isfile(e):
 
-                print('warning: data for {} are not available'.format(year))
+                print('land use data for {} are unavailable'.format(year))
+
+            elif not os.path.isfile(p):
+
+                try:
+
+                    cdlextractor.download_shapefile(self.subbasinfile, year)
+
+                except:
+
+                    print('warning: data for {} are not available'.format(year))
+
+            else:
+
+                print('land use data for {} exist'.format(year))
+                
+        print('')
 
         # check to see if CDL data are available for each year
 

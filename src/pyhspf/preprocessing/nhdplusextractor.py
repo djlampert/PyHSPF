@@ -584,51 +584,10 @@ class NHDPlusExtractor:
     
         w.save(destination)
 
-    def overlaps(self, bbox1, bbox2):
-        """
-        Tests if the two bounding boxes overlap.
-        """
-
-        xmin1, ymin1, xmax1, ymax1 = bbox1
-        xmin2, ymin2, xmax2, ymax2 = bbox2
-
-        if ((xmin1 < xmax2 and xmax1 > xmin2) and
-            (ymin1 < ymax2 and ymax1 > ymin2)):
-
-            return True
-
-        else: return False
-
-    #def find_NED(self, catchmentfile):
-    #    """
-    #    Parses the elevation rasters to find the one where the HUC8 is
-    #    located.
-    #    """
-    #
-    #    shapefile = Reader(catchmentfile)
-    #
-    #    f = None
-    #    for nedfile in self.nedfiles:
-    #
-    #        t,v = get_raster_table(nedfile, shapefile.bbox, 'int32', 
-    #                               quiet = True)
-    #
-    #        if t is not None: 
-    #            f = nedfile
-    #            break
-    #
-    #    if f is not None: 
-    #        return f
-    #    else:
-    #        print('warning: unable to find NED file')
-    #        raise
-
     def extract_NED(self, 
                     nedfiles,
                     catchmentfile, 
                     destination,
-                    #NED, 
-                    #output, 
                     zmin = -100000,
                     space = 0.05, 
                     verbose = True,
@@ -671,7 +630,8 @@ class NHDPlusExtractor:
 
                 array, corner = get_raster_table(NED, 
                                                  [xmin, ymin, xmax, ymax], 
-                                                 dtype = 'int32')
+                                                 dtype = 'int32',
+                                                 quiet = quiet)
 
                 if values is None: values = array
 
@@ -857,8 +817,7 @@ class NHDPlusExtractor:
             if verbose: 
                 print('extracting the NED raster file for {}\n'.format(HUC8))
             cfile = '{}/{}'.format(output, catchmentfile)
-            #NED = self.find_NED(cfile)
-            self.extract_NED(self.nedfiles, cfile, p, verbose = vverbose)
+            self.extract_NED(self.nedfiles, cfile, p, verbose = verbose)
 
         end = time.time()
         t = end - start

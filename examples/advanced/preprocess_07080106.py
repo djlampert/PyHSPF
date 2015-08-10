@@ -2,7 +2,7 @@
 #
 # author: David J. Lampert (djlampert@gmail.com)
 #
-# last updated: 05/20/2015
+# last updated: 08/09/2015
 # 
 # Purpose: shows how to use the Preprocessor class to gather all the input
 # data needed to create an HSPF model for an 8-digit hydrologic unit code 
@@ -100,12 +100,6 @@ elif os.name == 'nt':
     network     = 'D:'
     destination = 'C:/HSPF_data'
 
-for d in network, destination:
-    if not os.path.isdir(d):
-        print('\ndirectory {} does not exist!'.format(d))
-        print('please make sure that a valid path has been specified\n')
-        raise
-
 # import the Preprocessor
 
 from pyhspf.preprocessing import Preprocessor
@@ -114,16 +108,9 @@ from pyhspf.preprocessing import Preprocessor
 
 HUC8 = '07080106'
 
-# name of the state
+# start and end dates (2001 to 2010)
 
-state = 'Iowa'
-
-# If the watershed is in more than one state, this will probably not work 
-# (this is a feature that should be added in the future).
-
-# start and end dates (1981 to 2011)
-
-start = datetime.datetime(1981, 1, 1)
+start = datetime.datetime(2001, 1, 1)
 end   = datetime.datetime(2011, 1, 1)
 
 # maximum drainage area for subbasins in square kilometers
@@ -145,21 +132,21 @@ landuse = 'lucs.csv'
 
 if __name__ == '__main__': 
 
-    # make an instance of the Preprocessor
-
+    # make an instance of the preprocessor
+    
     processor = Preprocessor()
 
-    # set up the directory locations
+    # set the paths to the source network files and the working directory for
+    # the preprocessing, etc.
 
     processor.set_network(network)
     processor.set_output(destination)
 
-    # set the simulation-specific parameters
+    # set the parameters for the processing
 
     processor.set_parameters(HUC8 = HUC8,
                              start = start,
                              end = end,
-                             state = state,
                              cdlaggregate = aggregation,
                              landuse = landuse)
 
@@ -187,15 +174,6 @@ if __name__ == '__main__':
 #                                HUC07 Watershed shapefile
 #
 #             Compressed NHDPlus 7-zip files
-#
-#       /CDL
-#             CDL_<year>_19.zip
-#             CDL_<year>_19.tif
-#             CDL_<year>_19.tif.vat.dbf
-#
-#             <year> ranges from 2000 forward (CDL)
-#             "19" is the state FIPS code for Iowa
-#             so this is all the crop land use data for Iowa
 #       
 #       /NID
 #             dams00x020 shapefile of dam attributes

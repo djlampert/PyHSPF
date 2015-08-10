@@ -37,10 +37,6 @@ from pyhspf.calibration   import AutoCalibrator
 
 HUC8 = '07080106'
 
-# two-digit state abbreviation for the CDL
-
-state = 'Iowa'
-
 # NWIS gage for the calibration
 
 gageid = '05472500'
@@ -126,7 +122,6 @@ if __name__ == '__main__':
     processor.set_parameters(HUC8 = HUC8,
                              start = start,
                              end = end,
-                             state = state,
                              cdlaggregate = aggregation,
                              landuse = landuse)
 

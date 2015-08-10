@@ -292,39 +292,48 @@ class NWISExtractor:
 
         for gage, day1, dayn, drain, state, nwis, ave, name in iters:
 
-            # filename to use for data
+            s = float('{}'.format(dayn)[:4])
 
-            filename = '{}/{}'.format(output, gage)
+            if start.year <= s:
 
-            if not os.path.exists(filename):
+                # filename to use for data
+
+                filename = '{}/{}'.format(output, gage)
+
+                if not os.path.exists(filename):
                 
-                gagestation = GageStation(gage, name, state, day1, dayn,
-                                          drain, ave, nwis)
+                    gagestation = GageStation(gage, name, state, day1, dayn,
+                                              drain, ave, nwis)
 
-                # download the daily discharge data if it exists
+                    # download the daily discharge data if it exists
 
-                try: 
+                    try: 
 
-                    gagestation.download_daily_discharge(start, end)
+                        gagestation.download_daily_discharge(start, end)
 
-                    # make a plot of the data
+                        # make a plot of the data
 
-                    if plot: gagestation.plot(filename)
+                        if plot: gagestation.plot(filename)
 
-                    # download the water quality data if it exists
+                        # download the water quality data if it exists
 
-                    try: gagestation.download_water_quality()
-                    except: 
-                        print('warning, unable to download water quality ' +
-                              'data for {}\n'.format(gage))
+                        try: gagestation.download_water_quality()
+                        except: 
+                            print('warning, unable to download water quality ' +
+                                  'data for {}\n'.format(gage))
 
-                    # save for later
+                        # save for later
 
-                    with open(filename, 'wb') as f: pickle.dump(gagestation, f)
+                        with open(filename, 'wb') as f: 
+                            pickle.dump(gagestation, f)
 
-                except: 
-                    print('warning, unable to download daily flow data ' +
-                          'for {}\n'.format(gage))
+                    except: pass
+
+            else:
+
+                its = gage, start, end
+                print('no data available for station ' +
+                      '{} for years {:%Y}-{:%Y}\n'.format(*its))
 
 if __name__ == '__main__':
 
