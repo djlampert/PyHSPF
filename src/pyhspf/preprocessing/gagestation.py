@@ -2,7 +2,7 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# Last updated: 01/10/2015
+# Last updated: 09/01/2015
 #
 # Contains the GageStation class that is used to extract, store and manipulate
 # data from the USGS National Water Information System gages.
@@ -14,10 +14,23 @@ from scipy      import stats
 from matplotlib import pyplot, dates
 
 class GageStation:
-    """A class to store data from a USGS NWIS gage station."""
+    """
+    A class to store data from a USGS NWIS gage station.
+    """
 
-    def __init__(self, gageid, name, state, day1, dayn, drain, ave, web):
-        """Create a gage and provide the basic information about it."""
+    def __init__(self, 
+                 gageid, 
+                 name, 
+                 state, 
+                 day1, 
+                 dayn, 
+                 drain, 
+                 ave, 
+                 web,
+                 ):
+        """
+        Create a gage and provide the basic information about it.
+        """
 
         self.gageid = gageid
         self.name   = name
@@ -28,9 +41,13 @@ class GageStation:
         self.ave    = float(ave)
         self.web    = web
 
-    def import_csv(self, csvfile, verbose = True):
-        """Import data directly from a csv file formatted like the NWIS 
-        website."""
+    def import_csv(self, 
+                   csvfile, 
+                   verbose = True,
+                   ):
+        """
+        Imports data directly from a csv file formatted like the NWIS website.
+        """
 
         with open(csvfile, 'r') as f:
             reader = csv.reader(f, delimiter = '\t')
@@ -46,16 +63,22 @@ class GageStation:
 
         # convert dates to datetime and flows to integers
 
-        self.gagedates = [datetime.datetime.strptime(d, '%Y-%m-%d') 
+        self.dailydates = [datetime.datetime.strptime(d, '%Y-%m-%d') 
                           for d in gagedates]
-        self.gageflows = [float(g) if g else None for g in gageflows]
+        self.dailyflows = [float(g) if g else None for g in gageflows]
 
-    def download_daily_discharge(self, start, end, verbose = True):
-        """Downloads the daily discharge data for an NWIS station for the 
-        dates (default set in the init method)."""
+    def download_daily_discharge(self, 
+                                 start, 
+                                 end, 
+                                 verbose = True,
+                                 ):
+        """
+        Downloads the daily discharge data for an NWIS station for the 
+        dates (default set in the init method).
+        """
 
         if verbose: print('attempting to download daily discharge data ' +
-                          'directly from NWIS for {}'.format(self.gageid))
+                          'from NWIS for {}'.format(self.gageid))
 
         t = start.year, start.month, start.day, end.year, end.month, end.day
 
@@ -77,9 +100,9 @@ class GageStation:
 
             org, gagename, gagedates, gageflows, gageflags = zip(*rows)
 
-            self.gagedates = [datetime.datetime.strptime(d, '%Y-%m-%d') 
+            self.dailydates = [datetime.datetime.strptime(d, '%Y-%m-%d') 
                               for d in gagedates]
-            self.gageflows = [float(g) if g else None for g in gageflows]
+            self.dailyflows = [float(g) if g else None for g in gageflows]
 
             if verbose: print('successfully downloaded data\n')
 
@@ -87,15 +110,79 @@ class GageStation:
 
             print('warning: unable to download daily discharge data\n')
             
-            self.gagedates = []
-            self.gageflows = []
+            self.dailydates = []
+            self.dailyflows = []
 
-    def download_water_quality(self, verbose = True):
-        """Downloads the water quality data for an NWIS station for the 
-        dates (default set in the init method)."""
+    def download_instant_flows(self,
+                               start,
+                               end,
+                               verbose = True,
+                               ):
+        """
+        Downloads the instantaneous flow data for the station.
+        """
+
+        if verbose: print('attempting to download instantaneous flow data ' +
+                          'from NWIS for {}'.format(self.gageid))
+
+        its = start.year, start.month, start.day, end.year, end.month, end.day
+
+        url = ('http://nwis.waterdata.usgs.gov/nwis/uv?' +
+               'cb_00060=on&format=rdb&site_no=' +
+               '{}&begin_date='.format(self.gageid) +
+               '{}-{:02d}-{:02d}&end_date={}-{:02d}-{:02d}'.format(*its) +
+               '&format=rdb_expanded&rdb_compression=value')
+
+        with io.StringIO(request.urlopen(url).read().decode('utf-8')) as input:
+            reader = csv.reader(input, delimiter = '\t')
+            rows = [row for row in reader]
+
+        # snip the headings and comments
+
+        try:
+
+            rows = [row for row in rows if row[0][0] != '#'][2:]
+
+            # organize the data by type
+
+            org, n, dates, tz, cfs, x  = zip(*rows)
+
+            self.instantaneous = []
+
+            for d, v in zip(dates, cfs):
+
+                try:
+
+                    yr, mo, da = int(d[:4]),    int(d[5:7]), int(d[8:10])
+                    hr, mi     = int(d[11:13]), int(d[14:16])
+
+                    t = datetime.datetime(yr, mo, da, hr, mi)
+
+                    try:
+
+                        value = float(v)
+                        self.instantaneous.append((t, value))
+
+                    except: pass
+
+                except: pass
+
+            if verbose: print('successfully downloaded data\n')
+
+        except: 
+
+            self.instantaneous = []
+            print('warning: unable to download instantaneous flow data\n')
+
+    def download_water_quality(self, 
+                               verbose = True,
+                               ):
+        """
+        Downloads the water quality data for an NWIS station.
+        """
 
         if verbose: print('attempting to download water quality data ' +
-                          'directly from NWIS for {}'.format(self.gageid))
+                          'from NWIS for {}'.format(self.gageid))
 
         l = (self.state, self.gageid)
 
@@ -110,6 +197,7 @@ class GageStation:
         # snip the headings and comments
 
         try:
+
             rows = [row for row in rows if row[0][0] != '#'][2:]
 
             # organize the data by type
@@ -122,6 +210,7 @@ class GageStation:
             for d, t, parm, r in zip(dates, times, parm_cds, results):
 
                 try:
+
                     yr, mo, da = int(d[:4]), int(d[5:7]), int(d[8:10])
 
                     try:    hr, mi = int(t[:2]), int(t[3:5])
@@ -141,20 +230,107 @@ class GageStation:
             if verbose: print('successfully downloaded data\n')
 
         except: 
+
             print('warning: unable to download water quality data\n')
             
             self.waterquality = {}
 
-    def plot(self, output, fmin = 0.001, titlesize = 12, axsize = 11):
-        """makes a plot of the flows over time and the flow-duration curve."""
+    def download_measurements(self,
+                              verbose = True,
+                              ):
+        """
+        Downloads all stage-discharge measurements for the station.
+        """
+
+        if verbose: print('attempting to download stage-discharge ' +
+                          'measurements from NWIS for {}'.format(self.gageid))
+
+        url = ('http://nwis.waterdata.usgs.gov/' +
+               'nwis/measurements?site_no={}'.format(self.gageid) +
+               '&format=rdb_expanded&rdb_compression=value')
+
+        with io.StringIO(request.urlopen(url).read().decode('utf-8')) as input:
+            reader = csv.reader(input, delimiter = '\t')
+            rows = [row for row in reader]
+
+        # store the data in a list
+
+        self.measurements = [] 
+
+        try:
+
+            # snip the headings and comments
+
+            rows = [row for row in rows if row[0][0] != '#'][2:]
+
+            (x, x, x, ds, x, x, m, x, hs, qs, x, x, x, fs, x, x,  
+             x, x, x, x, x, x, x, x, ws, areas, vs, x, x, x, x, 
+             x, x, x, x) = zip(*rows)
+
+            for d, h, q, f, w, a, v in zip(ds, hs, qs, fs, ws, areas, vs):
+
+                # d = date/time
+                # h = gage height (ft)
+                # q = flow (cfs)
+                # f = flag (quality?)
+                # w = width (ft)
+                # a = cross-sectional area (ft2)
+                # v = velocity (fps)
+
+                yr, mo, da = int(d[:4]), int(d[5:7]), int(d[8:10])
+
+                try:    hr, mi = int(d[11:13]), int(d[14:16])
+                except: hr, mi = 0, 0
+                
+                t = datetime.datetime(yr, mo, da, hr, mi)
+
+                try:
+
+                    q = float(q)
+                    h = float(h)
+                    w = float(w)
+                    v = float(v)
+                    a = float(a)
+
+                    # store the attributes in a dictionary structure
+
+                    data = {'height (ft)':     h,
+                            'width (ft)':      w,
+                            'area (ft2)':      a,
+                            'flow (cfs)':      q,
+                            'velocity (fps)':  v,
+                            'flag':            f,
+                            }
+
+                    self.measurements.append((t, data))
+
+                except: pass
+
+            if verbose: 
+
+                print('successfully downloaded data\n')
+
+        except:
+
+            print('warning: unable to download stage-discharge measurements\n')
+
+    def plot(self, 
+             output, 
+             fmin = 0.001, 
+             titlesize = 12, 
+             axsize = 11,
+             ):
+        """
+        Makes a plot of the flows over time and the flow-duration curve.
+        """
 
         fig = pyplot.figure(figsize = (8,8))
         s1 = fig.add_subplot(211)
         s2 = fig.add_subplot(212)
 
-        start, end = min(self.gagedates), max(self.gagedates)
+        start, end = min(self.dailydates), max(self.dailydates)
 
-        s1.plot_date(self.gagedates, self.gageflows, fmt = 'r-')
+        s1.plot_date(self.dailydates, self.dailyflows, fmt = 'r-')
         s1.set_title('Hydrograph for {}: {}'.format(self.gageid, self.name), 
                      size = titlesize)
         s1.set_xlim(start, end)
@@ -171,7 +347,7 @@ class GageStation:
 
         # copy the daily flows to a new list
 
-        observed_daily = [f if f > 0 else fmin for f in self.gageflows]
+        observed_daily = [f if f > 0 else fmin for f in self.dailyflows]
         observed_daily.sort()
 
         # get the length and cdf
@@ -205,11 +381,16 @@ class GageStation:
         pyplot.clf()
         pyplot.close()
 
-    def make_timeseries(self, start = None, end = None):
-        """returns a time series of daily flows."""
+    def make_timeseries(self, 
+                        start = None, 
+                        end = None,
+                        ):
+        """
+        Returns a time series of daily flows.
+        """
 
-        if start is None: start = self.gagedates[0]
-        if end is None: end = self.gagedates[-1]
+        if start is None: start = self.dailydates[0]
+        if end is None: end = self.dailydates[-1]
 
         tstep = datetime.timedelta(days = 1)
 
@@ -217,24 +398,24 @@ class GageStation:
 
         t = start
 
-        if start in self.gagedates:
-            i = self.gagedates.index(start)
+        if start in self.dailydates:
+            i = self.dailydates.index(start)
 
         else:
             
             print('warning, requested dates exceed available data' +
                   ', filling with Nones\n')
-            while t < self.gagedates[0]:
+            while t < self.dailydates[0]:
                 series.append(None)
                 t += tstep
 
             i = 0
 
-        if end <= self.gagedates[-1]:
+        if end <= self.dailydates[-1]:
 
             while t < end:
 
-                series.append(self.gageflows[i])
+                series.append(self.dailyflows[i])
                 t += tstep
                 i += 1
 
@@ -243,9 +424,9 @@ class GageStation:
             print('warning, requested dates exceed available data' +
                   ', filling with Nones\n')
 
-            while t < self.gagedates[-1]:
+            while t < self.dailydates[-1]:
 
-                series.append(self.gageflows[i])
+                series.append(self.dailyflows[i])
                 t += tstep
                 i += 1
 

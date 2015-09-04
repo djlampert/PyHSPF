@@ -2,12 +2,12 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# Last updated: 07/26/2014
+# Last updated: 08/31/2015
 #
-# contains a class to download and import data on daily streamflow gage 
-# from the National Water Information Service (NWIS). the example below
-# will download the source metadata file for the US, then download all
-# the daily flow and water quality data for the Patuxent watershed.
+# Contains the NWISExtractor class that can be used to download and import 
+# data on daily discharge, instantaneous streamflow, field stage-discharge
+# estimates, and water quality from the National Water Information Service 
+# (NWIS). 
 
 import shutil, os, pickle, zipfile, datetime
 
@@ -17,14 +17,16 @@ from urllib    import request
 from .gagestation import GageStation
 
 class NWISExtractor:
-    """A class to download the NWIS station source metadata for the USGS 
-    daily discharge stations, and then retrieve information for a particular
-    watershed (8-digit HUC).
+    """
+    A class to download the NWIS station source metadata for the USGS daily 
+    discharge stations, and then retrieve flow and water quality data
+    for a particular watershed (8-digit HUC).
     """
 
     def __init__(self, 
                  destination, 
                  url = 'http://water.usgs.gov/GIS/dsdl',
+                 gages = None,
                  ):
 
         self.url         = url
@@ -40,6 +42,8 @@ class NWISExtractor:
                       '{}'.format(destination))
                 raise
 
+        self.gages = gages
+
     def report(self, 
                n, 
                block, 
@@ -53,9 +57,11 @@ class NWISExtractor:
     def download_metadata(self,
                           webfile = 'USGS_Streamgages-NHD_Locations_Shape.zip', 
                           sfile   = 'USGS_Streamgages-NHD_Locations',
-                          verbose = True
+                          verbose = True,
                           ):
-        """Downloads the source data files."""
+        """
+        Downloads the source data files.
+        """
         
         # directory for output
 
@@ -77,6 +83,7 @@ class NWISExtractor:
             url = '{}/{}'.format(self.url, webfile)
             print('the source zip file for the NWIS metadata is not present\n')
             request.urlretrieve(url, zfile, self.report)
+            print('')
 
         elif verbose: 
 
@@ -95,9 +102,14 @@ class NWISExtractor:
 
         elif verbose: print('gage metadata {} is present\n'.format(self.NWIS))
 
-    def extract_HUC8(self, HUC8, output, gagefile = 'gagestations', 
-                     verbose = True):
-        """Extracts the USGS gage stations for a watershed from the gage 
+    def extract_HUC8(self, 
+                     HUC8, 
+                     output, 
+                     gagefile = 'gagestations', 
+                     verbose = True,
+                     ):
+        """
+        Extracts the USGS gage stations for a watershed from the gage 
         station shapefile into a shapefile for the 8-digit hydrologic unit 
         code of interest. 
         """
@@ -152,6 +164,7 @@ class NWISExtractor:
             w.save(sfile)
 
             if verbose: 
+
                 print('successfully extracted NWIS gage stations\n')
 
         elif verbose: 
@@ -160,8 +173,12 @@ class NWISExtractor:
 
         self.set_metadata(sfile)
 
-    def set_metadata(self, gagefile):
-        """Opens the gage file for the station metadata and saves it."""
+    def set_metadata(self, 
+                     gagefile,
+                     ):
+        """
+        Opens the gage file with the station metadata.
+        """
 
         # metadata for stations
 
@@ -218,10 +235,24 @@ class NWISExtractor:
                           start, 
                           end, 
                           output = None, 
-                          plot = True
+                          plot = True,
                           ):
-        """Downloads the daily flow and water quality data for the given
-        period of time for a particular gage in the metadata."""
+        """
+        Downloads the daily instantaneous flow and water quality data for the 
+        given period of time for a particular gage in the metadata.
+        """
+
+        if self.gages is None:
+
+            try:
+
+                f = '{}/USGS_Streamgages-NHD_Locations'.format(self.destination)
+                self.set_metadata(f)
+
+            except:
+
+                print('error: please specify the path to the metadata')
+                raise
 
         if gageid in self.gages:
 
@@ -247,6 +278,10 @@ class NWISExtractor:
 
                     gagestation.download_daily_discharge(start, end)
 
+                    # download the stage-discharge measurements
+
+                    gagestation.download_measurements()
+
                     # make a plot of the data
 
                     if plot: gagestation.plot(output)
@@ -258,11 +293,16 @@ class NWISExtractor:
                         print('warning, unable to download water quality ' +
                               'data for {}\n'.format(gage))
 
+                    # download the instantaneous flow data if it exists
+
+                    gagestation.download_instant_flows(start, end)
+
                     # save for later
 
                     with open(output, 'wb') as f: pickle.dump(gagestation, f)
 
                 except: 
+
                     print('warning, unable to download daily flow data ' +
                           'for {}\n'.format(gage))
 
@@ -277,10 +317,12 @@ class NWISExtractor:
                      start, 
                      end, 
                      output = None, 
-                     plot = True
+                     plot = True,
                      ):
-        """Downloads the daily flow data for the given period of time for 
-        all gages in the metadata."""
+        """
+        Downloads the daily flow data for the given period of time for 
+        all gages in the metadata.
+        """
 
         if output is None: output = 'gagestations'
         if not os.path.isdir(output): os.mkdir(output)
@@ -311,6 +353,10 @@ class NWISExtractor:
 
                         gagestation.download_daily_discharge(start, end)
 
+                        # download the stage-discharge measurements
+
+                        gagestation.download_measurements()
+
                         # make a plot of the data
 
                         if plot: gagestation.plot(filename)
@@ -321,6 +367,10 @@ class NWISExtractor:
                         except: 
                             print('warning, unable to download water quality ' +
                                   'data for {}\n'.format(gage))
+
+                        # download the instantaneous flow data if it exists
+
+                        gagestation.download_instant_flows(start, end)
 
                         # save for later
 
@@ -335,24 +385,3 @@ class NWISExtractor:
                 print('no data available for station ' +
                       '{} for years {:%Y}-{:%Y}\n'.format(*its))
 
-if __name__ == '__main__':
-
-    NWIS     = '{}/NWIS'.format(os.getcwd())
-    HUC8     = '02060006'
-    gage     = '01594670'
-    output   = 'HSPF_data'
-    gagefile = 'gagestations'
-    start    = datetime.datetime(1980, 1, 1)
-    end      = datetime.datetime(2010, 1, 1)
-
-    # create an instance of the NWIS extractor
-
-    extractor = NWISExtractor(NWIS)
-
-    # extract the gage stations for the HUC8
-
-    extractor.extract_HUC8(HUC8, output = '{}/{}'.format(output, gagefile))
-
-    # download the daily flow and water quality data for each of the stations
-
-    extractor.download_data('{}/{}'.format(output, gagefile), output = output)

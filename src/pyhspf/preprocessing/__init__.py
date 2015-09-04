@@ -13,6 +13,7 @@ __all__ = [
     'NHDPlusDelineator',
     'HUC8Delineator',
     'Climateprocessor',
+    'FtableCalculator',
     ]
 
 from .preprocessor      import Preprocessor
@@ -25,3 +26,4 @@ from .dbfutils          import read_dbf
 from .cdlextractor      import CDLExtractor
 from .climateprocessor  import ClimateProcessor
 from .etcalculator      import ETCalculator
+from .ftablecalculator  import FtableCalculator

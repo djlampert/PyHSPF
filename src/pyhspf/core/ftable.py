@@ -1,49 +1,81 @@
 #
-# Create FTABLES from flow and velocity for HSPF
+# Estimates FTABLES from flow and velocity for HSPF
 #
-# last updated: 3/18/2013
+# last updated: 09/02/2015
 # 
-# David J. Lampert
+# David J. Lampert (djlampert@gmail.com)
 #
 
 import math
 
-def get_h(f, v):
-    """Returns the bottom width (m) of a trapezoidal channel with flowrate "f" 
-    (cfs) and velocity "v" (fps) assuming a 1:1 side slope."""
+def get_h(f, 
+          v,
+          ):
+    """
+    Returns the bottom width (m) of a trapezoidal channel with flowrate "f" 
+    (cfs) and velocity "v" (fps) assuming a 1:1 side slope.
+    """
 
     return math.sqrt(f / v / 2 * 0.3048**2)
 
-def get_A(x, h):
-    """Returns the area of a trapezoid with bottom width "h" and height "x"."""
+def get_A(x, 
+          h,
+          ):
+    """
+    Returns the area of a trapezoid with bottom width "h" and height "x".
+    """
 
     return (x * h + x**2)
 
-def get_P(x, h, slope):
-    """Returns the wetted perimeter of a trapezoid with bottom width "h" and 
-    height "x" and side slope "slope"."""
+def get_P(x, 
+          h, 
+          slope,
+          ):
+    """
+    Returns the wetted perimeter of a trapezoid with bottom width "h" and 
+    height "x" and side slope "slope".
+    """
 
     factor = 1 / math.sin(math.atan(slope))
 
     return (h + 2 * factor * x)
 
-def manning_flow(A, P, S, n = 0.05):
-    """Estimates the flow (m3/s) using Manning's Equation for a given area 
-    "A" (m2), perimeter "P" (m), slope "S", and roughness coefficient "n"."""
+def manning_flow(A, 
+                 P, 
+                 S, 
+                 n = 0.05,
+                 ):
+    """
+    Estimates the flow (m3/s) using Manning's Equation for a given area 
+    "A" (m2), perimeter "P" (m), slope "S", and roughness coefficient "n".
+    """
 
     return (1 / n * A**(5/3) / P**(2/3) * S**0.5)
 
-def manning_avg(h, S, n = 0.05):
-    """Estimates the flow of a trapezoidal channel using manning's equation
-    assuming bottom width h, with 1:1 side slopes of height h."""
+def manning_avg(h, 
+                S, 
+                n = 0.05,
+                ):
+    """
+    Estimates the flow of a trapezoidal channel using manning's equation
+    assuming bottom width h, with 1:1 side slopes of height h.
+    """
 
     A = get_A(h, h)
     P = get_P(h, h, 1)
 
     return manning_flow(A, P, S, n = n)
     
-def make_ftable(f, v, L, s, s0 = 1, s1 = 0.5, s2 = 0.5):
-    """Makes an ftable for a reach based on some assumptions about the 
+def make_ftable(f, 
+                v, 
+                L, 
+                s, 
+                s0 = 1, 
+                s1 = 0.5, 
+                s2 = 0.5,
+                ):
+    """
+    Makes an ftable for a reach based on some assumptions about the 
     geometry of the flood plain detailed below.
 
     f  -- average flow (cfs)
@@ -121,29 +153,34 @@ def make_ftable(f, v, L, s, s0 = 1, s1 = 0.5, s2 = 0.5):
     
     return ftable
 
-#f = 10   # flow, cfs
-#v = 5    # velocity, fps
-#L = 10   # reach length, km
-#s = 0.02 # reach slope
-
-#ftable = make_ftable(f, v, L, s)
-
-#for row in ftable: print ('%10.4f  %10.4f %10.4f' % (row[0], row[1], row[2]))
-
-def discharge_constant(f, h):
-    """Calculates the discharge constant for the flow (m3/s) at a given 
-    depth (m)."""
+def discharge_constant(f, 
+                       h,
+                       ):
+    """
+    Calculates the discharge constant for the flow (m3/s) at a given 
+    depth (m).
+    """
 
     return (f / h**1.5)
 
-def discharge(k, h):
-    """Calculates the flow using the discharge equation/constant (assumes units
-    are consistent)."""
+def discharge(k, 
+              h,
+              ):
+    """
+    Calculates the flow using the discharge equation/constant (assumes units
+    are consistent).
+    """
 
     return (k * h**1.5)
 
-def lake_ftable(f, v, L, s, dam):
-    """Makes an ftable for a lake reach based on a dam.
+def lake_ftable(f, 
+                v, 
+                L, 
+                s, 
+                dam,
+                ):
+    """
+    Makes an ftable for a lake reach based on a dam.
 
     f   -- average flow (cfs)
     v   -- average velocity (fps)
