@@ -173,23 +173,17 @@ for c in comids:
 
     length  = flowline.length   # km
     qavg    = flowline.flow     # ft3/s
-    vavg    = flowline.velocity # ft/s
-    h2      = flowline.maxelev  # cm
-    h1      = flowline.minelev  # cm
     
-    # convert the units and calculate the slope
+    # convert the units and calculate the slope (set min at 0.0001)
 
     qavg = qavg * 0.3048**3
-    vavg = vavg * 0.3048
-    slope = max((h2 - h1) / length / 100000, 0.00002)
 
-    its = comid, length, qavg, vavg, slope
-    print('comid: {}, L: {}, Q: {:.4f}, V: {:.4f}, S: {:.6f}'.format(*its))
+    i = c, length, qavg
+    print('Reach comid: {}, length: {} km, average flow: {:.4f} cfs'.format(*i))
 
-    ftable = calculator.extend_ftable(qref, length, qavg, vavg, slope, 
-                                      units = units)
+    ftable = calculator.extend_ftable(qref, qavg, length, units = units)
 
-    print('FTABLE for reach {}:\n'.format(c))
+    print('Estimated FTABLE for reach {}:\n'.format(c))
     for row in ftable: print('{:15.4f} {:15.4f} {:15.4f} {:15.4f}'.format(*row))
     print('')
 

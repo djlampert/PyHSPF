@@ -50,6 +50,7 @@ from .nhdplusextractor import NHDPlusExtractor
 from .nwisextractor    import NWISExtractor
 from .nidextractor     import NIDExtractor
 from .delineators      import HUC8Delineator
+from .ftablecalculator import FtableCalculator
 from .cdlextractor     import CDLExtractor
 from .climateprocessor import ClimateProcessor
 from .etcalculator     import ETCalculator
@@ -565,9 +566,9 @@ class Preprocessor:
         
         with open(self.hsolar, 'rb') as f: s, t, data = pickle.load(f)
 
-        # convert from W-hr/m2 to langley/interval (langley/hr)
+        # convert from W/m2 to langley/interval (langley/hr)
 
-        factor = 0.001434
+        factor = 0.001434 * t
 
         solar = [s * factor for s in data]
 
@@ -765,7 +766,9 @@ class Preprocessor:
                                       verbose = verbose,
                                       )
 
-    def extract_CDL(self, plots = True):
+    def extract_CDL(self, 
+                    plots = True,
+                    ):
         """
         Extract cropland data from the NASS CDL.
         """
@@ -870,7 +873,11 @@ class Preprocessor:
                     print('warning: unable to calculate land use for year ' +
                           '{}; check data availability'.format(year))
 
-    def build_watershed(self, masslink = True):
+    def build_watershed(self, 
+                        regression = True,
+                        masslink = True,
+                        verbose = True,
+                        ):
         """
         Method to build the Watershed data structure that is the input to an
         HSPFModel using data acquired from other PyHSPF utilities. The method
@@ -899,13 +906,41 @@ class Preprocessor:
 
         subbasins = {}
 
-        # create a dictionary to keep track of any subbasins that are inlets
+        # create a dictionary structure to keep track of inlets
 
         inlets = {}
 
-        # create a dictionary to store subbasin areas
+        # create a dictionary structure to store subbasin areas
 
         areas = {}
+
+        # open up the outlet file and see if the subbasin has a gage or dam
+
+        sf = Reader(self.outletfile)
+
+        records = sf.records()
+
+        comid_index = sf.fields.index(['COMID',    'N',  9, 0]) - 1
+        nid_index   = sf.fields.index(['NIDID',    'C',  7, 0]) - 1
+        nwis_index  = sf.fields.index(['SITE_NO',  'C', 15, 0]) - 1
+        flow_index  = sf.fields.index(['AVG_FLOW', 'N', 15, 3]) - 1
+
+        # make dictionaries of subbasins with dams and gages
+
+        nids = {'{}'.format(r[comid_index]):r[nid_index] for r in records 
+                if isinstance(r[nid_index], str)}
+
+        nwiss = {'{}'.format(r[comid_index]):r[nwis_index] 
+                 for r in records 
+                 if not isinstance(r[nwis_index], bytes)}
+
+        # make a default gage with the largest flow to use for FTABLE generation
+
+        avg_flows = {r[nwis_index]: r[flow_index]
+                     for r in records
+                     if not isinstance(r[nwis_index], bytes)}
+
+        default_gage = max(avg_flows, key = avg_flows.get)
 
         # read in the flow plane data into an instance of the Subbasin class
 
@@ -933,6 +968,23 @@ class Preprocessor:
 
             subbasins[comid] = subbasin
             areas[comid]     = tot_area
+
+        # open up the flowline VAA file to use to establish mass linkages
+
+        with open(self.VAAfile, 'rb') as f: flowlines = pickle.load(f)
+            
+        # create a dictionary to connect the comids to hydroseqs
+
+        hydroseqs = {'{}'.format(flowlines[f].comid): 
+                     flowlines[f].hydroseq for f in flowlines}
+
+        # create a dictionary linking upstream and downstream reach comids
+
+        connections = {}    
+        for c in hydroseqs:
+            f = flowlines[hydroseqs[c]].down
+            if f in flowlines:
+                connections[c] = '{}'.format(flowlines[f].comid)
 
         # read in the stream reach data to an instance of the Subbasin class
 
@@ -970,29 +1022,112 @@ class Preprocessor:
 
             if isinstance(gnis, bytes): gnis = ''
 
-            subbasin = subbasins[outcomid]
+            # average in and out flow
 
             flow = (inflow + outflow) / 2
+
+            subbasin = subbasins[outcomid]
+
+            if outcomid in nwiss:
+
+                # if the subbasin has a gage, find the measurements
+
+                gageid = nwiss[outcomid]
+
+                if verbose:
+
+                    its = gageid, outcomid
+                    print('using measurements from ' +
+                          '{} to estimate the reach FTABLE for {}'.format(*its))
+
+                # path to the data file
+
+                gagefile = '{}/{}'.format(self.gagedirectory, gageid)
+
+                # make an instance of the FtableCalculator to use to compute
+                # the FTABLE for the reach
+
+                calculator = FtableCalculator(gagefile)
+
+                # perform a regression on the measured reach data
+
+                calculator.calculate_regressions()
+
+                # calculate the FTABLE use the slope length
+
+                ftable = calculator.create_ftable(slopelen, units = 'Metric')
+
+                # plot the results of the correlations
+
+                its = self.gagedirectory, gageid
+                regression_plot = '{}/{}regression'.format(*its)
+                if regression and not os.path.isfile(regression_plot + '.png'):
+                    calculator.plot_regressions(output = regression_plot)
+
+            elif outcomid not in nids:
+
+                if verbose:
+
+                    print('searching for first gage downstream of ' +
+                          '{}'.format(outcomid))
+                
+                # find the downstream gage
+
+                comid = outcomid
+
+                while comid not in nwiss and comid in connections:
+                    comid = connections[comid]
+
+                if comid in nwiss:
+                    gageid = nwiss[comid]
+
+                    if verbose:
+
+                        print('found downstream gage {}'.format(nwiss[comid]))
+
+                else:
+
+                    gageid = default_gage
+                    comid = {v:k for k,v in nwiss.items()}[gageid]
+
+                    if verbose:
+
+                        print('unable to find downstream gage; using default ' +
+                              'gage {}'.format(gageid))
+
+                # path to the data file
+
+                gagefile = '{}/{}'.format(self.gagedirectory, gageid)
+
+                # make an instance of the FtableCalculator to use to compute
+                # the FTABLE for the reach
+
+                calculator = FtableCalculator(gagefile)
+
+                # perform a regression on the measured reach data
+
+                calculator.calculate_regressions()
+
+                # get the flowline VAAs for the gage comid and subbasin
+
+                gageflow  = flowlines[hydroseqs[comid]].flow * 0.3048**3
+                reachflow = outflow * 0.3048**3
+            
+                # extrapolate the FTABLE from the gage data
+
+                ftable = calculator.extend_ftable(gageflow, reachflow, slopelen,
+                                                  units = 'Metric')
+
+            else:
+
+                # it has a dam so deal with it separately
+
+                ftable = None
+
             subbasin.add_reach(gnis, maxelev, minelev, slopelen, flow = flow, 
-                               velocity = velocity, traveltime = traveltime)
+                               velocity = velocity, traveltime = traveltime,
+                               ftable = ftable)
             inlets[outcomid] = incomid
-
-        # open up the outlet file and see if the subbasin has a gage or dam
-
-        sf = Reader(self.outletfile)
-
-        records = sf.records()
-
-        comid_index = sf.fields.index(['COMID',   'N',  9, 0]) - 1
-        nid_index   = sf.fields.index(['NIDID',   'C',  7, 0]) - 1
-        nwis_index  = sf.fields.index(['SITE_NO', 'C', 15, 0]) - 1
-
-        nids = {'{}'.format(r[comid_index]):r[nid_index] for r in records 
-                if isinstance(r[nid_index], str)}
-
-        nwiss = {'{}'.format(r[comid_index]):r[nwis_index] 
-                 for r in records 
-                 if r[nwis_index] is not None}
 
         # open up the dam file and read in the information for the dams
 
@@ -1014,13 +1149,13 @@ class Preprocessor:
         nstor_index = sf.fields.index(['NORMAL_STO', 'N', 19,  11]) - 1
         area_index  = sf.fields.index(['SURF_AREA',  'N', 19,  11]) - 1
 
-        # iterate through the subbasins and see if they have a dam
+        # iterate through the subbasins and see if they have a dam 
 
         for comid, subbasin in subbasins.items():
 
             if comid in nids:
 
-                # if the subbasin has a dam, find the data info in the file
+                # if the subbasin has a dam, find the data in the file
 
                 nid = nids[comid]
 
@@ -1079,15 +1214,6 @@ class Preprocessor:
         # create an instance of the Watershed class
 
         watershed = Watershed(self.HUC8, subbasins)
-
-        # open up the flowline VAA file to use to establish mass linkages
-
-        with open(self.VAAfile, 'rb') as f: flowlines = pickle.load(f)
-            
-        # create a dictionary to connect the comids to hydroseqs
-
-        hydroseqs = {'{}'.format(flowlines[f].comid): 
-                     flowlines[f].hydroseq for f in flowlines}
 
         # establish the mass linkages using an "updown" dictionary
 

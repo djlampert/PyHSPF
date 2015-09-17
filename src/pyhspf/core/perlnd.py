@@ -8,7 +8,9 @@
 # last updated: 01/10/2015
 
 class Perlnd:
-    """A class for a pervious land segment for an HSPF model."""
+    """
+    A data structure for a pervious land segment for an HSPF model.
+    """
 
     def __init__(self, 
                  operation, 
@@ -330,9 +332,11 @@ class Perlnd:
                        UZSN = 20., 
                        NSUR = 0.1, 
                        INTFW = 10., 
-                       IRC = 0.6
+                       IRC = 0.6,
                        ):
-        """Sets the values for parameters that can vary by month but don't."""
+        """
+        Sets the values for parameters that can vary by month but don't.
+        """
 
         self.CEPSC = CEPSC # interception storage capacity
         self.UZSN  = UZSN  # upper zone nominal storage
@@ -342,23 +346,29 @@ class Perlnd:
         #self.LZETP = LZETP # lower zone ET parameter
 
     def get_pwat_parm4(self):
-        """Returns the PWAT-PARM4 parameters as a tuple."""
+        """
+        Returns the PWAT-PARM4 parameters as a tuple.
+        """
 
         return (self.operation, self.CEPSC, self.UZSN, self.NSUR, self.INTFW,
                 self.IRC, self.LZETP)
 
     def set_pwat_parm5(self, 
                        FZG = 0.0394, 
-                       FZGL = 0.1
+                       FZGL = 0.1,
                        ):
-        """Set the values for the parameters relating the effects of ice to
-        infiltration rate."""
+        """
+        Set the values for the parameters relating the effects of ice to
+        infiltration rate.
+        """
 
         self.FZG  = FZG
         self.FZGL = FZGL
 
     def get_pwat_parm5(self):
-        """Return the PWAT-PARM5 parameters as a tuple."""
+        """
+        Return the PWAT-PARM5 parameters as a tuple.
+        """
 
         return (self.operation, self.FZG, self.FZGL)
 
@@ -366,9 +376,11 @@ class Perlnd:
                        GWDATM = None, 
                        PCW = 0.4, 
                        PGW = 0.4, 
-                       UPGW = 0.4
+                       UPGW = 0.4,
                        ):
-        """Sets the values of the high water table parameters."""
+        """
+        Sets the values of the high water table parameters.
+        """
 
         if GWDATM is None: self.GWDATM = self.BELV - 5
         else:              self.GWDATM = GWDATM
@@ -378,7 +390,9 @@ class Perlnd:
         self.UPGW = UPGW  # upper gravitational water porosity
 
     def get_pwat_parm6(self):
-        """Returns the PWAT-PARM6 parameters as a tuple."""
+        """
+        Returns the PWAT-PARM6 parameters as a tuple.
+        """
         
         return (self.operation, self.MELEV, self.BELV, self.GWDATM, self.PCW,
                 self.PGW, self.UPGW)
@@ -390,9 +404,11 @@ class Perlnd:
                        IFWSC = 20., 
                        DELTA = 0.025, 
                        UELFAC = 4., 
-                       LELFAC = 2.5
+                       LELFAC = 2.5,
                        ):
-        """Sets the values for the high water table parameters."""
+        """
+        Sets the values for the high water table parameters.
+        """
 
         self.STABNO = STABNO  # ftable number
         self.SRRC   = SRRC    # surface runoff recession coefficient
@@ -403,7 +419,9 @@ class Perlnd:
         self.LELFAC = LELFAC  # multiplier for lower zone storage capacity
 
     def get_pwat_parm7(self):
-        """Returns the values for PWAT-PARM7 as a tuple."""
+        """
+        Returns the values for PWAT-PARM7 as a tuple.
+        """
 
         return (self.operation, self.STABNO, self.SRRC, self.SREXP, self.IFWSC,
                 self.DELTA, self.UELFAC, self.LELFAC)
@@ -415,9 +433,11 @@ class Perlnd:
                        IFWS = 0., 
                        LZS = None, 
                        AGWS = 0., 
-                       GWVS = 0.
+                       GWVS = 0.,
                        ):
-        """Sets the initial values for the state variables for PWATER."""
+        """
+        Sets the initial values for the state variables for PWATER.
+        """
 
         self.CEPS = CEPS
         self.SURS = SURS
@@ -434,13 +454,20 @@ class Perlnd:
         else:           self.LZS = LZS
 
     def get_pwat_state(self):
-        """Returns the initial values for the state variables for PWATER."""
+        """
+        Returns the initial values for the state variables for PWATER.
+        """
 
         return (self.operation, self.CEPS, self.SURS, self.UZS, self.IFWS, 
                 self.LZS, self.AGWS, self.GWVS)
 
-    def set_monthly(self, name, values = None):
-        """Returns a list of the monthly values of the parameter "name." """
+    def set_monthly(self, 
+                    name, 
+                    values = None,
+                    ):
+        """
+        Returns a list of the monthly values of the parameter "name." 
+        """
 
         # establish monthly variable value lists
 
@@ -462,8 +489,12 @@ class Perlnd:
             if name == 'IRC':      self.monIRC   = self.IRCdefaults
             if name == 'LZETPARM': self.monLZETP = self.LZETPdefaults
 
-    def get_monthly(self, name):
-        """Returns a list of the monthly values of the parameter "name." """
+    def get_monthly(self, 
+                    name,
+                    ):
+        """
+        Returns a list of the monthly values of the parameter "name." 
+        """
 
         if name == 'INTERCEP': return self.monCEPSC
         if name == 'UZSN':     return self.monUZSN
@@ -472,35 +503,55 @@ class Perlnd:
         if name == 'IRC':      return self.monIRC
         if name == 'LZETPARM': return self.monLZETP
 
-    def set_atemp_dat(self, ELDAT = 0., AIRTMP = 0.):
-        """Sets the data for adjusting gage temperature to land segment temp."""
+    def set_atemp_dat(self, 
+                      ELDAT = 0., 
+                      AIRTMP = 0.,
+                      ):
+        """
+        Sets the data for adjusting gage temperature to land segment temp.
+        """
 
         self.ELDAT  = ELDAT  # elevation difference between gage and segment (m)
         self.AIRTMP = AIRTMP # initial temperature (C)
 
     def get_atemp_dat(self):
-        """Returns the ATEMP-DAT values."""
+        """
+        Returns the ATEMP-DAT values.
+        """
 
         return (self.operation, self.ELDAT, self.AIRTMP)
 
-    def set_ice_flag(self, ICEFG = 1):
-        """Sets the flag for ice simulation."""
+    def set_ice_flag(self, 
+                     ICEFG = 1,
+                     ):
+        """
+        Sets the flag for ice simulation.
+        """
         
         self.ICEFG = ICEFG # ice formation flag
 
     def get_ice_flag(self):
-        """Returns the values of ICE-FLAG as a tuple."""
+        """
+        Returns the values of ICE-FLAG as a tuple.
+        """
 
         return (self.operation, self.ICEFG)
 
-    def set_snow_flags(self, SNOPFG = 0, VKMFG = 0):
-        """Sets the flags for the snow module."""
+    def set_snow_flags(self, 
+                       SNOPFG = 0, 
+                       VKMFG = 0,
+                       ):
+        """
+        Sets the flags for the snow module.
+        """
 
         self.SNOPFG = SNOPFG # snow melt algorithm (0: energy, 1: temp index)
         self.VKMFG  = VKMFG  # monthly variable degree day flag 
 
     def get_snow_flags(self):
-        """Returns the SNOW-FLAGS as a tuple."""
+        """
+        Returns the SNOW-FLAGS as a tuple.
+        """
 
         return (self.operation, self.SNOPFG, self.VKMFG)
 
@@ -509,9 +560,11 @@ class Perlnd:
                        SNOWCF = 1., 
                        COVIND = 10., 
                        KMELT = 0., 
-                       TBASE = 0.
+                       TBASE = 0.,
                        ):
-        """Sets the snow melt parameter values. Note first two pre-defined."""
+        """
+        Sets the snow melt parameter values. Note first two pre-defined.
+        """
 
         #self.LAT    = LAT   # latitude
         #self.MELEV  = MELEV # mean elevation (m)
@@ -522,7 +575,9 @@ class Perlnd:
         self.TBASE  = TBASE  # reference temperature index (C)
 
     def get_snow_parm1(self):
-        """Returns the SNOW-PARM1 values as a tuple."""
+        """
+        Returns the SNOW-PARM1 values as a tuple.
+        """
 
         return (self.operation, self.lat, self.MELEV, self.SHADE, self.SNOWCF,
                 self.COVIND, self.KMELT, self.TBASE)
@@ -533,9 +588,11 @@ class Perlnd:
                        SNOEVP = 0.1, 
                        CCFACT = 1., 
                        MWATER = 0.03, 
-                       MGMELT = 0.25
+                       MGMELT = 0.25,
                        ):
-        """Sets snowpack parameter values."""
+        """
+        Sets snowpack parameter values.
+        """
 
         self.RDCSN  = RDCSN  # snow density relative to water
         self.TSNOW  = TSNOW  # air temperature where snow occurs
@@ -545,7 +602,9 @@ class Perlnd:
         self.MGMELT = MGMELT # maximum snowmelt rate (mm/day)
 
     def get_snow_parm2(self):
-        """Returns the SNOW-PARM2 values as a tuple."""
+        """
+        Returns the SNOW-PARM2 values as a tuple.
+        """
 
         return (self.operation, self.RDCSN, self.TSNOW, self.SNOEVP, 
                 self.CCFACT, self.MWATER, self.MGMELT)
@@ -556,10 +615,12 @@ class Perlnd:
                        packwatr = 0., 
                        RDENPF = 0.2, 
                        DULL = 400., 
-                       PAKTMP = 0.
+                       PAKTMP = 0.,
                        ):
-        """Sets the initial snow pack conditions. Note all are in water-
-        equivalent units."""
+        """
+        Sets the initial snow pack conditions. Note all are in water-
+        equivalent units.
+        """
 
         self.packsnow = packsnow  # snow in pack (mm water)
         self.packice  = packice   # ice in snow pack (mm water)
@@ -569,7 +630,9 @@ class Perlnd:
         self.PAKTMP   = PAKTMP    # mean temperature of snow pack (C)
 
     def get_snow_init1(self):
-        """Returns the values of SNOW-INIT1 as a tuple."""
+        """
+        Returns the values of SNOW-INIT1 as a tuple.
+        """
 
         return (self.operation, self.packsnow, self.packice, self.packwatr,
                 self.RDENPF, self.DULL, self.PAKTMP)
@@ -577,32 +640,40 @@ class Perlnd:
     def set_snow_init2(self, 
                        COVINX = 10., 
                        XLNMLT = 2.5, 
-                       SKYCLR = 0.
+                       SKYCLR = 0.,
                        ):
-        """Sets the initial values of other snow parameters."""
+        """
+        Sets the initial values of other snow parameters.
+        """
 
         self.COVINX = COVINX # snow pack depth needed to cover segment (mm)
         self.XLNMLT = XLNMLT # increment to ice storage in the pack
         self.SKYCLR = SKYCLR # clear sky fraction
 
     def get_snow_init2(self):
-        """Returns the values of SNOW-INIT2 as a tuple."""
+        """
+        Returns the values of SNOW-INIT2 as a tuple.
+        """
 
         return (self.operation, self.COVINX, self.XLNMLT, self.SKYCLR)
 
     def set_sed_parm1(self, 
                       CRV = 0, 
                       VSIV = 0, 
-                      SDOP = 0
+                      SDOP = 0,
                       ):
-        """Sets the sediment transport flags for monthly variables."""
+        """
+        Sets the sediment transport flags for monthly variables.
+        """
 
         self.CRV  = CRV  # erosion-related cover flag
         self.VSIV = VSIV # net vertical sediment input flag
         self.SDOP = SDOP # land surface removal algorithm flag
 
     def get_sed_parm1(self):
-        """Returns the SED-PARM1 values as a tuple."""
+        """
+        Returns the SED-PARM1 values as a tuple.
+        """
 
         return (self.operation, self.CRV, self.VSIV, self.SDOP)
 
@@ -612,9 +683,11 @@ class Perlnd:
                       JRER = 2.0, 
                       AFFIX = None,
                       COVER = 0., 
-                      NVSI = 1.
+                      NVSI = 1.,
                       ):
-        """Sets some of the sediment transport parameters."""
+        """
+        Sets some of the sediment transport parameters.
+        """
 
         self.SMPF  = SMPF  # supporting management practice factor (-)
         self.KRER  = KRER  # soil detachment coefficient (kg mm^-JRER hr^JRER-1)
@@ -640,7 +713,9 @@ class Perlnd:
             self.AFFIX = AFFIX
                      
     def get_sed_parm2(self):
-        """Returns the SED-PARM2 values as a tuple."""
+        """
+        Returns the SED-PARM2 values as a tuple.
+        """
 
         return (self.operation, self.SMPF, self.KRER, self.JRER, self.AFFIX,
                 self.COVER, self.NVSI)
@@ -649,9 +724,11 @@ class Perlnd:
                       KSER = None, 
                       JSER = 2.0, 
                       KGER = 0., 
-                      JGER = 1.
+                      JGER = 1.,
                       ):
-        """Sets some of the sediment transport parameters."""
+        """
+        Sets some of the sediment transport parameters.
+        """
 
         self.KSER = KSER  # detached sediment washoff coeff (tonne/ha hr^JSER-1)
         self.JSER = JSER  # detached sediment washoff exponent (-)
@@ -675,19 +752,25 @@ class Perlnd:
             self.KSER = KSER
 
     def get_sed_parm3(self):
-        """Returns the SED-PARM3 values as a tuple."""
+        """
+        Returns the SED-PARM3 values as a tuple.
+        """
 
         return (self.operation, self.KSER, self.JSER, self.KGER, self.JGER)
 
     def set_sed_stor(self, 
-                     DETS = 0.2
+                     DETS = 0.2,
                      ):
-        """Sets the initial value of the detached sediment."""
+        """
+        Sets the initial value of the detached sediment.
+        """
 
         self.DETS = DETS
 
     def get_sed_stor(self):
-        """Returns the value of the sediment storage."""
+        """
+        Returns the value of the sediment storage.
+        """
 
         return (self.operation, self.DETS)
 

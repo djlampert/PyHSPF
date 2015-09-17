@@ -1,11 +1,11 @@
-# preprocess_02040101.py
+# preprocess_07100008.py
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# last updated: 08/09/2015
+# last updated: 05/25/2015
 # 
 # Purpose: Extracts GIS data from sources and builds the input file for HSPF
-# for a given set of assumptions for HUC 02040101, Delaware River, NY + DE.
+# for a given set of assumptions for HUC 07100008, Lake Red Rock, IA.
 
 import os, datetime
 
@@ -18,7 +18,6 @@ from pyhspf.preprocessing import Preprocessor
 # and RPUs are just used to point to location of the data files below
 
 HUC8        = '02040101'
-state       = 'Delaware'
 start       = datetime.datetime(1980, 1, 1)
 end         = datetime.datetime(2011, 1, 1)
 drainmax    = 400
@@ -34,7 +33,6 @@ if __name__ == '__main__':
     processor.set_parameters(HUC8 = HUC8,
                              start = start,
                              end = end,
-                             state = state,
                              cdlaggregate = aggregation,
                              landuse = landuse)
     processor.preprocess(drainmax = drainmax, parallel = False)

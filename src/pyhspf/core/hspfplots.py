@@ -702,8 +702,10 @@ def plot_calibration(HUC8, simulated_daily, observed_daily, simulated_monthly,
                      observed_monthly, titlesize = 14, axissize = 12,
                      ticksize = 11, output = None, show = True, 
                      verbose = False):
-    """Makes a figure with subplots for the daily simulated versus observed,
-    monthly simulated versus observed, and the daily flow duration curve."""
+    """
+    Makes a figure with subplots for the daily simulated versus observed,
+    monthly simulated versus observed, and the daily flow duration curve.
+    """
 
     if verbose: 
         print('plotting the calibration statistics for the simulation\n')
@@ -722,8 +724,10 @@ def plot_calibration(HUC8, simulated_daily, observed_daily, simulated_monthly,
     ax1.set_xlabel('Observed Daily Flows (m\u00B3/s)', size = axissize)
     ax1.set_ylabel('Simulated Daily Flows (m\u00B3/s)', size = axissize)
 
-    # get the max value for the limits
+    # get the min and max value for the limits
 
+    minflow = min(min([o for o in observed_daily if o is not None]), 
+                  min(simulated_daily))
     maxflow = max(max([o for o in observed_daily if o is not None]), 
                   max(simulated_daily))
 
@@ -754,8 +758,9 @@ def plot_calibration(HUC8, simulated_daily, observed_daily, simulated_monthly,
 
     # add the regression info to the plot
 
-    ax1.text(maxflow, 1.02 * (m * maxflow + b), 
+    ax1.text(0.98, 0.02,
              'r\u00B2 = {0:.3f}\nNS = {1:.3f}'.format(r**2, dNS), 
+             transform = ax1.transAxes,
              ha = 'right', va = 'bottom', color = 'black', size = ticksize)
 
     # add a legend
@@ -769,7 +774,6 @@ def plot_calibration(HUC8, simulated_daily, observed_daily, simulated_monthly,
     ax2.set_xscale('log')
     ax2.set_yscale('log')
 
-    #ax2.set_title('Daily Flow Analysis (log)\n', size = titlesize)
     ax2.set_xlabel('Observed Daily Flows (m\u00B3/s)', size = axissize)
     ax2.set_ylabel('Simulated Daily Flows (m\u00B3/s)', size = axissize)
 
@@ -809,8 +813,9 @@ def plot_calibration(HUC8, simulated_daily, observed_daily, simulated_monthly,
 
     # add the regression info to the plot
 
-    ax2.text(maxflow, 1.2 * minflow,
+    ax2.text(0.98, 0.02, 
              'r\u00B2 = {0:.3f}\nNS = {1:.3f}'.format(r**2, logdNS),
+             transform = ax2.transAxes,
              ha = 'right', va = 'bottom', color = 'black', size = ticksize)
 
     # add a legend
@@ -858,8 +863,9 @@ def plot_calibration(HUC8, simulated_daily, observed_daily, simulated_monthly,
 
     # add the regression info to the plot
 
-    ax3.text(maxflow, 1.02 * (m * maxflow + b), 
+    ax3.text(0.98, 0.02,
              'r\u00B2 = {0:.3f}\nNS = {1:.3f}'.format(r**2, mNS),
+             transform = ax3.transAxes,
              ha = 'right', va = 'bottom', color = 'black', size = ticksize)
 
     # add a legend
@@ -873,7 +879,6 @@ def plot_calibration(HUC8, simulated_daily, observed_daily, simulated_monthly,
     ax4.set_xscale('log')
     ax4.set_yscale('log')
 
-    #ax4.set_title('Monthly Flow Analysis (log)\n', size = titlesize)
     ax4.set_xlabel('Observed Monthly Flows (m\u00B3/s)', size = axissize)
     ax4.set_ylabel('Simulated Monthly Flows (m\u00B3/s)', size = axissize)
 
@@ -913,8 +918,9 @@ def plot_calibration(HUC8, simulated_daily, observed_daily, simulated_monthly,
 
     # add the regression info to the plot
 
-    ax4.text(maxflow, 1.2 * minflow, 
+    ax4.text(0.98, 0.02,
              'r\u00B2 = {0:.3f}\nNS = {1:.3f}'.format(r**2, logmNS),
+             transform = ax4.transAxes,
              ha = 'right', va = 'bottom', color = 'black', size = ticksize)
 
     # add a legend

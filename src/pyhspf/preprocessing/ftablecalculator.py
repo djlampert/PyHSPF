@@ -224,132 +224,16 @@ class FtableCalculator:
 
         return ftable
 
-    def width(self,
-              H,
-              a,
-              b,
-              ):
-        """
-        Returns the width of a channel as a function of the depth, H,
-        from a log-log fitting of channel width versus depth with parameters 
-        a and b of the form:
-        
-        W = a * H**b
-        """
-
-        return a * H**b
-
-    def area(self,
-             H, 
-             a, 
-             b,
-             ):
-        """
-        Estimates the area, A, of a channel as a function of the depth, H,
-        from a log-log fitting of channel width versus depth with parameters 
-        a and b of the form:
-
-        W = a * H**b
-        """
-
-        A = a * H**(b + 1) / (b + 1)
-
-        return A
-
-    def perimeter(self,
-                  H, 
-                  a, 
-                  b,
-                  ):
-        """
-        Estimates the perimeter, P, of a channel as a function of the depth, H, 
-        from a log-log fitting of channel width versus depth with parameters 
-        a and b of the form:
-
-        W = a * H**b
-        """
-
-        # break the equation into pieces for clarity (see png file)
-        
-        s1 = sqrt(a**2 * b**2 * H**(2 * b - 2) + 4)
-        s2 = sqrt(4 * H**(2 - 2 * b) / a**2 / b**2 + 1)
-
-        # hypergeometric function
-
-        hyp = special.hyp2f1(0.5, 
-                             (b - 2) / 2 / (b - 1), 
-                             (4 - 3 * b) / (2 - 2 * b), 
-                             -4 * H**(2 - 2 * b) / a**2 / b**2,
-                             ) 
-
-        last = (b - 2) * (a**2 * b**2 * H**(2 * b) + 4 * H**2)
-
-        denom = (b - 2) * b * (a**2 * b**2 * H**(2 * b) + 4 * H**2)
-
-        P = -1 * (H * s1 * (4 * (b - 1) * H**2 * s2 * hyp - last)) / denom
-
-        return P
-
-    def get_a2(self,
-               b, 
-               A, 
-               P,
-               initial = None,
-               ):
-        """
-        Calculates the value of the fitting parameter "a2" given the 
-        cross-sectional area, A, and wetted perimeter "P" for a channel with 
-        a discharge relationship of the form:
-
-        W = a2 * H**b2
-
-        where W and H are the channel width and channel depth, respectively.
-        """
-
-        if initial is None:
-
-            # make an initial guess assuming a 90 degree v-notched channel
-
-            initial = (A / P * 5.65, P / 2.82) 
-
-        # set up two equations and two unknowns for the cross-sectional area 
-        # and perimeter of the channel as a function of a and H
-
-        def equations(variables):
-
-            a2, H = variables
-
-            f1 = self.area(H, a2, b) - A
-            f2 = self.perimeter(H, a2, b) - P
-
-            return f1, f2
-
-        # solve the nonlinear system using scipy optimize
-
-        try: 
-
-            a2, H = optimize.fsolve(equations, initial)
-
-        except:
-
-            print('warning: unable to solve for the fitting parameter\n')
-            a2 = A / P / 5.65
-
-        return a2
-
     def extend_ftable(self,
                       qref,
-                      length,
                       qavg,
-                      vavg,
-                      slope,
-                      n = 0.04,
+                      length,
                       units = 'Metric',
                       ):
         """
         Estimates an FTABLE for a hydraulically-similar reach to the gage
-        with average flow qref to a new reach based on its length, 
-        average flow, average velocity, and slope.
+        with average flow "qref" to a new reach based on its average flow 
+        "qavg" and length.
         """
 
         required = self.a1, self.a2, self.b1, self.b2, self.xmin, self.xupper
@@ -359,48 +243,24 @@ class FtableCalculator:
             print('error, insufficient information supplied')
             raise
 
-        # estimate the area using the average flow and velocity
-
-        A = qavg / vavg
-
-        # estimate the hydraulic radius using Manning's equation
+        # units and conversion factors
 
         if units == 'Metric':
 
-            Rh = (n * vavg / slope**0.5)**1.5
-
-            # convert the x values from feet to meters
-
-            xmin   = self.xmin * 0.3048
-            xupper = self.xupper * 0.3048
-
             # conversion factors
             
-            a = self.a2 * 0.3048**(1 - self.b2) # ft to m
-            c1 = 0.1     # m * km to hectares
-            c2 = 0.001   # m2 * km to Mm3
-            k  = 1
+            c1 = 0.3048                          # ft to m
+            c2 = 0.1                             # m * km to hectares
+            c3 = 0.001                           # m2 * km to Mm3
 
         elif units == 'English':
-
-            Rh = (n / 1.49 * vavg / slope**0.5)**1.5
 
             xmin = self.xmin
             xupper = self.xupper
 
-            a  = 1
-            c1 = 5280 / 43560  # ft * mi to acres
-            c2 = 5280 / 43560  # ft2 * mi to acre-ft
-            k  = 1.49
-
-        # estimate the wetted perimeter
-            
-        P = A / Rh
-
-        # extend the fitting for width vs depth assuming the exponent is the 
-        # same by fitting the depth and first coefficient
-
-        a2 = self.get_a2(self.b2, A, P) * a
+            c1 = 1             # ft to ft
+            c2 = 5280 / 43560  # ft * mi to acres
+            c3 = 5280 / 43560  # ft2 * mi to acre-ft
 
         # iterate through each depth from the reference equation, adjust it
         # to the new depth given the relative flows, calculate the width
@@ -408,39 +268,30 @@ class FtableCalculator:
 
         ftable = [[0, 0, 0, 0]]
 
-        for x in self.get_logspaced(xmin, xupper):
+        for x in self.get_logspaced(self.xmin, self.xupper):
 
-            # adjust the depth to the new profile (q1 / q2 = (H1 / H2)**b)
+            # adjust the depth (ft) to the new profile (q = a1 * H**b1)
 
             H = x * (qavg / qref)**(1 / self.b1)
 
-            # calculate the width
+            # calculate the width (ft)
 
-            W = a2 * H**(self.b2)
+            W = self.a2 * H**(self.b2)
 
-            # calculate the cross-sectional area
+            # calculate the cross-sectional area (ft2)
 
-            A = a2 * H**(self.b2 + 1) / (self.b2 + 1)
+            A = self.a2 * H**(self.b2 + 1) / (self.b2 + 1)
 
-            # calculate the wetted perimeter
+            # calculate the flow (ft3/s)
 
-            P = self.perimeter(H, a2, self.b2)
-
-            # calculate the hydraulic radius
-
-            Rh = A / P
-
-            # calculate the velocity using Manning's equation
-
-            V = k / n * slope**0.5 * Rh**(2/3)
-
-            # calculate the flow rate
-
-            Q = V * A
+            Q = self.a1 * H**self.b1
 
             # use the reach length and conversion factors to fill in the table
 
-            row = [H, W * c1 * length, A * c2 * length, Q]
+            row = [H * c1, 
+                   W * c1 * length * c2, 
+                   A * c1**2 * length * c3, 
+                   Q * c1**3]
 
             ftable.append(row)
 

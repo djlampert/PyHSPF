@@ -43,12 +43,12 @@ class AutoCalibrator:
                  submodel = None,
                  warmup = 30,
                  parameter_ranges = {'IRC':    (0.5,    2),
-                                     'LZETP':  (0.2,  1.4),
+                                     'LZETP':  (0.2,  1.5),
                                      'DEEPFR': (0,      1),
                                      'LZSN':   (0.2,    2),
                                      'UZSN':   (0.2,   10),
                                      'INFILT': (0.01,  20),
-                                     'INTFW':  (0.01, 2.5),
+                                     'INTFW':  (0.01,  2.),
                                      'AGWRC':  (0.5,    2),
                                      'KVARY':  (0,    0.1),
                                      'CCFACT': (1,     10),
@@ -383,7 +383,10 @@ class AutoCalibrator:
                       '{} ({}) is above maximum ({})'.format(*its))
                 self.values[i] = ma
 
-    def optimize(self, parallel, nprocessors):
+    def optimize(self, 
+                 parallel, 
+                 nprocessors,
+                 ):
         """
         Optimizes the objective function for the parameters.
         """
@@ -542,8 +545,8 @@ class AutoCalibrator:
         # perturb until reaching a maximum (start with large perturbations)
 
         print('attempting to calibrate {}'.format(self.hspfmodel))
-        for p in perturbations:
 
+        for p in perturbations:
             self.perturbations = [p * self.get_default(v) for v in variables]
             self.optimize(parallel, nprocessors)
 

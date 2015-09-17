@@ -22,7 +22,6 @@ from pyhspf.preprocessing import Preprocessor
 # and RPUs are just used to point to location of the data files below
 
 HUC8        = '07100008'
-state       = 'ia'
 start       = datetime.datetime(1980, 1, 1)
 end         = datetime.datetime(2011, 1, 1)
 drainmax    = 400
@@ -38,7 +37,6 @@ if __name__ == '__main__':
     processor.set_parameters(HUC8 = HUC8,
                              start = start,
                              end = end,
-                             state = state,
                              cdlaggregate = aggregation,
                              landuse = landuse)
     processor.preprocess(drainmax = drainmax)

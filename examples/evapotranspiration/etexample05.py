@@ -45,7 +45,7 @@ if not os.path.isfile(filename + '.shp'):
 
 processor = ClimateProcessor()
 
-# the Penman-Monteith Equation requires temperature, humidity of dewpoint,
+# the Penman-Monteith Equation requires temperature, humidity or dewpoint,
 # wind speed, and solar radiation, which can be obtained from the processor
 
 processor.download_shapefile(filename, start, end, output, space = 0.)
