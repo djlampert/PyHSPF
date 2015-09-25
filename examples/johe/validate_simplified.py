@@ -2,7 +2,7 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# last updated: 07/21/2015
+# last updated: 09/22/2015
 # 
 # Purpose: shows how to use the Preprocessor class to gather all the input
 # data needed to create an HSPF model for an 8-digit hydrologic unit code 
@@ -31,12 +31,12 @@ gageid = '05472500'
 
 # start and end dates for the model
 
-start = datetime.datetime(2008, 1, 1)
-end   = datetime.datetime(2011, 1, 1)
+start = datetime.datetime(1994, 1, 1)
+end   = datetime.datetime(2009, 1, 1)
 
 # warmup time (model output for this number of days is ignored)
 
-warmup = 366
+warmup = 365
 
 if not os.path.isdir(network):
     print('error, directory {} doesn not exist (please update)'.format(network))
@@ -51,15 +51,15 @@ if not os.path.isdir(destination):
 
 if __name__ == '__main__': 
 
-    # file path to place the calibrated model and results
+    # file path to place the model validation results
 
-    validation  = '{}/{}/validation'.format(destination, HUC8)
+    calibration = '{}/{}/simplified/validation'.format(destination, HUC8)
 
-    if not os.path.isdir(validation): os.mkdir(validation)
+    if not os.path.isdir(calibration): os.mkdir(calibration)
 
-    # path where the calibrated model will be saved/located
+    # path where the calibrated model is located
 
-    calibrated = '{}/{}/calibration/{}'.format(destination, HUC8, gageid)
+    calibrated = '{}/{}/simplified/{}'.format(destination, HUC8, gageid)
 
     # open the calibrated model
 
@@ -69,6 +69,11 @@ if __name__ == '__main__':
 
     d = {v:k for k, v in hspfmodel.subbasin_timeseries['flowgage'].items()}
     comid = d[gageid]
+
+    # change the file paths for the input/output
+
+    its = destination, HUC8, gageid
+    hspfmodel.filename = '{}/{}/simplified/validation/{}'.format(*its)
 
     # build the input WDM file
 
@@ -103,16 +108,16 @@ if __name__ == '__main__':
 
     postprocessor.get_hspexp_parameters(verbose = False)
     postprocessor.plot_hydrograph(tstep = 'monthly', show = False,
-                                  output = '{}/hydrography'.format(validation))
-    postprocessor.plot_calibration(output = '{}/statistics'.format(validation),
+                                  output = '{}/hydrography'.format(calibration))
+    postprocessor.plot_calibration(output = '{}/statistics'.format(calibration),
                                    show = False)
     postprocessor.plot_runoff(tstep = 'daily', show = False,
-                              output = '{}/runoff'.format(validation))
-    output = '{}/calibration_report.csv'.format(validation)
+                              output = '{}/runoff'.format(calibration))
+    output = '{}/calibration_report.csv'.format(calibration)
     postprocessor.calibration_report(output = output)
-    postprocessor.plot_snow(output = '{}/snow'.format(validation), 
+    postprocessor.plot_snow(output = '{}/snow'.format(calibration), 
                             show = False)
-    postprocessor.plot_dayofyear(output = '{}/dayofyear'.format(validation),
+    postprocessor.plot_dayofyear(output = '{}/dayofyear'.format(calibration),
                                  show = False)
     postprocessor.plot_storms(season = 'all', show = False, 
-                              output = '{}/storms'.format(validation))
+                              output = '{}/storms'.format(calibration))

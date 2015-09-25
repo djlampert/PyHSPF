@@ -29,10 +29,10 @@ HUC8 = '07080106'
 
 gageid = '05472500'
 
-# start and end dates for the calibration simulations (1981 to 2009)
+# start and end dates for the calibration simulations (1981 to 2001)
 
 start = datetime.datetime(1980, 1, 1)
-end   = datetime.datetime(2009, 1, 1)
+end   = datetime.datetime(1995, 1, 1)
 
 # land use year to use for the model
 
@@ -47,15 +47,14 @@ warmup = 366
 # variables that are then modified using the "path-of-steepest ascent" 
 # approach to maximize the optimization parameter
 
-variables = {'LZSN':   0.9,
-             'UZSN':   3.20,
+variables = {'LZSN':   1.,
+             'UZSN':   3.30,
              'LZETP':  1.5,   
-             'INFILT': 0.20,
+             'INFILT': 0.19,
              'INTFW':  2.,
              'AGWRC':  1.02,
-             'IRC':    0.87,
+             'IRC':    0.82,
              'KVARY':  0.05,
-             'CCFACT': 2.00,
              }
 
 # optimization parameter 

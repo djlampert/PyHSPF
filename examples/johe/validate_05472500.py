@@ -25,26 +25,18 @@ destination = 'C:/HSPF_data'
 
 HUC8 = '07080106'
 
-# two-digit state abbreviation for the CDL
-
-state = 'Iowa'
-
 # NWIS gage for the calibration
 
 gageid = '05472500'
 
 # start and end dates for the model
 
-start = datetime.datetime(1980, 1, 1)
+start = datetime.datetime(1994, 1, 1)
 end   = datetime.datetime(2009, 1, 1)
-
-# land use year to use to develop the model
-
-landuseyear = 2001
 
 # warmup time (model output for this number of days is ignored)
 
-warmup = 366
+warmup = 365
 
 if not os.path.isdir(network):
     print('error, directory {} doesn not exist (please update)'.format(network))
@@ -59,17 +51,15 @@ if not os.path.isdir(destination):
 
 if __name__ == '__main__': 
 
-    # working directory for calibration simulations
-
-    directory = '{}/{}/hspf'.format(destination, HUC8)
-
     # file path to place the calibrated model and results
 
-    calibration = '{}/{}/calibration'.format(destination, HUC8)
+    validation  = '{}/{}/validation'.format(destination, HUC8)
+
+    if not os.path.isdir(validation): os.mkdir(validation)
 
     # path where the calibrated model will be saved/located
 
-    calibrated = '{}/{}'.format(calibration, gageid)
+    calibrated = '{}/{}/calibration/{}'.format(destination, HUC8, gageid)
 
     # open the calibrated model
 
@@ -79,6 +69,11 @@ if __name__ == '__main__':
 
     d = {v:k for k, v in hspfmodel.subbasin_timeseries['flowgage'].items()}
     comid = d[gageid]
+
+    # change the filename
+
+    its = destination, HUC8, gageid
+    hspfmodel.filename = '{}/{}/validation/{}'.format(*its)
 
     # build the input WDM file
 
@@ -113,16 +108,16 @@ if __name__ == '__main__':
 
     postprocessor.get_hspexp_parameters(verbose = False)
     postprocessor.plot_hydrograph(tstep = 'monthly', show = False,
-                                  output = '{}/hydrography'.format(calibration))
-    postprocessor.plot_calibration(output = '{}/statistics'.format(calibration),
+                                  output = '{}/hydrography'.format(validation))
+    postprocessor.plot_calibration(output = '{}/statistics'.format(validation),
                                    show = False)
     postprocessor.plot_runoff(tstep = 'daily', show = False,
-                              output = '{}/runoff'.format(calibration))
-    output = '{}/calibration_report.csv'.format(calibration)
+                              output = '{}/runoff'.format(validation))
+    output = '{}/calibration_report.csv'.format(validation)
     postprocessor.calibration_report(output = output)
-    postprocessor.plot_snow(output = '{}/snow'.format(calibration), 
+    postprocessor.plot_snow(output = '{}/snow'.format(validation), 
                             show = False)
-    postprocessor.plot_dayofyear(output = '{}/dayofyear'.format(calibration),
+    postprocessor.plot_dayofyear(output = '{}/dayofyear'.format(validation),
                                  show = False)
     postprocessor.plot_storms(season = 'all', show = False, 
-                              output = '{}/storms'.format(calibration))
+                              output = '{}/storms'.format(validation))

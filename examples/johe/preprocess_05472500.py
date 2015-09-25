@@ -2,7 +2,7 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# last updated: 07/21/2015
+# last updated: 08/10/2015
 # 
 # Purpose: shows how to use the Preprocessor class to gather all the input
 # data needed to create an HSPF model for an 8-digit hydrologic unit code 
@@ -24,10 +24,6 @@ destination = 'C:/HSPF_data'
 
 HUC8 = '07080106'
 
-# two-digit state abbreviation for the CDL
-
-state = 'Iowa'
-
 # NWIS gage for the calibration
 
 gageid = '05472500'
@@ -44,12 +40,12 @@ drainmax = 400
 # comma separated value file linking land use codes from the Cropland Data
 # Layer to aggregated land use categories for HSPF land segments
 
-aggregation = 'cdlaggregation.csv'
+aggregation = 'data/cdlaggregation.csv'
 
 # comma separated value file of parameters for the HSPF land use categories
 # including RGB values for plots and evapotranspiration crop coefficients
 
-landuse = 'lucs.csv'
+landuse = 'data/lucs.csv'
 
 # land use year to use for the model
 
@@ -59,14 +55,20 @@ landuseyear = 2001
 
 warmup = 366
 
-# make sure the directory paths exist
+# make sure the directory and file paths exist
 
 if not os.path.isdir(network):
-    print('error, directory {} doesn not exist (please update)'.format(network))
+    print('error, directory {} does not exist (please update)'.format(network))
     raise
 if not os.path.isdir(destination):
     print('error, directory ' +
-          '{} doesn not exist (please update)'.format(destination))
+          '{} does not exist (please update)'.format(destination))
+    raise
+if not os.path.isfile(aggregation):
+    print('error, file {} does not exist (please update)'.format(aggregation))
+    raise
+if not os.path.isfile(landuse):
+    print('error, file {} does not exist (please update)'.format(landuse))
     raise
 
 # Because parallel processing is (optionally) used, the process method has 
@@ -92,7 +94,6 @@ if __name__ == '__main__':
     processor.set_parameters(HUC8 = HUC8,
                              start = start,
                              end = end,
-                             state = state,
                              cdlaggregate = aggregation,
                              landuse = landuse)
 
@@ -132,6 +133,10 @@ if __name__ == '__main__':
     d = {v:k for k, v in hspfmodel.subbasin_timeseries['flowgage'].items()}
     comid = d[gageid]
 
+    # change the filename
+
+    hspfmodel.filename = '{}/{}'.format(preliminary, gageid)
+
     # build the input WDM file
 
     hspfmodel.build_wdminfile()
@@ -168,8 +173,8 @@ if __name__ == '__main__':
                                   output = '{}/hydrography'.format(preliminary))
     postprocessor.plot_calibration(output = '{}/statistics'.format(preliminary),
                                    show = False)
-    postprocessor.plot_runoff(tstep = 'daily', show = False,
-                              output = '{}/runoff'.format(preliminary))
+    #postprocessor.plot_runoff(tstep = 'daily', show = False,
+    #                          output = '{}/runoff'.format(preliminary))
     output = '{}/calibration_report.csv'.format(preliminary)
     postprocessor.calibration_report(output = output)
     postprocessor.plot_snow(output = '{}/snow'.format(preliminary), 
