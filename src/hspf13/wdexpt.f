@@ -72,7 +72,7 @@ C
  10   CONTINUE
 C       group loop
         GPIND= GPIND+ 1
-        WRITE(99,*) 'group loop',GPIND
+C        WRITE(99,*) 'group loop',GPIND
 C       find out the end of the group
         CALL WTEGRP (GPSDAT,TGROUP,
      O               GPEDAT)
@@ -80,7 +80,7 @@ C       find out the end of the group
 C         last group, dont dump too far
           CALL WDATCP (LEDAT,GPEDAT)
           LGRPFG= 1
-          WRITE(99,*) 'last group',LEDAT
+C          WRITE(99,*) 'last group',LEDAT
         END IF
 C       skip as required within group, dont need VBTIME because
 C       ADDAFG is 0
@@ -111,8 +111,9 @@ C             end of last group, recalc number of values
      O                     J)
               CURNOV= J+ CURCNT- 1
               IF (OLDNOV .NE. CURNOV) THEN
-                WRITE(99,*) 'adjust curnov',OLDNOV
-                WRITE(99,*) '           to',CURNOV
+                 OLDNOV = OLDNOV
+C                WRITE(99,*) 'adjust curnov',OLDNOV
+C                WRITE(99,*) '           to',CURNOV
               END IF
             END IF
 C
@@ -282,7 +283,7 @@ C             get actual location of table data set template
 C               table exists, but cant find template
                 RETCOD= -29
                 IEXIST= 0
-                WRITE (99,2050) TCLU,TGRP,TABIND
+C                WRITE (99,2050) TCLU,TGRP,TABIND
               ELSE
                 IEXIST= 1
               END IF
@@ -328,7 +329,7 @@ C                     dont include this fields space
                       IFLD= IFLD- 1
                     ELSE IF (IPOS.GT.MXPOS) THEN
 C                     field will not fit in buffer
-                      WRITE (99,2070) CTBNAM,TABIND,IFLD
+C                      WRITE (99,2070) CTBNAM,TABIND,IFLD
                       ALEN(IFLD)= 80
                     END IF
                     BFLDS= IFLD- FFLD+ 1
@@ -427,7 +428,7 @@ C                   dont include this fields space
                     IFLD= IFLD- 1
                   ELSE IF (IPOS.GT.MXPOS) THEN
 C                   field will not fit in buffer
-                    WRITE (99,2070) CTBNAM,TABIND,IFLD
+C                    WRITE (99,2070) CTBNAM,TABIND,IFLD
                     TLEN(IFLD)= 80
                   END IF
                   BFLDS= IFLD- FFLD+ 1
@@ -473,7 +474,7 @@ C             end of all data for table
             ELSE
 C             names don't match, problem
               RETCOD= -33
-              WRITE (99,2060) CTBNAM,MTBNAM,TABIND
+C              WRITE (99,2060) CTBNAM,MTBNAM,TABIND
             END IF
           END IF
         IF (ITBL.LT.TABCNT) GO TO 10
@@ -740,7 +741,7 @@ C       write end data
         WRITE(SUCIFL,2010)
       ELSE
 C       problems with this dataset
-        WRITE(99,2070) DSN
+C        WRITE(99,2070) DSN
       END IF
 C
       RETURN

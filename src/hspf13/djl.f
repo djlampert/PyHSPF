@@ -77,8 +77,6 @@ C
 C     version info and unix what info
       INCLUDE 'versn.inc'
 C
-      OPEN (UNIT=99,FILE='error.fil')
-C
 C     initialize wdm file common block
       CALL WDBFIN
 C     open message file
@@ -150,9 +148,15 @@ C         error opening uci file
 C
       END IF
 C
-      CLOSE(UNIT=99)
-      CLOSE(UNIT=11)
-      CLOSE(UNIT=12)
+C     DJL - close WDM or any other open files
+      DO 100 I = 1,15
+         IF (FILES(I) .GT. 0) THEN
+            CLOSE(UNIT=FILES(I))
+         END IF
+ 100     CONTINUE
+C      CLOSE(UNIT=99)
+C      CLOSE(UNIT=11)
+C      CLOSE(UNIT=12)
       RETURN
       END
 C

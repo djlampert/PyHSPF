@@ -94,7 +94,7 @@ C           search for current type in valid types string
             IF (ITMP.GT.0) THEN
 C             valid type found
               ITYPE= (ITMP/4)+ 1
-              WRITE(99,2010) GNUM,IBUFF(1:4)
+C              WRITE(99,2010) GNUM,IBUFF(1:4)
             ELSE
 C             couldn't find valid type
               IERR= 2
@@ -153,16 +153,16 @@ C
 C
         ELSE IF (IERR.LT.0) THEN
 C         WDM file problem
-          WRITE(99,2020) WDMSFL,CLU,GNUM
+C          WRITE(99,2020) WDMSFL,CLU,GNUM
           RETCOD= -150
         ELSE IF (IERR.EQ.1) THEN
 C         question already exists
-          WRITE(99,2030) CLU,GNUM
+C          WRITE(99,2030) CLU,GNUM
           RETCOD= -150
         ELSE IF (IERR.EQ.2) THEN
 C         problems with import file, find next question or END DATA
-          WRITE(99,2040) GNUM
-          WRITE(99,2050) EBUFF
+C          WRITE(99,2040) GNUM
+C          WRITE(99,2050) EBUFF
           RETCOD= -150
         END IF
 C
@@ -298,9 +298,9 @@ C           left justify
 C             cant import it and we're not at the end
               TBUFF= 'ERROR: The following record is not '//
      1               'recognized as a directive.'
-              WRITE(99,2000) TBUFF
+C              WRITE(99,2000) TBUFF
               TBUFF= 'Record is >> '//IBUFF(1:65)
-              WRITE(99,2000) TBUFF
+C              WRITE(99,2000) TBUFF
               RETCOD= -150
               I= 1
             END IF
@@ -323,7 +323,7 @@ C             done menu
 C               there wasn't anything in SCREEN directive
                 TBUFF= 'WARNING: Nothing in $SCREEN '//
      1                 'directive to import.'
-                WRITE(99,2000) TBUFF
+C                WRITE(99,2000) TBUFF
                 RETCOD= -150
               END IF
             ELSE
@@ -341,10 +341,10 @@ C               cant have parameter fields past line 10
                 NXTFG= 1
                 TBUFF= 'ERROR: Parameter fields must appear '//
      1                 'in line numbers 1 through 10 of'
-                WRITE(99,2000) TBUFF
-                WRITE(99,2010) LNLIN
+C                WRITE(99,2000) TBUFF
+C                WRITE(99,2010) LNLIN
                 TBUFF= 'Directive is >> '//IBUFF(1:62)
-                WRITE(99,2000) TBUFF
+C                WRITE(99,2000) TBUFF
                 RETCOD= -150
               END IF
             END IF
@@ -357,21 +357,21 @@ C         field information
           IF (L .LT. 1) THEN
 C           bad field name
             TBUFF= 'WARNING: Problem with $FIELD directive.'
-            WRITE(99,2000) TBUFF
+C            WRITE(99,2000) TBUFF
             TBUFF= 'Directive is >> '//IBUFF(1:62)
-            WRITE(99,2000) TBUFF
+C            WRITE(99,2000) TBUFF
             RETCOD= -150
           ELSE IF (SCNFG.EQ.0) THEN
 C           screen directive not added yet
             TBUFF= 'WARNING: $SCREEN directive has not been'//
      1             ' imported yet.'
-            WRITE(99,2000) TBUFF
+C            WRITE(99,2000) TBUFF
             RETCOD= -150
           ELSE IF (ORDER.GE.MXFLD) THEN
 C           cant add any more fields
             TBUFF= 'WARNING: Can''t import any more'//
      1             ' Fields for this group.'
-            WRITE(99,2000) TBUFF
+C            WRITE(99,2000) TBUFF
             RETCOD= -150
           ELSE
 C           add this field
@@ -394,11 +394,11 @@ C                 field found in screen text
               IF (I.LT.LNLIN) GO TO 170
               IF (K.EQ.0) THEN
 C               field was not found, let 'em know
-                WRITE(99,2020) IBUFF(1:L)
+C                WRITE(99,2020) IBUFF(1:L)
                 RETCOD= -150
               ELSE IF (K.GT.1) THEN
 C               field found more than once
-                WRITE(99,2030) IBUFF(1:L)
+C                WRITE(99,2030) IBUFF(1:L)
                 RETCOD= -150
               END IF
             END IF
@@ -439,10 +439,10 @@ C               parameter data type
                 IF (FSTFG.NE.0) THEN
 C                 too late to specify type
                   TBUFF= 'The _TYPE subdirective for field '//FLDNAM
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   TBUFF= 'must be specified earlier in this '//
      1                   'field''s definition.'
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   RETCOD= -150
                 ELSE
                   IBUFF = IBUFF(6:80)
@@ -474,10 +474,10 @@ C               field width for PRM2 type screen
                 IF (FSTFG.NE.0) THEN
 C                 too late to specify width
                   TBUFF= 'The _WIDTH subdirective for field '//FLDNAM
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   TBUFF= 'must be specified earlier in this '//
      1                   'field''s definition.'
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   RETCOD= -150
                 ELSE
                   IBUFF= IBUFF(7:80)
@@ -490,10 +490,10 @@ C               field width for PRM1 type screen, option field only
                 IF (OPTFLG.NE.0) THEN
 C                 too late to specify Width subdirective
                   TBUFF= 'The _WIDTH subdirective for field '//FLDNAM
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   TBUFF= 'must be specified earlier in this '//
      1                   'field''s definition.'
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   RETCOD= -150
                 ELSE
 C                 process Width subdirective
@@ -516,10 +516,10 @@ C               ordering for field
                 IF (FSTFG.NE.0) THEN
 C                 too late to specify order
                   TBUFF= 'The _ORDER subdirective for field '//FLDNAM
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   TBUFF= 'must be specified earlier in this '//
      1                   'field''s definition.'
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   RETCOD= -150
                 ELSE
                   IBUFF= IBUFF(7:80)
@@ -537,10 +537,10 @@ C               protection for field
                 IF (FSTFG.NE.0) THEN
 C                 too late to specify protection
                   TBUFF= 'The _PROTECT subdirective for field '//FLDNAM
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   TBUFF= 'must be specified earlier in this '//
      1                   'field''s definition.'
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   RETCOD= -150
                 ELSE
                   IBUFF= IBUFF(9:80)
@@ -558,10 +558,10 @@ C               starting column for field
                 IF (FSTFG.NE.0) THEN
 C                 too late to specify column
                   TBUFF= 'The _COLUMN subdirective for field '//FLDNAM
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   TBUFF= 'must be specified earlier in this '//
      1                   'field''s definition.'
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   RETCOD= -150
                 ELSE
                   IBUFF= IBUFF(8:80)
@@ -580,25 +580,25 @@ C                 need to put id 3 parms on WDM file first
                   FSTFG= 1
                   IF (FTYP.EQ.0 .AND. CLASS.EQ.1) THEN
 C                   no field type for this parm 1 field
-                    WRITE(99,2040) ORDER
+C                    WRITE(99,2040) ORDER
                     RETCOD= -150
                   ELSE IF (CLASS.EQ.2 .AND. (FTYP.EQ.0 .OR.
      1                     FLEN.EQ.0 .OR. FCOL.EQ.0)) THEN
 C                   bad parameters for parm 2 screen
-                    WRITE(99,2050) ORDER
-                    WRITE(99,2051) FTYP
-                    WRITE(99,2052) FLEN
-                    WRITE(99,2053) FCOL
+C                    WRITE(99,2050) ORDER
+C                    WRITE(99,2051) FTYP
+C                    WRITE(99,2052) FLEN
+C                    WRITE(99,2053) FCOL
                     RETCOD= -150
                   END IF
                 END IF
                 IF (VALFG.EQ.0 .AND. FTYP.NE.5) THEN
 C                 need to put valid or range on before default
                   TBUFF= 'ERROR: Can''t import Default value'
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   TBUFF= 'No data range or valid values have'//
      1                   ' been specified'
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   RETCOD= -150
                 END IF
                 IF (FSTFG.GT.0 .AND. (VALFG.GT.0 .OR. FTYP.EQ.5)) THEN
@@ -637,15 +637,15 @@ C                   need to put parms on WDM file first
                     FSTFG= 1
                     IF (FTYP.EQ.0 .AND. CLASS.EQ.1) THEN
 C                     no field type for this parm 1 field
-                      WRITE(99,2040) ORDER
+C                      WRITE(99,2040) ORDER
                       RETCOD= -150
                     ELSE IF (CLASS.EQ.2 .AND. (FTYP.EQ.0 .OR.
      1                       FLEN.EQ.0 .OR. FCOL.EQ.0)) THEN
 C                     bad parameters for parm 2 screen
-                      WRITE(99,2050) ORDER
-                      WRITE(99,2051) FTYP
-                      WRITE(99,2052) FLEN
-                      WRITE(99,2053) FCOL
+C                      WRITE(99,2050) ORDER
+C                      WRITE(99,2051) FTYP
+C                      WRITE(99,2052) FLEN
+C                      WRITE(99,2053) FCOL
                       RETCOD= -150
                     END IF
                   END IF
@@ -671,8 +671,8 @@ C                     store as integer
                       IF (IVAL(2).LT.IVAL(1) .AND. IVAL(2).GT.-999) THEN
 C                       invalid range values
                         TBUFF= 'ERROR: Invalid Range values.'
-                        WRITE(99,2000) TBUFF
-                        WRITE(99,2060) IVAL(1),IVAL(2)
+C                        WRITE(99,2000) TBUFF
+C                        WRITE(99,2060) IVAL(1),IVAL(2)
                         RETCOD= -150
                       END IF
                     ELSE
@@ -681,8 +681,8 @@ C                     store as real
                       IF (RMAX.LT.RMIN .AND. RMAX.GT.-999.0) THEN
 C                       invalid range values
                         TBUFF= 'ERROR: Invalid Range values.'
-                        WRITE(99,2000) TBUFF
-                        WRITE(99,2061) RMIN,RMAX
+C                        WRITE(99,2000) TBUFF
+C                        WRITE(99,2061) RMIN,RMAX
                         RETCOD= -150
                       END IF
                     END IF
@@ -696,16 +696,16 @@ C                       invalid range values
                   ELSE
 C                   bad range record
                     TBUFF= 'ERROR: problem with _RANGE record'
-                    WRITE(99,2000) TBUFF
+C                    WRITE(99,2000) TBUFF
                     TBUFF= 'Record is >> '//IBUFF(1:65)
-                    WRITE(99,2000) TBUFF
+C                    WRITE(99,2000) TBUFF
                     RETCOD= -150
                   END IF
                 ELSE
 C                 '_RANGE' not valid subdirective for this type field
                   TBUFF= 'WARNING: _RANGE subdirective being ignored,'//
      1                   ' not valid for this field type.'
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   RETCOD= -150
                 END IF
               ELSE IF (IBUFF(1:6) .EQ. '_VALID') THEN
@@ -719,15 +719,15 @@ C                 need to put parms on WDM file first
                   FSTFG= 1
                   IF (FTYP.EQ.0 .AND. CLASS.EQ.1) THEN
 C                   no field type for this parm 1 field
-                    WRITE(99,2040) ORDER
+C                    WRITE(99,2040) ORDER
                     RETCOD= -150
                   ELSE IF (CLASS.EQ.2 .AND. (FTYP.EQ.0 .OR.
      1                     FLEN.EQ.0 .OR. FCOL.EQ.0)) THEN
 C                   bad parameters for parm 2 screen
-                    WRITE(99,2050) ORDER
-                    WRITE(99,2051) FTYP
-                    WRITE(99,2052) FLEN
-                    WRITE(99,2053) FCOL
+C                    WRITE(99,2050) ORDER
+C                    WRITE(99,2051) FTYP
+C                    WRITE(99,2052) FLEN
+C                    WRITE(99,2053) FCOL
                     RETCOD= -150
                   END IF
                 END IF
@@ -749,9 +749,9 @@ C                   check validity of file specification parameters
 C                     problem with file specifications
                       TBUFF= 'Problem with _VALID file specifications'//
      $                       ' for File type data field.'
-                      WRITE(99,2000) TBUFF
+C                      WRITE(99,2000) TBUFF
                       TBUFF= 'Record is >> '//IBUFF(1:65)
-                      WRITE(99,2000) TBUFF
+C                      WRITE(99,2000) TBUFF
                     END IF
                   END IF
                 END IF
@@ -766,15 +766,15 @@ C                 need to put parms on WDM file first
                   FSTFG= 1
                   IF (FTYP.EQ.0 .AND. CLASS.EQ.1) THEN
 C                   no field type for this parm 1 field
-                    WRITE(99,2040) ORDER
+C                    WRITE(99,2040) ORDER
                     RETCOD= -150
                   ELSE IF (CLASS.EQ.2 .AND. (FTYP.EQ.0 .OR.
      1                     FLEN.EQ.0 .OR. FCOL.EQ.0)) THEN
 C                   bad parameters for parm 2 screen
-                    WRITE(99,2050) ORDER
-                    WRITE(99,2051) FTYP
-                    WRITE(99,2052) FLEN
-                    WRITE(99,2053) FCOL
+C                    WRITE(99,2050) ORDER
+C                    WRITE(99,2051) FTYP
+C                    WRITE(99,2052) FLEN
+C                    WRITE(99,2053) FCOL
                     RETCOD= -150
                   END IF
                 END IF
@@ -793,15 +793,15 @@ C               set number for this option
 C                 ignore _SET subdirective if not type OPTION
                   TBUFF= 'WARNING: _SET subdirective being ignored as'//
      1                   ' field type is not OPTION.'
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   RETCOD= -150
                 ELSE IF (OPTFLG.NE.0) THEN
 C                 too late to specify set subdirective
                   TBUFF= 'The _SET subdirective for field '//FLDNAM
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   TBUFF= 'must be specified earlier in this '//
      1                   'field''s definition.'
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   RETCOD= -150
                 ELSE
 C                 save set number for later storage
@@ -827,9 +827,9 @@ C               option conditionals for other option fields
 C                 ignore directive if not type OPTION
                   TBUFF= 'WARNING: This subdirective being ignored as'//
      1                   ' field type is not OPTION.'
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   TBUFF= 'Directive is >> '//IBUFF(1:62)
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   RETCOD= -150
                 ELSE
 C                 ok to process conditional records
@@ -882,7 +882,7 @@ C                         field found in screen text
                       IF (I.LT.LNLIN .AND. K.EQ.0) GO TO 310
                       IF (K.EQ.0) THEN
 C                       field was not found, let 'em know
-                        WRITE(99,2070) IBUFF(IPOS:IPOS+L-1)
+C                        WRITE(99,2070) IBUFF(IPOS:IPOS+L-1)
                         RETCOD= -150
                       END IF
                       IPOS= IPOS+ ILEN+ 1
@@ -901,10 +901,10 @@ C               this field to have a box next to it
                 IF (OPTFLG.NE.0) THEN
 C                 too late to specify Box subdirective
                   TBUFF= 'The _BOX subdirective for field '//FLDNAM
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   TBUFF= 'must be specified earlier in this '//
      1                   'field''s definition.'
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   RETCOD= -150
                 ELSE
 C                 process Box subdirective
@@ -916,9 +916,9 @@ C               hide another field based on this fields value
 C                 ignore directive if not type OPTION
                   TBUFF= 'WARNING: This subdirective being ignored as'//
      1                   ' field type is not OPTION.'
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   TBUFF= 'Directive is >> '//IBUFF(1:62)
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   RETCOD= -150
                 ELSE
 C                 ok to do hidden fields
@@ -996,33 +996,33 @@ C                             no value there, problem
 C                           problem with row/column specs
                             TBUFF= 'ERROR:  Invalid row/column spec'//
      1                             'ifications for _HIDE subdirective.'
-                            WRITE(99,2000) TBUFF
+C                            WRITE(99,2000) TBUFF
                             RETCOD= -150
                           END IF
                         ELSE
 C                         no row/column specs for hidden field
                           TBUFF= 'ERROR:  No row/column specifica'//
      1                           'tions for _HIDE subdirective.'
-                          WRITE(99,2000) TBUFF
+C                          WRITE(99,2000) TBUFF
                           RETCOD= -150
                         END IF
                       ELSE
 C                       field was not found, let 'em know
-                        WRITE(99,2080) XBUFF(1:IPOS-1)
+C                        WRITE(99,2080) XBUFF(1:IPOS-1)
                         RETCOD= -150
                       END IF
                     ELSE
 C                     no field specified
                       TBUFF= 'ERROR:  No field specified for '//
      1                       '_HIDE subdirective.'
-                      WRITE(99,2000) TBUFF
+C                      WRITE(99,2000) TBUFF
                       RETCOD= -150
                     END IF
                   ELSE
 C                   no condition specified for hiding field
                     TBUFF= 'ERROR:  No condition specified for '//
      1                     '_HIDE subdirective.'
-                    WRITE(99,2000) TBUFF
+C                    WRITE(99,2000) TBUFF
                     RETCOD= -150
                   END IF
 C                 put on WDM file as text
@@ -1095,15 +1095,15 @@ C                 need to put parms on WDM file first
                   FSTFG= 1
                   IF (FTYP.EQ.0 .AND. CLASS.EQ.1) THEN
 C                   no field type for this parm 1 field
-                    WRITE(99,2040) ORDER
+C                    WRITE(99,2040) ORDER
                     RETCOD= -150
                   ELSE IF (CLASS.EQ.2 .AND. (FTYP.EQ.0 .OR.
      1                     FLEN.EQ.0 .OR. FCOL.EQ.0)) THEN
 C                   bad parameters for parm 2 screen
-                    WRITE(99,2050) ORDER
-                    WRITE(99,2051) FTYP
-                    WRITE(99,2052) FLEN
-                    WRITE(99,2053) FCOL
+C                    WRITE(99,2050) ORDER
+C                    WRITE(99,2051) FTYP
+C                    WRITE(99,2052) FLEN
+C                    WRITE(99,2053) FCOL
                     RETCOD= -150
                   END IF
                 END IF
@@ -1129,15 +1129,15 @@ C                 PRM2 type, need to put parms on WDM file
                   FSTFG= 1
                   IF (FTYP.EQ.0 .AND. CLASS.EQ.1) THEN
 C                   no field type for this parm 1 field
-                    WRITE(99,2040) ORDER
+C                    WRITE(99,2040) ORDER
                     RETCOD= -150
                   ELSE IF (CLASS.EQ.2 .AND. (FTYP.EQ.0 .OR.
      1                     FLEN.EQ.0 .OR. FCOL.EQ.0)) THEN
 C                   bad parameters for parm 2 screen
-                    WRITE(99,2050) ORDER
-                    WRITE(99,2051) FTYP
-                    WRITE(99,2052) FLEN
-                    WRITE(99,2053) FCOL
+C                    WRITE(99,2050) ORDER
+C                    WRITE(99,2051) FTYP
+C                    WRITE(99,2052) FLEN
+C                    WRITE(99,2053) FCOL
                     RETCOD= -150
                   END IF
                 END IF
@@ -1161,9 +1161,9 @@ C                 add table parameter/units codes
 C               subdirective not importable
                 TBUFF= 'ERROR: The following record is not '//
      1                 'recognized as a subdirective.'
-                WRITE(99,2000) TBUFF
+C                WRITE(99,2000) TBUFF
                 TBUFF= 'Record is >> '//IBUFF(1:65)
-                WRITE(99,2000) TBUFF
+C                WRITE(99,2000) TBUFF
                 RETCOD= -150
               END IF
             IF (IBUF1(1).NE.'$' .AND. IBUF1(1).NE.'#' .AND.
@@ -1179,15 +1179,15 @@ C             PRM2 type, need to put parms on WDM file
               FSTFG= 1
               IF (FTYP.EQ.0 .AND. CLASS.EQ.1) THEN
 C               no field type for this parm 1 field
-                WRITE(99,2040) ORDER
+C                WRITE(99,2040) ORDER
                 RETCOD= -150
               ELSE IF (CLASS.EQ.2 .AND. (FTYP.EQ.0 .OR.
      1                 FLEN.EQ.0 .OR. FCOL.EQ.0)) THEN
 C               bad parameters for parm 2 screen
-                WRITE(99,2050) ORDER
-                WRITE(99,2051) FTYP
-                WRITE(99,2052) FLEN
-                WRITE(99,2053) FCOL
+C                WRITE(99,2050) ORDER
+C                WRITE(99,2051) FTYP
+C                WRITE(99,2052) FLEN
+C                WRITE(99,2053) FCOL
                 RETCOD= -150
               END IF
             END IF
@@ -1311,9 +1311,9 @@ C         window name for data screen
 C         not end of group, directive not importable
           TBUFF= 'ERROR: The following record is not '//
      1           'recognized as a directive.'
-          WRITE(99,2000) TBUFF
+C          WRITE(99,2000) TBUFF
           TBUFF= 'Record is >> '//IBUFF(1:65)
-          WRITE(99,2000) TBUFF
+C          WRITE(99,2000) TBUFF
           RETCOD= -150
         END IF
       IF (IBUF1(1).NE.'#'.AND.STRFND(I10,IBUF1,I5,CEND).EQ.0) GO TO 100
@@ -1402,9 +1402,9 @@ C           left justify
 C             cant import it and we're not at the end
               TBUFF= 'ERROR: The following record is not'//
      1               ' recognized as a directive.'
-              WRITE(99,2000) TBUFF
+C              WRITE(99,2000) TBUFF
               TBUFF= 'Record is >> '//IBUFF(1:65)
-              WRITE(99,2000) TBUFF
+C              WRITE(99,2000) TBUFF
               RETCOD= -150
               I= 1
             END IF
@@ -1440,9 +1440,9 @@ C         window name for data screen
 C         not end of group, directive not importable
           TBUFF= 'ERROR: The following record is not'//
      1           ' recognized as a directive.'
-          WRITE(99,2000) TBUFF
+C          WRITE(99,2000) TBUFF
           TBUFF= 'Record is >> '//IBUFF(1:65)
-          WRITE(99,2000) TBUFF
+C          WRITE(99,2000) TBUFF
           RETCOD= -150
         END IF
       IF (IBUF1(1).NE.'#' .AND.
@@ -1550,9 +1550,9 @@ C           left justify
 C             cant import it and we're not at the end
               TBUFF= 'ERROR: The following record is not'//
      1               ' recognized as a directive.'
-              WRITE(99,2000) TBUFF
+C              WRITE(99,2000) TBUFF
               TBUFF= 'Record is >> '//IBUFF(1:65)
-              WRITE(99,2000) TBUFF
+C              WRITE(99,2000) TBUFF
               RETCOD= -150
               I= 1
             END IF
@@ -1576,7 +1576,7 @@ C           screen method not in use, ok to process Title
 C           screen method in use, can't have Title directive
             TBUFF= 'ERROR: Screen directive already in use, '//
      1             '$TITLE directive is not allowed.'
-            WRITE(99,2000) TBUFF
+C            WRITE(99,2000) TBUFF
             RETCOD= -150
           END IF
         ELSE IF (IBUFF(1:7).EQ.'$SCREEN') THEN
@@ -1596,7 +1596,7 @@ C               done menu
 C                 there wasn't anything in SCREEN directive
                   TBUFF= 'WARNING: Nothing in $SCREEN '//
      1                   'directive to import.'
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   RETCOD= -150
                 END IF
               ELSE
@@ -1614,10 +1614,10 @@ C                 cant have parameter fields past line 10
                   NXTFG= 1
                   TBUFF= 'ERROR: Parameter fields must appear '//
      1                   'in line numbers 1 through 10 of'
-                  WRITE(99,2000) TBUFF
-                  WRITE(99,2005) LNLIN
+C                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2005) LNLIN
                   TBUFF= 'Directive is >> '//IBUFF(1:62)
-                  WRITE(99,2000) TBUFF
+C                  WRITE(99,2000) TBUFF
                   RETCOD= -150
                 END IF
               END IF
@@ -1626,7 +1626,7 @@ C                 cant have parameter fields past line 10
 C           original title method in use, can't have Screen directive
             TBUFF= 'ERROR: Title directive already in use, '//
      1             '$SCREEN directive is not allowed.'
-            WRITE(99,2000) TBUFF
+C            WRITE(99,2000) TBUFF
             RETCOD= -150
           END IF
         ELSE IF (IBUFF(1:8) .EQ. '$DEFAULT') THEN
@@ -1640,7 +1640,7 @@ C         length of text
 C           cant change length after option read
             TBUFF= 'ERROR: Options already defined,'//
      1             ' can''t modify Option Length.'
-            WRITE(99,2000) TBUFF
+C            WRITE(99,2000) TBUFF
             RETCOD= -150
           ELSE
 C           save length
@@ -1657,7 +1657,7 @@ C         max width of text and description
 C           cant change length after option read
             TBUFF= 'ERROR: Options already defined,'//
      1                  ' can''t modify Width of columns.'
-            WRITE(99,2000) TBUFF
+C            WRITE(99,2000) TBUFF
             RETCOD= -150
           ELSE
 C           save column width
@@ -1671,7 +1671,7 @@ C         length of text
 C           cant change column length after option read
             TBUFF= 'ERROR: Options already defined,'//
      1             ' can''t modify Length of columns.'
-            WRITE(99,2000) TBUFF
+C            WRITE(99,2000) TBUFF
             RETCOD= -150
           ELSE
 C           save column
@@ -1683,7 +1683,7 @@ C             cant fit on screen
               ICOL= 8
               TBUFF= 'WARNING: Column length too large,'//
      1               ' being set to a value of 8.'
-              WRITE(99,2000) TBUFF
+C              WRITE(99,2000) TBUFF
               RETCOD= -150
             END IF
           END IF
@@ -1697,7 +1697,7 @@ C           put integer parms on WDM file
             IVAL(1)= IDEF
             IF (ILEN.LT.1 .OR. ILEN.GT.63) THEN
 C             bad length or not specified yet
-              WRITE(99,2010) ILEN
+C              WRITE(99,2010) ILEN
               RETCOD= -150
             END IF
             IVAL(2)= ILEN
@@ -1720,10 +1720,10 @@ C
           IF (L.GT.ILEN) THEN
 C           option longer than specified option lengths
             TBUFF= 'WARNING:  Option '//IBUFF(1:L)
-            WRITE(99,2000) TBUFF
+C            WRITE(99,2000) TBUFF
             TBUFF= 'is longer than the option length already '//
      1             'specified for this screen.'
-            WRITE(99,2000) TBUFF
+C            WRITE(99,2000) TBUFF
             RETCOD= -150
           END IF
           IF (SCRFG.EQ.1) THEN
@@ -1749,11 +1749,11 @@ C                 we know we have a match
             IF (I.LT.LNLIN) GO TO 170
             IF (K.EQ.0) THEN
 C             field was not found, let 'em know
-              WRITE(99,2020) IBUFF(1:L)
+C              WRITE(99,2020) IBUFF(1:L)
               RETCOD= -150
             ELSE IF (K.GT.1) THEN
 C             field found more than once
-              WRITE(99,2030) IBUFF(1:L)
+C              WRITE(99,2030) IBUFF(1:L)
               RETCOD= -150
             END IF
           END IF
@@ -1796,9 +1796,9 @@ C             done directives
 C             subdirective not importable
               TBUFF= 'ERROR: The following record is not'//
      1               ' recognized as a subdirective.'
-              WRITE(99,2000) TBUFF
+C              WRITE(99,2000) TBUFF
               TBUFF= 'Record is >> '//IBUFF(1:65)
-              WRITE(99,2000) TBUFF
+C              WRITE(99,2000) TBUFF
               RETCOD= -150
             END IF
           IF (IBUF1(1).NE.'$' .AND. IBUF1(1).NE.'#' .AND.
@@ -1825,9 +1825,9 @@ C         window name for data screen
 C         not end of group, directive not importable
           TBUFF= 'ERROR: The following record is not'//
      1           ' recognized as a directive.'
-          WRITE(99,2000) TBUFF
+C          WRITE(99,2000) TBUFF
           TBUFF= 'Record is >> '//IBUFF(1:65)
-          WRITE(99,2000) TBUFF
+C          WRITE(99,2000) TBUFF
           RETCOD= -150
         END IF
       IF (IBUF1(1).NE.'#'.AND.STRFND(I10,IBUF1,I5,CEND).EQ.0) GO TO 100
@@ -1844,17 +1844,17 @@ C
       IF (TITFG.EQ.0 .AND. SCRFG.EQ.0) THEN
 C       no title specified, assume they will do so
         TBUFF= 'WARNING: Did not find the $TITLE directive.'
-        WRITE(99,2000) TBUFF
+C        WRITE(99,2000) TBUFF
         TBUFF= 'Assuming one will be provided in the application.'
-        WRITE(99,2000) TBUFF
+C        WRITE(99,2000) TBUFF
         RETCOD= -150
       END IF
       IF (INOPT .LT. 1) THEN
 C       oops, no options from file
         TBUFF= 'WARNING: Did not find any Options to import.'
-        WRITE(99,2000) TBUFF
+C        WRITE(99,2000) TBUFF
         TBUFF= 'Assuming they will be provided in the application.'
-        WRITE(99,2000) TBUFF
+C        WRITE(99,2000) TBUFF
         RETCOD= -150
       END IF
 C
@@ -1936,9 +1936,9 @@ C           left justify
 C             cant import it and we're not at the end
               TBUFF= 'ERROR: The following record is not '//
      1               'recognized as a directive.'
-              WRITE(99,2000) TBUFF
+C              WRITE(99,2000) TBUFF
               TBUFF= 'Record is >> '//IBUFF(1:59)
-              WRITE(99,2000) TBUFF
+C              WRITE(99,2000) TBUFF
               RETCOD= -150
               I= 1
             END IF
@@ -1961,7 +1961,7 @@ C             done menu
 C               there wasn't anything in SCREEN directive
                 TBUFF= 'WARNING: Nothing in $SCREEN'//
      1                 ' directive to import.'
-                WRITE(99,2000) TBUFF
+C                WRITE(99,2000) TBUFF
                 RETCOD= -150
               END IF
             ELSE
@@ -1979,10 +1979,10 @@ C               cant have parameter fields past line 10
                 NXTFG= 1
                 TBUFF= 'ERROR: Parameter fields must appear '//
      1                 'in line numbers 1 through 10 of'
-                WRITE(99,2000) TBUFF
-                WRITE(99,2010) LNLIN
+C                WRITE(99,2000) TBUFF
+C                WRITE(99,2010) LNLIN
                 TBUFF= 'Directive is >> '//IBUFF(1:62)
-                WRITE(99,2000) TBUFF
+C                WRITE(99,2000) TBUFF
                 RETCOD= -150
               END IF
             END IF
@@ -2010,7 +2010,7 @@ C               field found in screen text
             IF (I.LT.LNLIN) GO TO 170
             IF (K.EQ.0) THEN
 C             field was not found, let 'em know
-              WRITE(99,2020) IBUFF(1:L)
+C              WRITE(99,2020) IBUFF(1:L)
               RETCOD= -150
             END IF
           END IF
@@ -2064,9 +2064,9 @@ C         window name for data screen
 C         not end of group, directive not importable
           TBUFF= 'ERROR: The following record is not'//
      1                ' recognized as a directive.'
-          WRITE(99,2000) TBUFF
+C          WRITE(99,2000) TBUFF
           TBUFF= 'Record is >> '//IBUFF(1:65)
-          WRITE(99,2000) TBUFF
+C          WRITE(99,2000) TBUFF
           RETCOD= -150
         END IF
       IF (IBUF1(1).NE.'#'.AND.STRFND(I10,IBUF1,I5,CEND).EQ.0) GO TO 100
@@ -2297,10 +2297,11 @@ C             read record length
               READ (TMPSTR,CFMT) IRECL
             END IF
           ELSE
+             IPOS = 0
 C           can't process this keyword
-            WRITE (99,*) 'Unable to process FILE type field identifier',
-     $                   ' in _VALID subdirective.'
-            WRITE (99,*) 'Subdirective is >> ',FSPTXT(IPOS:LPOS-1)
+C            WRITE (99,*) 'Unable to process FILE type field identifier',
+C     $                   ' in _VALID subdirective.'
+C            WRITE (99,*) 'Subdirective is >> ',FSPTXT(IPOS:LPOS-1)
           END IF
           IPOS= LPS2+ 1
         ELSE

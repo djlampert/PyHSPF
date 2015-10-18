@@ -634,9 +634,10 @@ C     determine where data set starts
 C       bring label into memory
         RIND= WDRCGO(WDMSFL,TDSFRC)
         IF ((RIND .LE. 0) .OR. (RIND .GT. 512)) THEN
+           RIND = RIND
 C         invalid record
-          WRITE (99,*) 'BAD RIND:  WDMSFL,DSN,TDSFRC,RIND',WDMSFL,DSN,
-     $                  TDSFRC,RIND
+C          WRITE (99,*) 'BAD RIND:  WDMSFL,DSN,TDSFRC,RIND',WDMSFL,DSN,
+C     $                  TDSFRC,RIND
         ELSE
 C         look for attribute
           SALEN= 16

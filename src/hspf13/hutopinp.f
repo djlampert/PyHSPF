@@ -1028,20 +1028,20 @@ C
       IF (TYPEFG.EQ.4) THEN
 C       revised format, use direct acess file
         INQUIRE (PLOTFL,OPENED=LOPEN,NAME=LFILE)
-       write(99,*) "PLTGEN: unit # ",PLOTFL," is named ",LFILE
+C       write(99,*) "PLTGEN: unit # ",PLOTFL," is named ",LFILE
         IF (LOPEN .EQV. .TRUE.) THEN
 C         close file before opening
           CLOSE (PLOTFL)
         END IF
 C       determine record length and write it on 1st record
         LLEN= 4*LEN
-       write(99,*) "PLTGEN: About to open ",LFILE,
-     $             " with length ",LLEN
+C       write(99,*) "PLTGEN: About to open ",LFILE,
+C     $             " with length ",LLEN
         OPEN (PLOTFL,FILE=LFILE,STATUS="REPLACE",
      $        ACCESS="DIRECT",RECL=LLEN)
         WRITE (PLOTFL,REC=1) LLEN,(IREC(I),I=2,LEN)
-       write(99,*) "PLTGEN: wrote LLEN and Dummy 0s, like this:"
-       write(99,*) "PLTGEN: ",LLEN,(IREC(I),I=1,4)
+C       write(99,*) "PLTGEN: wrote LLEN and Dummy 0s, like this:"
+C       write(99,*) "PLTGEN: ",LLEN,(IREC(I),I=1,4)
       END IF
 C
 C     write first record

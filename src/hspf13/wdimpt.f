@@ -164,8 +164,9 @@ C       error on write to wdmsfl, see how bad
 C         ok for for missing
           RETCOD = 0
         ELSE
+           RETCOD = RETCOD
 C         might be a problem, print retcod for user to investigate
-          WRITE(99,2000) RETCOD,DSN,CURTST,CURTUN,CURNOV,CURQUA,CURDAT
+C          WRITE(99,2000) RETCOD,DSN,CURTST,CURTUN,CURNOV,CURQUA,CURDAT
         END IF
 CJK     DONFG= 1
       END IF
@@ -372,21 +373,21 @@ C           INDEX found, get the value
             IF (ATIND.EQ.0) THEN
 C             no INDEX number
               TBUFF= 'No index number found for attribute '//ATNAM
-              WRITE(99,2020) TBUFF
+C              WRITE(99,2020) TBUFF
               RETCOD= -151
               IERR  = 1
             END IF
           ELSE
 C           invalid group number
             TBUFF= 'No INDEX found for attribute '//ATNAM
-            WRITE(99,2020) TBUFF
+C            WRITE(99,2020) TBUFF
             RETCOD= -151
             IERR  = 2
           END IF
         ELSE
 C         no attribute name found
           TBUFF= 'No attribute name found on #ATTRIBUTE record.'
-          WRITE(99,2020) TBUFF
+C          WRITE(99,2020) TBUFF
           RETCOD= -151
           IERR  = 3
         END IF
@@ -414,7 +415,7 @@ C           put attribute on WDM file
      M                   IBUFF,CONT,RETCOD)
           ELSE IF (IERR.EQ.4) THEN
 C           attribute already exists, cant add
-            WRITE (99,2010) ATNAM,ATIND
+C            WRITE (99,2010) ATNAM,ATIND
             RETCOD= -151
           END IF
         END IF
@@ -650,10 +651,10 @@ C         attribute range
           IF (J.LT.1) THEN
 C           bad range or type not set
             TBUFF= 'ERROR: problem with _RANGE record'
-            WRITE(99,2000) TBUFF
+C            WRITE(99,2000) TBUFF
             TBUFF= 'Record is >> '//IBUFF(1:65)
-            WRITE(99,2000) TBUFF
-            WRITE(99,*)
+C            WRITE(99,2000) TBUFF
+C            WRITE(99,*)
             RETCOD= -151
           ELSE
 C           min value
@@ -678,9 +679,9 @@ C             store as integer
               IF (IVAL(2).LT.IVAL(1) .AND. IVAL(2).GT.-999) THEN
 C               invalid range values
                 TBUFF= 'ERROR: Invalid Range values.'
-                WRITE(99,2000) TBUFF
-                WRITE(99,2010) IVAL(1),IVAL(2)
-                WRITE(99,*)
+C                WRITE(99,2000) TBUFF
+C                WRITE(99,2010) IVAL(1),IVAL(2)
+C                WRITE(99,*)
                 RETCOD= -151
               END IF
             ELSE
@@ -689,9 +690,9 @@ C             store as real
               IF (RMAX.LT.RMIN .AND. RMAX.GT.-998.0) THEN
 C               invalid range values
                 TBUFF= 'ERROR: Invalid Range values.'
-                WRITE(99,2000) TBUFF
-                WRITE(99,2020) RMIN,RMAX
-                WRITE(99,*)
+C                WRITE(99,2000) TBUFF
+C                WRITE(99,2020) RMIN,RMAX
+C                WRITE(99,*)
                 RETCOD= -151
               END IF
             END IF
@@ -712,10 +713,10 @@ C         valid attribute values
 C         not end of group, directive not importable
           TBUFF= 'ERROR: The following record is not'//
      1           ' recognized as a directive.'
-          WRITE(99,2000) TBUFF
+C          WRITE(99,2000) TBUFF
           TBUFF= 'Record is >> '//IBUFF(1:65)
-          WRITE(99,2000) TBUFF
-          WRITE(99,*)
+C          WRITE(99,2000) TBUFF
+C          WRITE(99,*)
           RETCOD= -151
         END IF
 C
@@ -725,9 +726,9 @@ C     make sure integer parameters get put on
       IF (ATTYP.EQ.0 .OR. ATLEN.EQ.0) THEN
 C       problems, haven't specified required info
         TBUFF= 'ERROR: Attribute Type and/or Length not specified.'
-        WRITE(99,2000) TBUFF
-        WRITE(99,2030) ATIND,ATTYP,ATLEN
-        WRITE(99,*)
+C        WRITE(99,2000) TBUFF
+C        WRITE(99,2030) ATIND,ATTYP,ATLEN
+C        WRITE(99,*)
         RETCOD= -151
       END IF
 C     add info to WDM file
@@ -922,7 +923,7 @@ C                 dont include this fields space
                   IFLD= IFLD- 1
                 ELSE IF (IPOS.GT.MXPOS) THEN
 C                 field will not fit in buffer
-                  WRITE (99,2020) TABNAM,TABIND,IFLD
+C                  WRITE (99,2020) TABNAM,TABIND,IFLD
                   ALEN(IFLD)= 80
                   LRET= -34
                 END IF
@@ -957,7 +958,7 @@ C           loop till end of extension data
           END IF
           IF (RETCOD.NE.0) THEN
 C           write bad record
-            WRITE(99,2000) RETCOD
+C            WRITE(99,2000) RETCOD
           ELSE
 C           now do the main table
             DATFLG= 1
@@ -987,7 +988,7 @@ C                 dont include this fields space
                   IFLD= IFLD- 1
                 ELSE IF (IPOS.GT.MXPOS) THEN
 C                 field will not fit in buffer
-                  WRITE (99,2020) TABNAM,TABIND,IFLD
+C                  WRITE (99,2020) TABNAM,TABIND,IFLD
                   TLEN(IFLD)= 80
                   LRET= -34
                 END IF
@@ -1011,7 +1012,7 @@ C                   record of data (no '***' found)
                 IF (ENDFG.GT.0) THEN
 C                 end of data reached early, problem
                   LRET= -35
-                  WRITE (99,2030) TABNAM,TABIND
+C                  WRITE (99,2030) TABNAM,TABIND
                   IF (I.GT.1) THEN
 C                   store any data that has been successfully read
                     NROW= I- 1
@@ -1033,8 +1034,9 @@ C               write main table to the WDM file
      I                       I1,NROW,FSPA,BSPA,RBUFF,
      O                       RETCOD)
                 IF (RETCOD.NE.0) THEN
+                   RETCOD = RETCOD
 C                 write bad RETCOD
-                  WRITE(99,2010) RETCOD
+C                  WRITE(99,2010) RETCOD
                 END IF
                 IF (IPOS.GT.MXPOS) THEN
 C                 more table to process, update positions in table
@@ -1048,8 +1050,9 @@ C             increment field number
             IF (IFLD.LE.TFLDS .AND. ENDFG.EQ.0) GO TO 200
           END IF
         ELSE
+           RETCOD = RETCOD
 C         problem retrieving table template info
-          WRITE (99,2040) RETCOD
+C          WRITE (99,2040) RETCOD
         END IF
 C       loop till end of data
  250    CONTINUE

@@ -101,7 +101,7 @@ C     save starting date of run
       CALL COPYI (I5,RUNINF(2),NXTDAT)
       CALL EXDATE(NXTDAT,CURDAT)
       CURDAT(6)= 0
-      WRITE(99,2020) "OSUPER:START:CURDAT:", CURDAT
+C      WRITE(99,2020) "OSUPER:START:CURDAT:", CURDAT
 C
 C     find the starting key for the first exgroup
       EXKEY= OSUPKY +1
@@ -134,8 +134,8 @@ C           find the number of inspans in this exspan
             ELSE
               LAST= REPEAT
             END IF
-            WRITE(99,2030) 'OSUPER:grp,runwid,last',
-     1                             GRP,RUNWID,LAST
+C            WRITE(99,2030) 'OSUPER:grp,runwid,last',
+C     1                             GRP,RUNWID,LAST
 C
             IF (EXTWID.GT.WID) THEN
 C             using external update functionality and 
@@ -251,8 +251,8 @@ C             set up runwid loop
 C
               IF (RUNWID .GT. 0) THEN
 C               get all external time series before running any
-                WRITE(99,2030)
-     1            'OSUPER:runwid>0, getting all time series'
+C                WRITE(99,2030)
+C     1            'OSUPER:runwid>0, getting all time series'
                 EXTFG= 1
                 DO 50 GKEY= FOPKEY, LOPKEY
                   CALL COPYI (I8,OSUPM(1,GKEY),
@@ -281,9 +281,9 @@ C                 run entire remaining width
 C                 IW= WIDTH
                 END IF
 C
-                WRITE(99,2030) 
-     1            'OSUPER:width,ivls,runwid,iw',
-     1                    WIDTH,IVLS,RUNWID,IW
+C                WRITE(99,2030) 
+C     1            'OSUPER:width,ivls,runwid,iw',
+C     1                    WIDTH,IVLS,RUNWID,IW
 C
 C               how many time steps to next mfact special action?
                 CALL SPECLX(CURDAT,DELT,
@@ -297,7 +297,7 @@ C                 special action update to mfactr
 C                 check again for next
                   CALL SPECLX(CURDAT,DELT,
      O                        INSPAC)
-                  WRITE(99,2030) 'OSUPER:MUPFG,INSPAC:',MUPFG,INSPAC
+C                  WRITE(99,2030) 'OSUPER:MUPFG,INSPAC:',MUPFG,INSPAC
                 END IF
 C
                 IF (INSPAC .GT. 0 .AND. INSPAC.LT.IW) THEN
@@ -306,9 +306,9 @@ C                 to next mfact special action
                   IW = INSPAC
                 END IF
 C
-                WRITE(99,2030)
-     1            'OSUPER:width,ivls,runwid,iw,inspac',
-     1                    WIDTH,IVLS,RUNWID,IW,INSPAC
+C                WRITE(99,2030)
+C     1            'OSUPER:width,ivls,runwid,iw,inspac',
+C     1                    WIDTH,IVLS,RUNWID,IW,INSPAC
 C
 C               determine whether or not this is the first or last
 C               time through operation loop
@@ -360,10 +360,11 @@ C                 get time series data not already done
                     CALL TSGET (FILES,TSGKST,TSGKND,
      I                          DELT,STIVL,IW,FSTCAL,EXTFG)
                     IF (FSTCAL .EQ. 1) THEN
+                       OPCODE = OPCODE
 C                     details first time thru
-                      write(99,2030)
-     1                  'OSUPER:TSGET:omc,optno,kst,knd,stivl,iw',
-     1                  OMCODE,OPTNO,TSGKST,TSGKND,STIVL,IW
+C                      write(99,2030)
+C     1                  'OSUPER:TSGET:omc,optno,kst,knd,stivl,iw',
+C     1                  OMCODE,OPTNO,TSGKST,TSGKND,STIVL,IW
                     END IF
                   END IF
 C
@@ -446,7 +447,7 @@ C                   only put internal time series
 C
                   IF (TSPKST.GT.0) THEN
 C                   output time series from the inpad
-                    WRITE(99,2030) 'OSUPER:TSPUT:',TSPKST
+C                    WRITE(99,2030) 'OSUPER:TSPUT:',TSPKST
                     CALL TSPUT (FILES,TSPKST,TSPKND,
      I                          DELT,STIVL,IW,FSTCAL,LSTCAL,EXTFG)
                   END IF
@@ -465,8 +466,8 @@ C
                 IF (RUNWID .GT. 0) THEN
                   STIVL = STIVL+ IW
                 END IF
-                WRITE (99,2030)'OSUPER:updated:ivls,stivl,iw',
-     1                                         IVLS,STIVL,IW
+C                WRITE (99,2030)'OSUPER:updated:ivls,stivl,iw',
+C     1                                         IVLS,STIVL,IW
 C
 C               status file write
                 IF (STFIL .NE. 0) THEN
@@ -480,15 +481,15 @@ C
 C               update current time
                 CALL TIMADD (CURDAT,I2,DELT,IW,NXTDAT)
                 CALL COPYI (I6,NXTDAT,CURDAT)
-                WRITE(99,2020) "OSUPER:end interval loop:CURDAT:",
-     1                                                   CURDAT
+C                WRITE(99,2020) "OSUPER:end interval loop:CURDAT:",
+C     1                                                   CURDAT
 C
 C             end of interval loop
               IF (IVLS.GT.0 .AND. RETCOD.EQ.0) GO TO 60
 C
               IF (RUNWID .GT. 0) THEN
 C               put all external time series
-                WRITE(99,2030) 'OSUPER:put external time series'
+C                WRITE(99,2030) 'OSUPER:put external time series'
                 EXTFG= 1
                 DO 310 PKEY= FOPKEY, LOPKEY
                   CALL COPYI (I8,OSUPM(1,PKEY),
@@ -500,16 +501,16 @@ C               put all external time series
  310            CONTINUE
               END IF
 C
-              WRITE(99,2030) 'OSUPER:end inpsan loop:COUNT,LAST,RETCOD',
-     1                                               COUNT,LAST,RETCOD 
+C              WRITE(99,2030) 'OSUPER:end inpsan loop:COUNT,LAST,RETCOD',
+C     1                                               COUNT,LAST,RETCOD 
 C
 C           end of inspan loop
             IF (COUNT.LT.LAST .AND. RETCOD.EQ.0) GO TO 40
 C           get key for start of next ingroup
             INKEY= OPKEY
 C
-            WRITE(99,2030) 'OSUPER:end ingroup loop:GRP,RETCOD',
-     1                                              GRP,RETCOD
+C            WRITE(99,2030) 'OSUPER:end ingroup loop:GRP,RETCOD',
+C     1                                              GRP,RETCOD
 C         end of ingroup loop
           IF (GRP.LT.NGRPS .AND. RETCOD.EQ.0) GO TO 30
 C

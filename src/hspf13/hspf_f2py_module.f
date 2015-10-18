@@ -453,7 +453,7 @@ C     + + + END SPECIFICATIONS + + +
 C
 C     general info
       WRITE (*,2000)
-      WRITE(99,2000)
+C      WRITE(99,2000)
 C
 C     loop to write out general comments
       DONFG= 0
@@ -464,7 +464,7 @@ C     loop to write out general comments
 C         general comment line, write it to terminal and log file
           I= LENSTR(I80,BUFF)
           WRITE (*,2020) (BUFF(J),J=1,I)
-          WRITE(99,2020) (BUFF(J),J=1,I)
+C          WRITE(99,2020) (BUFF(J),J=1,I)
         ELSE
           DONFG= 1
         END IF
@@ -488,7 +488,7 @@ C       process a cluster
         IF (NDP.EQ.0) NDP= 100
 C
         WRITE (*,2002) CLU
-        WRITE(99,2002) CLU
+C        WRITE(99,2002) CLU
 C
 C       loop to find valid cluster to write or skip
         SKIPFG= 0
@@ -497,7 +497,7 @@ C       loop to find valid cluster to write or skip
         IF (DSFREC.GT.0) THEN
 C         cluster exists, change, skip, add, or overwrite data?
           WRITE (*,2005)
-          WRITE(99,2005)
+C          WRITE(99,2005)
  25       CONTINUE
             WRITE (*,*) 'Do you want to Skip data, ',
      1                  'Overwrite data or Abort import',
@@ -507,17 +507,17 @@ C         cluster exists, change, skip, add, or overwrite data?
      1      CRESP.NE.'o'.AND.CRESP.NE.'A'.AND.CRESP.NE.'a') GO TO 25
           IF (CRESP.EQ.'S' .OR. CRESP.EQ.'s') THEN
 C           skip cluster
-            WRITE(99,*) 'Skipping DSN/CLU'
+C            WRITE(99,*) 'Skipping DSN/CLU'
             SKIPFG= 2
           ELSE IF (CRESP.EQ.'O' .OR. CRESP.EQ.'o') THEN
 C           overwrite cluster
             CALL WDDSDL (WDMSFL,CLU,
      O                   RETCOD)
-            WRITE(99,*) 'Overwrite DSN/CLU'
+C            WRITE(99,*) 'Overwrite DSN/CLU'
             SKIPFG= 0
           ELSE
 C           aborting import
-            WRITE(99,*) 'Abort import'
+C            WRITE(99,*) 'Abort import'
             SKIPFG= 5
           END IF
         END IF
@@ -601,7 +601,7 @@ C
               IF (RETCOD.NE.0) THEN
 C               problem writing out attributes
                 WRITE (*,2010) RETCOD
-                WRITE(99,2010) RETCOD
+C                WRITE(99,2010) RETCOD
                 RETCOD= 0
               END IF
             IF (DONFG.EQ.0) GO TO 40
@@ -609,7 +609,7 @@ C
           ELSE
 C           no attributes found to write on a new cluster, skip
             WRITE (*,2015)
-            WRITE(99,2015)
+C            WRITE(99,2015)
             SKIPFG= 2
           END IF
 C
@@ -673,7 +673,7 @@ C     close import file
       CLOSE (SUCIFL)
 C     end of file, all clusters copied
       WRITE (*,2040)
-      WRITE(99,2040)
+C      WRITE(99,2040)
 C
       RETURN
       END

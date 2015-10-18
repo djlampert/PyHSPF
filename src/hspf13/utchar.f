@@ -1909,16 +1909,16 @@ C                 keep the zero to the left of the decimal.
                   IF (FRAC) THEN
 C                    r1 gets the number that we had planned to display, but
 C                    raised to a power of 10 such that it is a whole number.
-                     WRITE(99,*) 'ARTMP =',ARTMP
-                     WRITE(99,*) 'LENGTH=',LENGTH
-                     WRITE(99,*) 'FDIGS =',FDIGS 
-                     WRITE(99,*) 'DBLE(10.0)**FDIGS =',DBLE(10.0)**FDIGS
-                     WRITE(99,*) 'ARTMP*DBLE(10.0)**FDIGS =',
-     $                            ARTMP*DBLE(10.0)**FDIGS
-                     WRITE(99,*) 'DNINT(ARTMP*DBLE(10.0)**FDIGS) =',
-     $                            DNINT(ARTMP*DBLE(10.0)**FDIGS)
-                     WRITE(99,*) '--'
-                     WRITE(99,*) ' '
+C                     WRITE(99,*) 'ARTMP =',ARTMP
+C                     WRITE(99,*) 'LENGTH=',LENGTH
+C                     WRITE(99,*) 'FDIGS =',FDIGS 
+C                     WRITE(99,*) 'DBLE(10.0)**FDIGS =',DBLE(10.0)**FDIGS
+C                     WRITE(99,*) 'ARTMP*DBLE(10.0)**FDIGS =',
+C     $                            ARTMP*DBLE(10.0)**FDIGS
+C                     WRITE(99,*) 'DNINT(ARTMP*DBLE(10.0)**FDIGS) =',
+C     $                            DNINT(ARTMP*DBLE(10.0)**FDIGS)
+C                     WRITE(99,*) '--'
+C                     WRITE(99,*) ' '
                      R1 = DNINT(ARTMP*DBLE(10.0)**FDIGS)
 C                    r2 gets a fraction representing digits which we had
 C                    not planned to display and r3 is that fraction times 10.

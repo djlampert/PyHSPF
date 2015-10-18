@@ -386,8 +386,9 @@ C                     put character default in screen text (left justified)
                     END IF
                   ELSE IF (CLASS.EQ.1) THEN
 C                   no room for default in screen text
-                    WRITE(99,*) 'Not enough room for default of length',
-     1                           OLEN,' in field',ORDER
+                     OLEN = OLEN
+C                    WRITE(99,*) 'Not enough room for default of length',
+C     1                           OLEN,' in field',ORDER
                   END IF
                 ELSE IF (ID.EQ.19 .AND. ZWNFLG.EQ.0) THEN
 C                 window name for data screen,
@@ -1483,7 +1484,7 @@ C
 C
       IF (NFLDS.GT.30) THEN
 C       this should not happen for the purposes of this routine
-        WRITE (99,*) 'BIG PROBLEM in WMSGTX: NFLDS > 30, NFLDS =',NFLDS
+C        WRITE (99,*) 'BIG PROBLEM in WMSGTX: NFLDS > 30, NFLDS =',NFLDS
         LNFLDS= 30
       ELSE
 C       use all available fields
@@ -1991,7 +1992,7 @@ C     + + + END SPECIFICATIONS + + +
 C
       IF (NFLDS.GT.30) THEN
 C       this should not happen for the purposes of this routine
-        WRITE (99,*) 'BIG PROBLEM in WMSGFD: NFLDS > 30, NFLDS =',NFLDS
+C        WRITE (99,*) 'BIG PROBLEM in WMSGFD: NFLDS > 30, NFLDS =',NFLDS
         J= 30
       ELSE
 C       use all available fields

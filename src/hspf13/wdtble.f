@@ -1432,12 +1432,12 @@ C         template stored with application message file
 C         look for table template somewhere else
           TCLU   = 20
           TGRP   = 1
-          WRITE(99,*)'changing from 8/29 to 20/1 for table template'
+C          WRITE(99,*)'changing from 8/29 to 20/1 for table template'
         ELSE IF (TCLU.EQ.122 .AND. TGRP.EQ.1) THEN
 C         look for table template somewhere else
           TCLU   = 20
           TGRP   = 1
-          WRITE(99,*)'changing from 122/1 to 20/1 for table template'
+C          WRITE(99,*)'changing from 122/1 to 20/1 for table template'
         ELSE
 C         table template is missing
           DONFG  = 1

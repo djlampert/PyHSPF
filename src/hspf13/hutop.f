@@ -1538,8 +1538,8 @@ C             dtsf format
               ELSE
                 WRITE (PLOTFL,REC=CURREC) JTIME,DYFRAC,(EXDAT(N),N=1,3),
      $                                   (VAL(N), N= 1, NC)
-            write(99,*) "PLTGEN: REC=",CURREC," JTIME,DYFRAC,EXDAT,VALS"
-            write(99,*) JTIME,DYFRAC,(EXDAT(N),N=1,3),(VAL(N),N=1,NC)
+C            write(99,*) "PLTGEN: REC=",CURREC," JTIME,DYFRAC,EXDAT,VALS"
+C            write(99,*) JTIME,DYFRAC,(EXDAT(N),N=1,3),(VAL(N),N=1,NC)
                 CURREC= CURREC + 1
               END IF
             ELSE IF (TYPEFG .EQ. 3) THEN

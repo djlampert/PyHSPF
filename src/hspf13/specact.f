@@ -6980,7 +6980,7 @@ C
      O               INSPAC)
       END IF
 C
-      WRITE(99,*) ' SPECLX:INSPAC:', INSPAC
+C      WRITE(99,*) ' SPECLX:INSPAC:', INSPAC
 C
       RETURN
       END

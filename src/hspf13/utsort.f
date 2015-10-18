@@ -365,7 +365,7 @@ C           zero here
             IZCNT= I
           END IF
         IF (IZFND .LT. CNT) GO TO 12
-        WRITE(99,*) 'zero count in sort:',IZCNT
+C        WRITE(99,*) 'zero count in sort:',IZCNT
       ELSE
 C       no quick move of zero to first position
         IZCNT= 0

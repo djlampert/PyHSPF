@@ -858,7 +858,7 @@ C     split pointer into record/offset
 C       if position was 512, WDPTSP will return as 0, reset to 512
         DPOS= 512
         DREC= DREC- 1
-        WRITE (99,*) 'In WMSBCX:  Reset DPOS from 0 to 512, DREC-1'
+C        WRITE (99,*) 'In WMSBCX:  Reset DPOS from 0 to 512, DREC-1'
       END IF
       DIND= WDRCGO (WDMSFL,DREC)
       CALL WMSBCS (WIBUFF(DPOS,DIND),

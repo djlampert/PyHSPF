@@ -270,7 +270,8 @@ C             pad values
       IF (ID .LT. ZGLCNT) GO TO 10
 C
       IF (ILEN .EQ. 0) THEN
-        WRITE(99,*) 'problem in GGTGLV, didnt find',GLOID,ZGLCNT
+         ILEN = ILEN
+C        WRITE(99,*) 'problem in GGTGLV, didnt find',GLOID,ZGLCNT
       END IF
 C
       RETURN
@@ -314,8 +315,9 @@ C         this is it
       IF (ID .LT. ZGLCNT) GO TO 10
 C
       IF (ID .EQ. ZGLCNT) THEN
+         ID = ID
 C       didnt find it
-        WRITE(99,*) 'problem in GGTGLA, didnt find',GLNAM,ZGLCNT
+C        WRITE(99,*) 'problem in GGTGLA, didnt find',GLNAM,ZGLCNT
       END IF
 C
       RETURN

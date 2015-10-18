@@ -205,7 +205,7 @@ C          write(99,*) endfg
      M               ECOUNT)
 C         missing data not fatal for ihm operation
           IF (IHMFG .EQ. 1) THEN
-            WRITE(99,*) 'PROWDS:missing data IGNORE!',WDMSFL,VOLNO
+C            WRITE(99,*) 'PROWDS:missing data IGNORE!',WDMSFL,VOLNO
             ECOUNT = ECOUNT-1
           END IF
         END IF
