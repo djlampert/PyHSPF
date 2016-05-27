@@ -109,7 +109,17 @@ class NHDPlusExtractor:
         self.url          = url
         self.destination  = destination
         self.path_to_7zip = path_to_7zip
-        self.DA           = self.vpu_to_da[VPU]
+
+        if VPU in self.vpu_to_da:
+            self.DA = self.vpu_to_da[VPU]
+        else:
+            print('')
+            print('error: VPU "{}" is not a valid choice!'.format(VPU))
+            print('valid VPU choices are:')
+            print(*self.vpu_to_da.keys())
+            print('')
+            raise
+        
         self.VPU          = VPU
         self.ftp          = ftp
         self.start        = time.time()
@@ -778,7 +788,7 @@ class NHDPlusExtractor:
             
             # get the flow and velocity data
     
-            eromattributes = ['Comid', 'Q0001E', 'V0001E', 'SMGageID']
+            eromattributes = ['ComID', 'Q0001E', 'V0001E', 'SMGageID']
 
             if verbose: print('reading EROM model attributes for ' +
                               '{}\n'.format(HUC8))
@@ -800,7 +810,7 @@ class NHDPlusExtractor:
                 flowlines[f].add_slope(slopevalues['MAXELEVSMO'][i], 
                                        slopevalues['MINELEVSMO'][i],
                                        slopevalues['SLOPELENKM'][i])
-                i = eromvalues['Comid'].index(flowlines[f].comid)
+                i = eromvalues['ComID'].index(flowlines[f].comid)
                 flowlines[f].add_flow(eromvalues['Q0001E'][i], 
                                       eromvalues['V0001E'][i],
                                       eromvalues['SMGageID'][i])
@@ -968,8 +978,9 @@ class NHDPlusExtractor:
                   bfile,
                   VAAfile, 
                   elevfile,
+                  vmin = 0.1,
                   patchcolor = None,
-                  resolution = 400, 
+                  resolution = 400,
                   colormap = 'gist_earth',
                   grid = False,
                   title = None, 
@@ -1056,7 +1067,9 @@ class NHDPlusExtractor:
                 # estimate flow width (ft) assuming triangular 90 d channel 
 
                 comids.append(comid)
-                widths.append(numpy.sqrt(4 * flow / velocity))
+
+                if velocity < 0: widths.append(numpy.sqrt(4 * flow / vmin))
+                else:            widths.append(numpy.sqrt(4 * flow / velocity))
         
         # convert widths in feet to points on the figure; exaggerated by 10
 

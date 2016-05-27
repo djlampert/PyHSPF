@@ -2,13 +2,14 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# last updated: 07/21/2014
+# last updated: 05/20/2016
 #
 # contains the Flowline class, which can be used to store data from the 
 # NHDPlus V2 dataset 
 
 class Flowline:
-    """A class to store the attributes of a flowline from the NHDPlus database.
+    """
+    A data structure to store flowline attributes from the NHDPlus database.
     """
 
     def __init__(self, comid, hydroseq, down, up, drain, area, div, reachcode):

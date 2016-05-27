@@ -4,7 +4,7 @@
 #
 # the setup file for PyHSPF
 
-_version   = '0.1.17'
+_version   = '0.2.1'
 
 # check for the required and optional dependencies
 
@@ -133,10 +133,10 @@ if os.name == 'nt':
     python = sys.executable[:-10]
     gnu = python + 'lib/site-packages/numpy/distutils/fcompiler/gnu.py'
     with open(gnu, 'r') as f: s = f.read()
-    i = s.index('raise NotImplementedError')
-    if s[i-5:i] != 'pass#': 
-        s = s[:i] + 'pass#' + s[i:]
-        with open(gnu, 'w') as f: f.write(s)
+    #i = s.index('raise NotImplementedError')
+    #if s[i-5:i] != 'pass#': 
+    #    s = s[:i] + 'pass#' + s[i:]
+    #    with open(gnu, 'w') as f: f.write(s)
 
     # numpy/f2py need this configuration file setup to work right
 

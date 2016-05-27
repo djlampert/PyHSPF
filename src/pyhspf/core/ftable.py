@@ -1,9 +1,10 @@
+# ftable.py
 #
 # Estimates FTABLES from flow and velocity for HSPF
 #
-# last updated: 09/02/2015
+# last updated: 05/19/2016
 # 
-# David J. Lampert (djlampert@gmail.com)
+# David J. Lampert
 #
 
 import math
@@ -80,7 +81,7 @@ def make_ftable(f,
 
     f  -- average flow (cfs)
     v  -- average velocity (fps)
-    L  -- channel length (km)
+    L  -- reach length (km)
     s  -- reach average slope
     s0 -- main channel side slope
     s1 -- lower flood plain side slope
@@ -153,7 +154,20 @@ def make_ftable(f,
     
     return ftable
 
-def discharge_constant(f, 
+def spillway(qavg,
+             r = 40,
+             gravity = 9.81,
+             ):
+    """
+    Estimates the critical depth (m) and spillway width from the average 
+    flow (m3/s), gravitational constant, and assumed width to depth ratio r.
+    """
+
+    yc = (qavg**2 / r / gravity)**0.2
+    
+    return yc, r * yc
+
+def discharge_constant(q, 
                        h,
                        ):
     """
@@ -161,7 +175,7 @@ def discharge_constant(f,
     depth (m).
     """
 
-    return (f / h**1.5)
+    return (q / h**1.5)
 
 def discharge(k, 
               h,
@@ -173,24 +187,23 @@ def discharge(k,
 
     return (k * h**1.5)
 
-def lake_ftable(f, 
-                v, 
+def lake_ftable(qavg, 
+                vavg, 
                 L, 
                 s, 
                 dam,
+                n = 10,
                 ):
     """
     Makes an ftable for a lake reach based on a dam.
 
-    f   -- average flow (cfs)
-    v   -- average velocity (fps)
-    s   -- reach slope
-    dam -- an instance of the Dam class
+    qavg  -- average flow (cfs)
+    vavg  -- average velocity (fps)
+    L     -- reach length (km)
+    s     -- reach slope
+    dam   -- an instance of the Dam class
+    n     -- number of segments between spillway height and max lake depth
     """
-
-    # use the reach ftable to fill out depths greater than the lake depth
-
-    reach_ftable = make_ftable(f, v, L, s)
 
     # lake characterstics
 
@@ -207,49 +220,79 @@ def lake_ftable(f,
 
     if area == 0: 
 
-        # no area avaiable; make a rough estimate assuming 1/3 vol / depth
+        # no area available; roughly assume volume = depth * area / 3
 
-        area = norm_volume / depth / 3 * 100
+        conv = 100 # Mm3 / m to ha
+        
+        area = 3 * norm_volume / depth * conv
 
-    else: area = area * 0.4049
+    else:
 
-    # estimate the normal lake height assuming a cubic relationship between
-    # volume and depth
+        conv = 0.4049 # acres to ha
 
-    norm_depth = max_depth * (norm_volume / max_volume)**(1/3)
+        area = area * conv
 
+    # estimate the average depth of the reach assuming a cubic relationship
+    # between volume and depth using the max values
+
+    avg_depth = max_depth * (norm_volume / max_volume)**(1/3)
+
+    # estimate the critical depth (m) and spillway width (m)
+    
+    yc, b = spillway(qavg * 0.3048**3)
+          
     # calculate the scaling constant for the flow at average depth
 
-    k = discharge_constant(f * 0.3048**3, norm_depth)
+    k = discharge_constant(qavg * 0.3048**3, yc)
 
+    # calculate the spillway height from the upstream and critical depths
+
+    height = avg_depth - yc
+    
     # first row of the ftable is all zeros
 
     ftable = [[0,0,0,0]]
 
     # second row for dead storage
+    # assume a quadratic increase in surface area and a cubic increase in volume
 
-    ftable.append([norm_depth, area, norm_volume, 0])
+    a = (height / avg_depth)**2 * area
+    v = (height / avg_depth)**3 * norm_volume
+    
+    ftable.append([height, a, v, 0])
 
-    # relative heights of the lake above the dam to calculate ftable values
-    # (i.e., x = (depth - normdepth) / (maxdepth - normdepth)
+    # third row for half normal spillway depth
 
-    xs = [0.1 * i for i in range(1,11)]
-
+    a = ((height + yc / 2) / avg_depth)**2 * area
+    v = ((height + yc / 2) / avg_depth)**3 * norm_volume
+    q = discharge(k, yc / 2)
+    
+    ftable.append([height + yc / 2, a, v, q])
+        
     # calculate the ftable values for each depth
 
-    for x in xs:
+    for i in range(n + 1):
 
-        # flow height
+        # relative height of the lake above the dam
+        # x = (depth - avg_depth) / (maxdepth - avg_depth)
 
-        d = norm_depth + x * (max_depth - norm_depth)
+        x = i / n
+        
+        # depth of flow upstream of the dam
+
+        y = x * (max_depth - avg_depth) + avg_depth
+
+        # depth of flow over the dam
+        
+        d = y - height
 
         # assume a quadratic increase in surface area with depth
 
-        a = (d / norm_depth)**2 * area
+        a = (y / avg_depth)**2 * area
 
         # assume a cubic increase in volume with depth
 
-        v = (d / norm_depth)**3 * norm_volume
+        v = (y / avg_depth)**3 * norm_volume
 
         # use the discharge equation to estimate flow
 
@@ -257,24 +300,15 @@ def lake_ftable(f,
 
         # append the ftable
 
-        ftable.append([d, a, v, q])
+        ftable.append([y, a, v, q])
 
-    # find the first row with a greater depth
+    # add rows to the ftable until reaching 17
 
-    i = 0
-    while reach_ftable[i][0] < ftable[-1][0] and i < len(reach_ftable) - 1: 
-        i += 1
-
-    # add the rows to the ftable until reaching 17
-
-    if i == len(reach_ftable) - 1: 
-        ftable.append([ftable[-1][0] + 5, 
-                       max(1.1 * ftable[-1][1], 1.1 * reach_ftable[-1][1]), 
-                       max(2   * ftable[-1][2], 2   * reach_ftable[-1][2]),
-                       max(2   * ftable[-1][3], 2   * reach_ftable[-1][3])])
-    else:
-        while i < len(reach_ftable) and len(ftable) < 18:
-            ftable.append(reach_ftable[i])
-            i += 1
+    while len(ftable) < 17:
+        last = ftable[-1]
+        ftable.append([last[0] + 0.1 * (max_depth - avg_depth),
+                       last[1] * 1.2,
+                       last[2] * 1.3,
+                       last[3] * 1.5])
 
     return ftable

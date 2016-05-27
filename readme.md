@@ -1,10 +1,6 @@
-PyHSPF, Version 0.1.17
+**PyHSPF**
  		 
-Developed by David J. Lampert and May M. Wu, Argonne National Laboratory
-
-**Summary:** PyHSPF contains Python extensions to the Hydrological Simulation Program in Fortran (HSPF), including classes for gathering input data, building input files, performing simulations, postprocessing results, calibrating hydrology process parameters, and forecasting climate and land use change effects on water resources.
-
-Flowline and catchment data for a stream network, land use data for the stream reach subbasins, time series data of climate parameters, and hydrology parameters for each land use category/subbasin are needed to use HSPF. These data sources can be supplied externally as needed (e.g., using Python extensions for geographic information systems (GIS) software). Alternatively, a series of preprocessing classes and routines were developed for a number of databases including:
+PyHSPF contains Python extensions to the Hydrological Simulation Program in Fortran (HSPF), including classes for gathering input data, building input files, performing simulations, postprocessing results, calibrating hydrology process parameters, and forecasting climate and land use change effects on water resources. Flowline and catchment data for a stream network, land use data for the stream reach subbasins, time series data of climate parameters, and hydrology parameters for each land use category/subbasin are needed to use HSPF. The data can be supplied externally as needed (e.g., using Python extensions for various classes of data) or using PyHSPF's preprocessing classes. Tools have developed to interact with data from the following databases:
 
 - National Hydrography Dataset Plus Version 2 (NHDPlus)
 - National Water Information System (NWIS)
@@ -31,12 +27,8 @@ PyHSPF can be used to assimilate data into an HSPF model, build the HSPF input f
 - Python Imaging Library (Pillow)		
 - 7-zip
 
-**Installation:** A few pre-built distributions are provided for Windows at the Python Package Index (PyPI), although these cannot be guaranteed to port to different machines. The HSPF library and associated PyHSPF code can be rebuilt using the open source GNU compiler collection (other compilers may work but are untested). The misc directory contains the HSPF source code including some minor modifications needed to simplify the compilation. Assuming gfortran and gcc are available as environment variables, the HSPF library can be built by navigating to the PyHSPF src folder, running "python setup.py build," and then (as adminstrator) "python setup.py install." Please report any issues encountered with the compilation, installation or running the example files.
+**Installation:** Pre-built distributions are provided for Windows at the Python Package Index (PyPI), although these cannot be guaranteed to port to different machines. The HSPF library and associated PyHSPF code can be rebuilt using the open source GNU compiler collection (other compilers may work but are untested). The misc directory contains the HSPF source code including some minor modifications needed to simplify the compilation. Assuming gfortran and gcc are available as environment variables, the HSPF library can be built by navigating to the PyHSPF src folder, running "python setup.py build," and then (as adminstrator) "python setup.py install." Please report any issues encountered with the compilation, installation or running the example files.
 
 **Testing:** Open the Python interpreter (from a command prompt simply type "python"). Then try "import pyhspf"; the base Fortran subroutines can be accessed from pyhspf.hspf. If the import succeeds, then try to run pyhspf.hspf.sydatepy(), which should print the date as a tuple. There are numerous examples scripts provided. The examples are designed to illustrate the basic concepts used to build HSPF models and extract relevant hydrological data.
 
-**Acknowledgements:** Developed with funding from the United States Department of Energy, Energy Efficiency & Renewable Energy, Bioenergy Technologies Office (BETO). The sponsor in no way endorses this program.
-
-Other Related Pages:
-WATER (water analysis tool for energy resources) http://water.es.anl.gov/	
-Bioenergy KDF https://bioenergykdf.net/
+**Acknowledgements:** Developed in part with funding from the United States Department of Energy, Energy Efficiency & Renewable Energy, Bioenergy Technologies Office. 

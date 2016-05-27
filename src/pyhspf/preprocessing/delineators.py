@@ -1287,8 +1287,9 @@ class NHDPlusDelineator:
             velocity = flowlineVAAs[comid].velocity
     
             # estimate the flow width in feet assuming triangular 90 deg channel
-    
-            widths.append(numpy.sqrt(4 * flow / velocity))
+
+            if velocity > 0: widths.append(numpy.sqrt(4 * flow / velocity))
+            else:            widths.append(0)
     
         # convert widths in feet to points on the figure; exaggerated by 10
     
@@ -2967,7 +2968,10 @@ class HUC8Delineator(NHDPlusDelineator):
                     # estimate width (ft) assuming triangular 90 deg channel 
 
                     comids.append(comid)
-                    widths.append(numpy.sqrt(4 * flow / velocity))
+                    if velocity > 0:
+                        widths.append(numpy.sqrt(4 * flow / velocity))
+                    else:
+                        widths.append(0)
         
             # convert widths in feet to points on the figure; exaggerated by 10
 
@@ -3021,8 +3025,11 @@ class HUC8Delineator(NHDPlusDelineator):
 
                 # estimate the flow width assuming triangular 90 deg channel
 
-                widths.append(numpy.sqrt(4 * flow / velocity))
-                
+                if velocity > 0:
+                    widths.append(numpy.sqrt(4 * flow / velocity))
+                else:
+                    widths.append(0)
+                    
             # convert widths in feet to points on the figure; exaggerated by 10
 
             widths = [w * scale_factor * 10 for w in widths]

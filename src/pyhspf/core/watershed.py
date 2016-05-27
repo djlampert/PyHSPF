@@ -12,7 +12,7 @@ from matplotlib import pyplot, patches
 
 class FlowPlane:
     """
-    A class that contains information about a flow plane.
+    A data structure that contains information about a flow plane.
     """
 
     def __init__(self, 
@@ -29,7 +29,7 @@ class FlowPlane:
 
 class Dam:
     """
-    A class to store information about a dam.
+    A data structure to store information about a dam from the NID database.
     """
 
     def __init__(self, 
@@ -94,7 +94,7 @@ class Dam:
 
 class Reach:
     """
-    A class that contains information about a stream reach or reservoir.
+    A data structure containing information about stream reaches and reservoirs.
     """
 
     def __init__(self, 
@@ -127,7 +127,7 @@ class Reach:
 
 class Subbasin:
     """
-    A class that contains information about an HSPF watershed subbasin.
+    A data structure that contains information about an HSPF watershed subbasin.
     """
 
     def __init__(self, name):
@@ -172,8 +172,10 @@ class Subbasin:
         self.landuse[year] = {l:a for l, a in zip(landtypes, areas)}
 
 class Watershed:
-    """A class that stores all the information about a watershed needed to 
-    build and HSPF model."""
+    """
+    A data structure that stores all the information about a watershed needed 
+    to build an HSPF model.
+    """
 
     def __init__(self, name, subbasins):
         """Constructor based on a list of instances of the Subbasin class.

@@ -35,13 +35,43 @@ class CDLParser(HTMLParser):
 
         # flags for parsing
 
-        self.table = False
-        self.tr    = False
-        self.td    = False
-        self.font  = False
-        self.a     = False
-        self.div   = False
-
+        self.table  = False
+        self.tr     = False
+        self.td     = False
+        self.font   = False
+        self.a      = False
+        self.div    = False
+        self.html   = False
+        self.head   = False
+        self.title  = False
+        self.link   = False
+        self.meta   = False
+        self.script = False
+        self.body   = False
+        self.img    = False
+        self.h1     = False
+        self.h2     = False
+        self.h3     = False
+        self.hr     = False
+        self.form   = False
+        self.inp    = False
+        self.button = False
+        self.ul     = False
+        self.li     = False
+        self.span   = False
+        self.p      = False
+        self.br     = False
+        self.art    = False
+        self.em     = False
+        self.strong = False
+        self.addr   = False
+        self.nav    = False
+        self.select = False
+        self.ogroup = False
+        self.option = False
+        self.center = False
+        self.tbody  = False
+        
         # 
         # keep track of states
 
@@ -104,6 +134,8 @@ class CDLParser(HTMLParser):
             'Wyoming': 'WY',
             }
 
+        self.abbreviations = {v:k for k,v in self.statenames.items()}
+
     def is_integer(self, i):
         """
         Tests if "i" is an integer.
@@ -117,12 +149,45 @@ class CDLParser(HTMLParser):
 
     def handle_starttag(self, tag, attrs):
 
-        if tag == 'table': self.table = True
-        if tag == 'tr':    self.tr    = True
-        if tag == 'td':    self.td    = True
-        if tag == 'font':  self.font  = True
-        if tag == 'a':     self.a     = True
-        if tag == 'div':   self.div   = True
+        if   tag == 'table':    self.table  = True
+        elif tag == 'tr':       self.tr     = True
+        elif tag == 'td':       self.td     = True
+        elif tag == 'font':     self.font   = True
+        elif tag == 'a':        self.a      = True
+        elif tag == 'div':      self.div    = True
+        elif tag == 'html':     self.html   = True
+        elif tag == 'head':     self.head   = True
+        elif tag == 'title':    self.title  = True
+        elif tag == 'link':     self.link   = True
+        elif tag == 'meta':     self.meta   = True
+        elif tag == 'script':   self.script = True
+        elif tag == 'body':     self.body   = True
+        elif tag == 'img':      self.img    = True
+        elif tag == 'h1':       self.h1     = True
+        elif tag == 'h2':       self.h2     = True
+        elif tag == 'h3':       self.h3     = True
+        elif tag == 'hr':       self.hr     = True
+        elif tag == 'form':     self.form   = True
+        elif tag == 'input':    self.inp    = True
+        elif tag == 'button':   self.button = True
+        elif tag == 'ul':       self.ul     = True
+        elif tag == 'li':       self.li     = True
+        elif tag == 'span':     self.span   = True
+        elif tag == 'p':        self.p      = True
+        elif tag == 'br':       self.br     = True
+        elif tag == 'article':  self.art    = True
+        elif tag == 'em':       self.em     = True
+        elif tag == 'strong':   self.strong = True
+        elif tag == 'address':  self.addr   = True
+        elif tag == 'nav':      self.nav    = True
+        elif tag == 'select':   self.select = True
+        elif tag == 'optgroup': self.ogroup = True
+        elif tag == 'option':   self.option = True
+        elif tag == 'center':   self.center = True
+        elif tag == 'tbody':    self.tbody  = True
+        else:
+            print('error: unknown tag {} specified'.format(tag))
+            raise
 
         if all((self.tr, self.td, self.a,
                 )):
@@ -133,16 +198,57 @@ class CDLParser(HTMLParser):
                         y = int('20' + v[11:13])
                     else:
                         y = int('19' + v[11:13])
-                    self.stateyears[self.state].append(y)
+                    state = self.abbreviations[v[9:11].upper()]
+                    try:
+                        if state in self.stateyears:
+                            self.stateyears[state].append(y)
+                        else:
+                            self.stateyears[state] = [y]
+                    except:
+                        print('error: {} does not exist'.format(self.state))
+                        raise
 
     def handle_endtag(self, tag):
 
-        if tag == 'table': self.table = False
-        if tag == 'tr':    self.tr    = False
-        if tag == 'td':    self.td    = False
-        if tag == 'font':  self.font  = False
-        if tag == 'a':     self.a     = False
-        if tag == 'div':   self.div   = False
+        if   tag == 'table':    self.table  = False
+        elif tag == 'tr':       self.tr     = False
+        elif tag == 'td':       self.td     = False
+        elif tag == 'font':     self.font   = False
+        elif tag == 'a':        self.a      = False
+        elif tag == 'div':      self.div    = False
+        elif tag == 'html':     self.html   = False
+        elif tag == 'head':     self.head   = False
+        elif tag == 'title':    self.title  = False
+        elif tag == 'link':     self.link   = False
+        elif tag == 'meta':     self.meta   = False
+        elif tag == 'script':   self.script = False
+        elif tag == 'body':     self.body   = False
+        elif tag == 'img':      self.img    = False
+        elif tag == 'h1':       self.h1     = False
+        elif tag == 'h2':       self.h2     = False
+        elif tag == 'h3':       self.h3     = False
+        elif tag == 'hr':       self.hr     = False
+        elif tag == 'form':     self.form   = False
+        elif tag == 'input':    self.inp    = False
+        elif tag == 'button':   self.button = False
+        elif tag == 'ul':       self.ul     = False
+        elif tag == 'li':       self.li     = False
+        elif tag == 'span':     self.span   = False
+        elif tag == 'p':        self.p      = False
+        elif tag == 'br':       self.br     = False
+        elif tag == 'article':  self.art    = False
+        elif tag == 'em':       self.em     = False
+        elif tag == 'strong':   self.strong = False
+        elif tag == 'address':  self.addr   = False
+        elif tag == 'nav':      self.nav    = False
+        elif tag == 'select':   self.select = False
+        elif tag == 'optgroup': self.ogroup = False
+        elif tag == 'option':   self.option = False
+        elif tag == 'center':   self.center = False
+        elif tag == 'tbody':    self.tbody  = False
+        else:
+            print('error: unknown tag {} specified'.format(tag))
+            raise
 
     def handle_data(self, data):
 
@@ -152,9 +258,12 @@ class CDLParser(HTMLParser):
                 self.stateyears[data.strip()] = []
 
     def read(self,
-             u = 'http://www.nass.usda.gov/research/Cropland/metadata/meta.htm',
+             USDA = 'http://www.nass.usda.gov',
+             meta = 'Research_and_Science/Cropland/metadata/meta.php',
              ):
 
+        u = '{}/{}'.format(USDA, meta)
+        
         with request.urlopen(u) as f: metadata = f.read().decode()
 
         self.feed(metadata)
@@ -541,12 +650,14 @@ class CDLExtractor:
 
             parser = CDLParser()
 
-            try: 
+            if 1==1:
+            #try: 
             
                 parser.read()
 
                 # make a reverse dictionary to look up the state abbreviation
 
+                abb = parser.abbreviations
                 abb = {v:k for k,v in parser.statenames.items()}
 
                 # get the list of available years
@@ -556,7 +667,7 @@ class CDLExtractor:
                 print('CDL data for {} available for years:\n'.format(state) + 
                       ', '.join(['{}'.format(y) for y in available_years])+'\n')
 
-            except:
+            else:#except:
 
                 print('warning: unable to access CDL metadata\n')
 

@@ -29,7 +29,8 @@ def dbf_format(value, typ, deci):
     return value
 
 def read_dbf(filename, attributes = None, comids = None, verbose = True):
-    """ Reads data from a .dbf dataset for a given set of comids 
+    """ 
+    Reads data from a .dbf dataset for a given set of comids.
 
     filename   -- The path to the dbf file
     attributes -- A list of the attributes to get. If None, returns all.

@@ -147,10 +147,10 @@ class FtableCalculator:
         Uses the regressions for channel width and flow and the supplied
         channel length to compute an HSPF FTABLE for the reach. The FTABLE
         is a list of up to 18 values of channel discharge, volume, and surface
-        area as a function of the channel depth. Assumes the data are in 
-        default NWIS units (cfs, ft, etc.) but will compute in either English
-        or Metric units. Must provide length in miles or kilometers consistent
-        with the unit selection.
+        area as a function of the channel depth. The algorithm assumes the 
+        data are in default NWIS units (cfs, ft, etc.) but will compute in 
+        either English or Metric units. The length must be provided in miles 
+        or kilometers consistent with the unit selection.
         """
 
         required = self.a1, self.a2, self.b1, self.b2, self.xmin, self.xupper
