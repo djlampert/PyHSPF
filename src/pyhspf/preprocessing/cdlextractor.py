@@ -650,8 +650,7 @@ class CDLExtractor:
 
             parser = CDLParser()
 
-            if 1==1:
-            #try: 
+            try: 
             
                 parser.read()
 
@@ -667,7 +666,7 @@ class CDLExtractor:
                 print('CDL data for {} available for years:\n'.format(state) + 
                       ', '.join(['{}'.format(y) for y in available_years])+'\n')
 
-            else:#except:
+            except:
 
                 print('warning: unable to access CDL metadata\n')
 

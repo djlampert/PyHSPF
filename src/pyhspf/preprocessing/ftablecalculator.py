@@ -233,7 +233,8 @@ class FtableCalculator:
         """
         Estimates an FTABLE for a hydraulically-similar reach to the gage
         with average flow "qref" to a new reach based on its average flow 
-        "qavg" and length.
+        "qavg" and length "length." The units can be Metric or English, and
+        the cutoff is the lower limit on adjustments to depth limits.
         """
 
         required = self.a1, self.a2, self.b1, self.b2, self.xmin, self.xupper
@@ -262,29 +263,39 @@ class FtableCalculator:
             c2 = 5280 / 43560  # ft * mi to acres
             c3 = 5280 / 43560  # ft2 * mi to acre-ft
 
+        # estimate the regression parameters for the flow (q = a1 * H**b1)
+        # assume b1 is the same, but a1 is square root of the flow ratio
+        # since q1 / q2 ~ A1 / A2 ~ (H1 / H2)**2
+
+        a1 = self.a1 * (qavg / qref)**0.5
+        b1 = self.b1
+
+        # estimate the regression parameters for the width (w = a2 * H**b2)
+        # assume b2 is the same, but a2 is square root of the flow ratio
+        # since q1 / q2 ~ A1 / A2 ~ (W1 / W2) * (H1 / H2)
+
+        a2 = self.a2 * (qavg / qref)**0.5
+        b2 = self.b2
+       
         # iterate through each depth from the reference equation, adjust it
         # to the new depth given the relative flows, calculate the width
         # and cross-sectional area, then get the flow with Manning's Equation
 
         ftable = [[0, 0, 0, 0]]
 
-        for x in self.get_logspaced(self.xmin, self.xupper):
-
-            # adjust the depth (ft) to the new profile (q = a1 * H**b1)
-
-            H = x * (qavg / qref)**(1 / self.b1)
+        for H in self.get_logspaced(self.xmin, self.xupper):
 
             # calculate the width (ft)
 
-            W = self.a2 * H**(self.b2)
+            W = a2 * H**(b2)
 
             # calculate the cross-sectional area (ft2)
 
-            A = self.a2 * H**(self.b2 + 1) / (self.b2 + 1)
+            A = a2 * H**(b2 + 1) / (b2 + 1)
 
             # calculate the flow (ft3/s)
 
-            Q = self.a1 * H**self.b1
+            Q = a1 * H**b1
 
             # use the reach length and conversion factors to fill in the table
 

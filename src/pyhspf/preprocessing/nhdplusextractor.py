@@ -231,11 +231,41 @@ class NHDPlusExtractor:
             self.count      = 0
 
             # download the file
+            
+            if os.name == 'nt':
 
-            with open(compressed, 'wb') as self.openfile:
+                with open(compressed, 'wb') as self.openfile:
+                    
+                    self.ftp.retrbinary('RETR {}'.format(webfile), self.handler,
+                                        blocksize = self.blocksize)
 
-                self.ftp.retrbinary('RETR {}'.format(webfile), self.handler,
-                                    blocksize = self.blocksize)
+            # work around needed for retrbinary on linux for some reason
+            
+            else:
+                
+                cmd = 'RETR {}'.format(webfile)
+                rest = None
+                conn = self.ftp.transfercmd(cmd, rest)
+
+                with open(compressed, 'wb') as self.openfile:
+                
+                    i = 0
+                    while self.openfile.tell() < self.filesize:
+
+                        data = conn.recv(self.blocksize)
+                        self.openfile.write(data)
+
+                        i+=1
+
+                        if i % 1000 == 0:
+
+                            c = 10**6
+                            s = self.openfile.tell() / c
+                            it = s, 'MB of', self.filesize / c, 'completed'
+                            print('{:>6.1f} {} {:>6.1f} MB {}'.format(*it))
+
+                print('')
+                print(self.ftp.voidresp())
 
             print('')
 
@@ -882,7 +912,9 @@ class NHDPlusExtractor:
         return numpy.sqrt(k1**2 * dphi**2 + k2**2 * dlam**2)
 
     def get_boundaries(self, shapes, space = 0.1):
-        """Gets the boundaries for the plot."""
+        """
+        Gets the boundaries for the plot.
+        """
 
         boundaries = shapes[0].bbox
         for shape in shapes[0:]:
@@ -933,7 +965,8 @@ class NHDPlusExtractor:
                    colormap, 
                    scale,
                    ):
-        """adds a rectangular raster image with corners located at the extents
+        """
+        adds a rectangular raster image with corners located at the extents
         to a plot.
         """
 
@@ -988,7 +1021,9 @@ class NHDPlusExtractor:
                   output = None,
                   show = False,
                   ):
-        """Makes a plot of the raw NHDPlus data."""
+        """
+        Makes a plot of the raw NHDPlus data.
+        """
 
         if verbose: print('generating plot of the watershed\n')
 

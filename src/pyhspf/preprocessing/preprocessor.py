@@ -59,7 +59,7 @@ from  pyhspf.core      import HSPFModel, Watershed, Subbasin
 class Preprocessor:
     """
     A class that integrates the various preprocessing tools together into a 
-    single class to build a baseline HSPFModel for an 8-digit Hydrologic Unit
+    single object to build a baseline HSPFModel for an 8-digit Hydrologic Unit
     Code (HUC8).
     """
 
@@ -160,7 +160,9 @@ class Preprocessor:
         if cdlaggregate is not None:  self.cdlaggregate = cdlaggregate
         if landuse      is not None:  self.landuse      = landuse
 
-    def make_float(self, s):
+    def make_float(self,
+                   s,
+                   ):
         """
         Converts string "s" into a float.
         """
@@ -653,7 +655,9 @@ class Preprocessor:
 
         with open(self.hspfmodel, 'wb') as f: pickle.dump(hspfmodel, f)
             
-    def extract_hydrography(self, plot = True):
+    def extract_hydrography(self,
+                            plot = True,
+                            ):
         """
         Downloads and extracts NHDPlus, NWIS, and NID data for a HUC8.
         """
@@ -710,6 +714,9 @@ class Preprocessor:
                   verbose       = True, 
                   vverbose      = False, 
                   ):
+        """
+        Delineates subbasins based on NHDPlus data.
+        """
 
         # create an instance of the HUC8Delineator to use to subdivide the 
         # HUC8 into subbasins
@@ -899,7 +906,6 @@ class Preprocessor:
                 Subbasin data structures
              7. Adds mass linkages between the individual subbasin stream 
                 reaches including the locations of inlets and outlets
-
         """
 
         # create a dictionary to store subbasin data

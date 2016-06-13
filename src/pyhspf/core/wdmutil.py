@@ -108,18 +108,18 @@ class WDMUtil:
             retcode = hspf.wdbopnpy(len(self.openfiles) + 11, wdmpath, ronwfg)
 
             # this is a hack fix i've run into with some simulations
-
-            if retcode == -5004: 
-
-                if self.verbose: 
-
-                    print('warning, file is already open')
-                    print('trying to close open files\n')
-
-                for i in range(100): hspf.seqclose(i)
-
-                retcode = hspf.wdbopnpy(len(self.openfiles) + 11, wdmpath, 
-                                        ronwfg)
+            #
+            #if retcode == -5004: 
+            #
+            #    if self.verbose: 
+            #
+            #        print('warning, file is already open')
+            #        print('trying to close open files\n')
+            #
+            #    for i in range(100): hspf.seqclose(i)
+            #
+            #    retcode = hspf.wdbopnpy(len(self.openfiles) + 11, wdmpath, 
+            #                            ronwfg)
 
             if retcode == 0 and self.verbose: 
                 print('opened {} {}'.format(wdmpath, choice[ronwfg]))
@@ -171,7 +171,8 @@ class WDMUtil:
                        attributes, 
                        pointers = None,
                        ):
-        """Creates new dataset in self.wdmfp/dsn. Parameters:
+        """
+        Creates new dataset in self.wdmfp/dsn. Parameters:
 
         wdmpath:     path to the WDM file to add the dataset
         dsn:         the dataset number
@@ -212,6 +213,7 @@ class WDMUtil:
                 print('set {} to {}'.format(k, v))
             elif self.verbose:
                 print('failed to set value of {}'.format(k))
+                raise
 
         self.dsns[wdm_number] = dsn
 
@@ -226,7 +228,8 @@ class WDMUtil:
         data:        the data to be added to the dataset
         """
 
-        if len(data) > 275000:
+        if 1==2:
+        #if len(data) > 275000:
             print('warning: maximum length of a WDM data set is 275,000')
             raise
 
@@ -239,7 +242,9 @@ class WDMUtil:
         self.retcode_check(retcode, function = 'wdtput')
         if retcode == 0 and self.verbose: 
             print('added data to {} DSN {}'.format(wdmpath, dsn))
-        elif retcode != 0: print('failed to add data to DSN %d'.format(dsn))
+        elif retcode != 0:
+            print('failed to add data to DSN {}'.format(dsn))
+            raise
 
     def import_exp(self, 
                    source, 

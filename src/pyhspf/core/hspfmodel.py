@@ -3614,7 +3614,7 @@ class HSPFModel:
                              '     depth      area    volume  outflow1 ***']
 
             for row in ftable:
-                lines.append('{:10.4g}{:10.4g}{:10.5g} {:9.4g}'.format(*row))
+                lines.append('{:10.4g} {:9.4g} {:9.4g} {:9.4g}'.format(*row))
 
             lines.append('  END FTABLE%3d' % r.operation)
             lines.append('')

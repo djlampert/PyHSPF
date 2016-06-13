@@ -952,8 +952,13 @@ class ETCalculator:
         except:
             return None
 
-    def dayofyear(self, dates, values):
-        """Returns the day of the water year average for the timeseries."""
+    def dayofyear(self,
+                  dates,
+                  values,
+                  ):
+        """
+        Returns the day of the water year average for the timeseries.
+        """
 
         year = dates[0].year
         while not calendar.isleap(year): year += 1
@@ -1194,7 +1199,7 @@ class ETCalculator:
         dewt   = self.dayofyear(times, dewt)
         wind   = self.dayofyear(times, wind)
         RET    = self.dayofyear(times, RET)
-
+            
         # day of year times (2004 is a leap year)
 
         wateryear = [datetime.datetime(2003,10,1) + 
@@ -1245,7 +1250,8 @@ class ETCalculator:
                 tot = sum([e for e in evaporation if e is not None])
                 tots.append('{}: {:4.0f} mm/yr'.format(station.name, tot))
 
-        tots.append('Penman-Monteith Model: {:4.0f} mm/yr'.format(sum(RET)))
+        tRET = sum([v for v in RET if v is not None])
+        tots.append('Penman-Monteith Model: {:4.0f} mm/yr'.format(tRET))
 
         subs[i].plot_date(wateryear, RET, color = 'green', fmt = '-',
                           label = 'Penman-Monteith')

@@ -165,6 +165,7 @@ files = ['hspf13/{}'.format(f)
          for f in os.listdir('hspf13') if f[-1] == 'c' or f[-1] == 'f']
 
 fflags = ['-O3', '-fno-automatic', '-fno-align-commons']
+requires = ['numpy', 'scipy', 'matplotlib']
 
 setup(
     name = 'pyhspf',
@@ -201,6 +202,7 @@ setup(
     package_data = {'pyhspf': ['HSPF13.zip'],
                     'pyhspf.core': package_data
                     },
+    install_requires = requires,
     data_files = [(data_directory, data_files)],
     ext_modules=[Extension(name = 'hspf', 
                            sources = files, 

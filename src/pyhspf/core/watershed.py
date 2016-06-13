@@ -178,7 +178,8 @@ class Watershed:
     """
 
     def __init__(self, name, subbasins):
-        """Constructor based on a list of instances of the Subbasin class.
+        """
+        Constructor based on a list of instances of the Subbasin class.
 
         subbasins -- a dictionary with keys as subbasin names and values as
                      instances of the Subbasin class for the watershed
@@ -227,7 +228,7 @@ class Watershed:
         """
             
         if verbose: print('generating a mass linkage plot\n')
-
+       
         fontheight = fontsize / 72.
         rheight = 3 * fontheight
         rwidth  = 12 * fontheight
@@ -253,9 +254,9 @@ class Watershed:
         top = False
         while not top:
             row = []
-            for next in rows[0]:
+            for nxt in rows[0]:
                 for subbasin in self.updown:
-                    if self.updown[subbasin] == next: row.append(subbasin)
+                    if self.updown[subbasin] == nxt: row.append(subbasin)
             if len(row) > 0: 
                 rows.insert(0, row)
             else: 
@@ -281,7 +282,7 @@ class Watershed:
                             # figure out where the subbasins point
                         
                             updowns = [self.updown[s] for s in rows[i-1]]
-                            
+
                             # if first or last, add it there in the row above
 
                             if   j == 0:                
@@ -289,6 +290,10 @@ class Watershed:
                             elif j == len(rows[i]) - 1: 
                                 rows[i-1].append('inlet')
                             else:
+
+                                # find the location of the first arrow
+                                
+                                while rows[i][j-1] not in updowns: j = j - 1
 
                                 # find the place to add in the preceeding row 
 
@@ -317,8 +322,12 @@ class Watershed:
             if i == 0:
                 main = row[(len(row) - 1) // 2]
             elif i < len(rows) - 1:
-                main = self.updown[rows[i-1][last]]
-            else: main = 'outlet'
+                if rows[i-1][last] in self.updown:
+                    main = self.updown[rows[i-1][last]]    
+                else:
+                    main = [c for c in rows[i] if c in self.inlets][0]
+            else:
+                main = 'outlet'
 
             start = middle - row.index(main)
 
@@ -348,20 +357,24 @@ class Watershed:
                     x1 = x + rwidth / 2
 
                     if i < len(rows) - 2 and subbasin != 'inlet':
-                        next = self.updown[subbasin]
+                        nxt = self.updown[subbasin]
+                        if main in self.updown: dwn = self.updown[main]
+                        else: dwn = [c for c in next_row if c in self.inlets][0]
                         next_start = (middle - 
-                                      next_row.index(self.updown[main]))
+                                      next_row.index(dwn))
                         x2 = ((rwidth + xgap) * 
-                              (next_start + next_row.index(next))
+                              (next_start + next_row.index(nxt))
                               + rwidth / 2)
 
                     elif subbasin == 'inlet':
-                        next = self.inlets[0]
+                        nxt = self.inlets[0]
+                        if main in self.updown: dwn = self.updown[main]
+                        else: dwn = [c for c in next_row if c in self.inlets][0]
                         next_start = (middle - 
-                                      next_row.index(self.updown[main]))
+                                      next_row.index(dwn))
 
                         x2 = ((rwidth + xgap) * 
-                              (next_start + next_row.index(next))
+                              (next_start + next_row.index(nxt))
                               + rwidth / 2)
 
                     else:

@@ -1208,6 +1208,7 @@ class NHDPlusDelineator:
                                   title      = None,
                                   cmap       = 'gist_earth',
                                   resolution = 200,
+                                  vmin       = 0.1,
                                   output     = None,
                                   show       = False,
                                   verbose    = True,
@@ -1289,7 +1290,7 @@ class NHDPlusDelineator:
             # estimate the flow width in feet assuming triangular 90 deg channel
 
             if velocity > 0: widths.append(numpy.sqrt(4 * flow / velocity))
-            else:            widths.append(0)
+            else:            widths.append(numpy.sqrt(4 * flow / vmin))
     
         # convert widths in feet to points on the figure; exaggerated by 10
     
@@ -2867,6 +2868,7 @@ class HUC8Delineator(NHDPlusDelineator):
                        patchcolor = None,
                        width = 0.2,
                        resolution = 400,
+                       vmin       = 0.1,
                        colormap = 'gist_earth',
                        output = None, 
                        show = False, 
@@ -2971,7 +2973,7 @@ class HUC8Delineator(NHDPlusDelineator):
                     if velocity > 0:
                         widths.append(numpy.sqrt(4 * flow / velocity))
                     else:
-                        widths.append(0)
+                        widths.append(numpy.sqrt(4 * flow / vmin))
         
             # convert widths in feet to points on the figure; exaggerated by 10
 
