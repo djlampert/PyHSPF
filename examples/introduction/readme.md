@@ -4,5 +4,6 @@ These scripts illustrate how HSPF organizes information about the world into a c
 - **intro02.py:** Uses python scripting to re-create the Hunting Creek Daily HSPF model 
 - **intro03.py:** Builds the Hunting Creek HSPF model with an hourly time step
 - **intro04.py:** Utilizes the PyHSPF Postprocessor class to analyze the Hunting Creek example
-- **intro05.py:** Performs a calibration of the Hunting Creek watershed with Python and PyHSPF
+- **intro05.py:** Illustrates how to modify parameters for calibration
+- **intro06.py:** Illustrates how to search for a maximum value of an objective function
 - **hbnreader.py:** Reads the data in the "base.hbn" file

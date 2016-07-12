@@ -9,7 +9,7 @@
 
 import os, datetime, pickle
 
-from pyhspf import HSPFModel, WDMUtil, Postprocessor
+from pyhspf import HSPFModel, Postprocessor
 
 # open up the pickled HSPFModel 
 

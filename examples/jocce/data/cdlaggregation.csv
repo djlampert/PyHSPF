@@ -1,0 +1,257 @@
+CDL Code,CDL Category,HSPF Category
+0,Empty,Empty
+1,Corn,Corn
+2,Cotton,Other
+3,Rice,Other grain
+4,Sorghum,Other grain
+5,Soybeans,Soybeans
+6,Sunflower,Other
+7,,Other
+8,,Other
+9,,Other
+10,Peanuts,Other
+11,Tobacco,Other
+12,Sweet Corn,Corn
+13,Pop or Orn Corn,Corn
+14,Mint,Other
+15,,Other
+16,,Other
+17,,Other
+18,,Other
+19,,Other
+20,,Other
+21,Barley,Other grain
+22,Durum Wheat,Other grain
+23,Spring Wheat,Other grain
+24,Winter Wheat,Other grain
+25,Other Small Grains,Other grain
+26,Dbl Crop WinWht/Soybeans,Other grain
+27,Rye,Other grain
+28,Oats,Other grain
+29,Millet,Other grain
+30,Speltz,Other grain
+31,Canola,Other
+32,Flaxseed,Other
+33,Safflower,Other
+34,Rape Seed,Other
+35,Mustard,Other
+36,Alfalfa,Hay/alfalfa
+37,Other Hay/Non Alfalfa,Hay/alfalfa
+38,Camelina,Hay/alfalfa
+39,Buckwheat,Hay/alfalfa
+40,,Other
+41,Sugarbeets,Other
+42,Dry Beans,Other
+43,Potatoes,Other
+44,Other Crops,Other
+45,Sugarcane,Other
+46,Sweet Potatoes,Other
+47,Misc Vegs & Fruits,Other
+48,Watermelons,Other
+49,Onions,Other
+50,Cucumbers,Other
+51,Chick Peas,Other
+52,Lentils,Other
+53,Peas,Other
+54,Tomatoes,Other
+55,Caneberries,Other
+56,Hops,Other
+57,Herbs,Other
+58,Clover/Wildflowers,Other
+59,Sod/Grass Seed,Other
+60,Switchgrass,Pasture/grass
+61,Fallow/Idle Cropland,Fallow land
+62,Pasture/Grass,Pasture/grass
+63,Forest,Forest
+64,Shrubland,Forest
+65,Barren,Pasture/grass
+66,Cherries,Other
+67,Peaches,Other
+68,Apples,Other
+69,Grapes,Other
+70,Christmas Trees,Other
+71,Other Tree Crops,Other
+72,Citrus,Other
+73,,Other
+74,Pecans,Other
+75,Almonds,Other
+76,Walnuts,Other
+77,Pears,Other
+78,,Other
+79,,Other
+80,,Other
+81,Clouds/No Data,Other
+82,Developed,Developed
+83,Water,Water/wetland
+84,,Other
+85,,Other
+86,,Other
+87,Wetlands,Developed
+88,Nonag/Undefined,Other
+89,,Other
+90,,Other
+91,,Other
+92,Aquaculture,Developed
+93,,Other
+94,,Other
+95,,Other
+96,,Other
+97,,Other
+98,,Other
+99,,Other
+100,,Other
+101,,Other
+102,,Other
+103,,Other
+104,,Other
+105,,Other
+106,,Other
+107,,Other
+108,,Other
+109,,Other
+110,,Other
+111,Open Water,Water/wetland
+112,Perennial Ice/Snow ,Other
+113,,Other
+114,,Other
+115,,Other
+116,,Other
+117,,Other
+118,,Other
+119,,Other
+120,,Other
+121,Developed/Open Space,Developed
+122,Developed/Low Intensity,Developed
+123,Developed/Med Intensity,Developed
+124,Developed/High Intensity,Developed
+125,,Other
+126,,Other
+127,,Other
+128,,Other
+129,,Other
+130,,Other
+131,Barren,Pasture/grass
+132,,Other
+133,,Other
+134,,Other
+135,,Other
+136,,Other
+137,,Other
+138,,Other
+139,,Other
+140,,Other
+141,Deciduous Forest,Forest
+142,Evergreen Forest,Forest
+143,Mixed Forest,Forest
+144,,Other
+145,,Other
+146,,Other
+147,,Other
+148,,Other
+149,,Other
+150,,Other
+151,,Other
+152,Shrubland,Forest
+153,,Other
+154,,Other
+155,,Other
+156,,Other
+157,,Other
+158,,Other
+159,,Other
+160,,Other
+161,,Other
+162,,Other
+163,,Other
+164,,Other
+165,,Other
+166,,Other
+167,,Other
+168,,Other
+169,,Other
+170,,Other
+171,Grassland Herbaceous,Pasture/grass
+172,,Other
+173,,Other
+174,,Other
+175,,Other
+176,Grass/Pasture,Pasture/grass
+177,,Other
+178,,Other
+179,,Other
+180,,Other
+181,Pasture/Hay,Pasture/grass
+182,,Other
+183,,Other
+184,,Other
+185,,Other
+186,,Other
+187,,Other
+188,,Other
+189,,Other
+190,Woody Wetlands,Water/wetland
+191,,Other
+192,,Other
+193,,Other
+194,,Other
+195,Herbaceous Wetlands,Water/wetland
+196,,Other
+197,,Other
+198,,Other
+199,,Other
+200,,Other
+201,,Other
+202,,Other
+203,,Other
+204,Pistachios,Other
+205,Triticale,Other
+206,Carrots,Other
+207,Asparagus,Other
+208,Garlic,Other
+209,Cantaloupes,Other
+210,Prunes,Other
+211,Olives,Other
+212,Oranges,Other
+213,Honeydew Melons,Other
+214,Broccoli,Other
+215,,Other
+216,Peppers,Other
+217,Pomegranates,Other
+218,Nectarines,Other
+219,Greens,Other
+220,Plums,Other
+221,Strawberries,Other
+222,Squash,Other
+223,Apricots,Other
+224,Vetch,Other
+225,Dbl Crop WinWht/Corn,Other grain
+226,Dbl Crop Oats/Corn,Other grain
+227,Lettuce,Other
+228,,Other
+229,Pumpkins,Other
+230,Dbl Crop Lettuce/Durum Wht,Other
+231,Dbl Crop Lettuce/Cantaloupe,Other
+232,Dbl Crop Lettuce/Cotton,Other
+233,Dbl Crop Lettuce/Barley,Other
+234,Dbl Crop Durum Wht/Sorghum,Other grain
+235,Dbl Crop Barley/Sorghum,Other grain
+236,Dbl Crop WinWht/Sorghum,Other grain
+237,Dbl Crop Barley/Corn,Other grain
+238,Dbl Crop WinWht/Cotton,Other grain
+239,Dbl Crop Soybeans/Cotton,Other grain
+240,Dbl Crop Soybeans/Oats,Other grain
+241,Dbl Crop Corn/Soybeans,Other grain
+242,Blueberries,Other
+243,Cabbage,Other
+244,Cauliflower,Other
+245,Celery,Other
+246,Radishes,Other
+247,Turnips,Other
+248,Eggplants,Other
+249,Gourds,Other
+250,Cranberries,Other
+251,,Other
+252,,Other
+253,,Other
+254,Dbl Crop Barley/Soybeans,Other grain
+255,,Other

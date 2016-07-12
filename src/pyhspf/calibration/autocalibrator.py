@@ -168,7 +168,7 @@ class AutoCalibrator:
 
         model.run(verbose = verbose)
 
-        # get the regression information using the postprocessor
+        # regression period
 
         dates = self.start + datetime.timedelta(days = self.warmup), self.end
 
@@ -235,7 +235,7 @@ class AutoCalibrator:
 
             return dNS * logdNS
 
-        if self.optimization == 'Nash-Sutcliffe Efficiency': 
+        elif self.optimization == 'Nash-Sutcliffe Efficiency': 
 
             # daily NS
 
@@ -243,6 +243,12 @@ class AutoCalibrator:
                     sum((numpy.array(oflows) - numpy.mean(oflows))**2))
 
             return dNS
+
+        else:
+
+            print('error: optimization parameter ' +
+                  '{} not recognized'.format(self.optimization))
+            raise
 
     def simulate(self, simulation):
         """

@@ -1,11 +1,13 @@
-#!/usr/bin/python
-#
 # compile_hspf.py
-# author: David J. Lampert
-# email: djlampert@gmail.com
-# date: 01/06/2014 
+#
+# David J. Lampert
+# djlampert@gmail.com
+# 01/06/2014 
+#
 # purpose: the setup file to install pyhspf from the source code.
+#
 # dependencies: mingw, python3, numpy
+#
 # instructions: pretty simple. if the source files change, this may need to 
 # be modified. otherwise, just point to the url of the source code and the
 # modified files, and make sure you have the gnu compilers as environment

@@ -5,7 +5,7 @@
 # Purpose: This file contains many functions to extract data for postprocessing
 # from an HSPF simulation.
 #
-# Last updated: 07/15/2015
+# Last updated: 06/30/2016
 
 import os, pickle, numpy, datetime, calendar, csv
 
@@ -14,7 +14,9 @@ from scipy import stats
 from .wdmutil import WDMUtil
 
 class Postprocessor:
-    """A class for post processing HSPF simulation data."""
+    """
+    A class for post processing HSPF simulation data.
+    """
 
     def __init__(self, 
                  hspfmodel, 
@@ -258,9 +260,10 @@ class Postprocessor:
         return areas
 
     def get_upstream_comids(self, comid, upcomids = []):
-        """Uses an "updown" dictionary to find the comids upstream of comid."""
+        """
+        Uses an "updown" dictionary to find the comids upstream of comid.
+        """
 
-        done = False
         upstreams = [comid]
         n = 0
         while len(upstreams) != n:
@@ -272,10 +275,16 @@ class Postprocessor:
 
         return upstreams
 
-    def get_segment_timeseries(self, variables, comid, wdm = 'output', 
-                               dates = None):
-        """Gets the all the timeseries for a given list of variables in the 
-        output WDM file for a subbasin identified by "comid." """
+    def get_segment_timeseries(self,
+                               variables,
+                               comid,
+                               wdm = 'output', 
+                               dates = None,
+                               ):
+        """
+        Gets the all the timeseries for a given list of variables in the 
+        output WDM file for a subbasin identified by "comid." 
+        """
 
         self.set_wdm_parms(wdm = wdm)
 
@@ -292,9 +301,9 @@ class Postprocessor:
         # find the dsn of the surface storage with the right station id (comid)
 
         var_dsns, areas = [], []
-        for id, staid, desc, dsn in zip(self.idconss, self.staids, 
+        for const, staid, desc, dsn in zip(self.idconss, self.staids, 
                                         self.descriptions, self.dsns):
-            if id in variables and staid == comid:
+            if const in variables and staid == comid:
                 areas.append(segment_areas[desc])
                 var_dsns.append(dsn)
 
@@ -349,14 +358,21 @@ class Postprocessor:
 
         return times, values
 
-    def get_precipitation(self, comid, upcomids = [], tstep = 'daily', 
-                          variable = 'supply', dates = None):
-        """Returns the weighted average timeseries of precipitation 
+    def get_precipitation(self,
+                          comid,
+                          upcomids = [],
+                          tstep = 'daily', 
+                          variable = 'supply',
+                          dates = None,
+                          ):
+        """
+        Returns the weighted average timeseries of precipitation 
         for the comids. Currently set up for either watershed-wide or subbasin
         timeseries (if you want something else you'll have to add it). If
         snow is simulated and "variable" is set to supply, the function
         returns the estimated moisture supplied rather than the input
-        precipitation."""
+        precipitation.
+        """
 
         if dates is None: start, end = self.start, self.end
         else:             start, end = dates
@@ -2143,7 +2159,9 @@ class Postprocessor:
     def get_calibration(self, comid = None, upcomids = [], dates = None,
                         summer_storms = None, other_storms = None,
                         verbose = True, vverbose = False):
-        """Computes all the statistics for a calibration at a given comid."""
+        """
+        Computes all the statistics for a calibration at a given comid.
+        """
 
         if dates is None: start, end = self.start, self.end
 
