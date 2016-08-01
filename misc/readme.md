@@ -1,4 +1,4 @@
-This directory contains information about compiling HSPF including a number of files that can be used to build independent HSPF libraries (not necessarily linked to Python). Here is a brief summary of the contents:
+This directory contains information about compiling HSPF including a number of files that can be used to build independent HSPF libraries (not necessarily linked to Python). If you try to make use of any of these files and run into problems, please report them. Here is a brief summary of the contents:
 
 - **HSPF_compilation_documentation.rtf:** documentation on the HSPF source code, the changes made to the code in this distribution, and the other files in the folder (rich text format)
 - **HSPF_compilation_documentation.pdf:** documentation on the HSPF source code, the changes made to the code in this distribution, and the other files in the folder (pdf version)
