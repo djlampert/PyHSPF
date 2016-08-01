@@ -48,9 +48,7 @@ gagecomid = '30'
 # 0.006 < INFILT < 0.030
 #
 # The script illustrates how to explore this space for the optimum NSE.
-# It is designed such that it will save the results to a CSV file
-# so that the whole set of simulation doesn't have to be repeated for small
-# modifications.
+# 
 
 LZSNmin = 8
 LZSNmax = 22
@@ -315,4 +313,4 @@ if __name__ == '__main__':
     sub.set_ylim((LZSNmin - LZSNint, LZSNmax + LZSNint))
 
     pyplot.savefig('example06')
-    pyplot.show()
+    #pyplot.show()

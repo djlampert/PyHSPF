@@ -1,4 +1,4 @@
-# read_two_year.py
+# make_figure7.py
 #
 # David Lampert
 #
@@ -19,7 +19,7 @@ csvfile = 'two_year_calibrations.csv'
 
 # paths to the data files
 
-directory = 'C:/HSPF_new/07080106/two_year'
+directory = 'C:/HSPF_data/07080106/two_year'
 NWISgage  = '05472500'
 start     = datetime.datetime(1981, 1, 1)
 end       = datetime.datetime(2011, 1, 1)

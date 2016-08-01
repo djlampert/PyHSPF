@@ -20,4 +20,6 @@ The examples in each subdirectory are subdivided into the following groups:
 
 **Advanced:** The scripts in this directory illustrate how to integrate data into HSPF models using the preprocessing tools (thus enabling the construction of complicated models).
 
-Questions and suggestions are always welcome. The examples may not be compatible with older versions of the software. Please report any problems running the scripts in these directories (check that any required data files in the right location first).
+**jocce:** The scripts in this directory are used to construct and calibrate a 30-year model and generate a series of figures for NWIS gage 05472500.
+
+Questions and suggestions are always welcome. The examples may not be compatible with older versions of the software. Please report any problems running the scripts in these directories.

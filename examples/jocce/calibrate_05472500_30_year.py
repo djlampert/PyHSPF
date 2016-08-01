@@ -1,4 +1,4 @@
-# full_calibration.py
+# calibration_05472500_30_year.py
 #
 # David J. Lampert
 #
@@ -18,10 +18,11 @@ from pyhspf.preprocessing import Preprocessor
 from pyhspf.calibration   import AutoCalibrator
 
 # paths to the HSPF/watershed data files
+# network is the path to place/read the (large) NHDPlus, NID, and NWIS raw data
+# destination is the path to place HUC8-specific files/models
 
 network     = 'D:'
-#destination = 'C:/HSPF_data'
-destination = 'C:/HSPF_new'
+destination = 'C:/HSPF_data'
 
 # 8-digit hydrologic unit code of interest (North Skunk River, IA)
 
@@ -98,26 +99,29 @@ perturbations = [2, 1, 0.5]
 parallel    = True
 nprocessors = 5
 
-# make sure the directory and file paths exist
-
-if not os.path.isdir(network):
-    print('error, directory {} does not exist (please update)'.format(network))
-    raise
-if not os.path.isdir(destination):
-    print('error, directory ' +
-          '{} does not exist (please update)'.format(destination))
-    raise
-if not os.path.isfile(aggregation):
-    print('error, file {} does not exist (please update)'.format(aggregation))
-    raise
-if not os.path.isfile(landuse):
-    print('error, file {} does not exist (please update)'.format(landuse))
-    raise
-
 # Because parallel processing is (optionally) used, the process method has 
-# to be called at runtime as shown below
+# to be called at runtime as shown below (nothing below this point should
+# be modified)
 
 if __name__ == '__main__': 
+
+    # check to make sure the directory and file paths exist and warn if not
+
+    if not os.path.isdir(network):
+        print('error, directory ' +
+              '{} does not exist (please update)'.format(network))
+        raise
+    if not os.path.isdir(destination):
+        print('error, directory ' +
+              '{} does not exist (please update)'.format(destination))
+        raise
+    if not os.path.isfile(aggregation):
+        print('error, file ' +
+              '{} does not exist (please update)'.format(aggregation))
+        raise
+    if not os.path.isfile(landuse):
+        print('error, file {} does not exist (please update)'.format(landuse))
+        raise
 
     # working directory for calibration simulations
 
@@ -265,7 +269,7 @@ if __name__ == '__main__':
         
     with open(calibrated, 'rb') as f: hspfmodel = pickle.load(f)
 
-    # get the comid of the gage
+    # find the comid of the gage
 
     d = {v:k for k, v in hspfmodel.subbasin_timeseries['flowgage'].items()}
     comid = d[gageid]

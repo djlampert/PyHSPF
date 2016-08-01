@@ -1,4 +1,4 @@
-# make_figure3.py
+# make_figure4.py
 #
 # David Lampert
 #
@@ -47,16 +47,16 @@ end   = datetime.datetime(2011, 1, 1)
 
 # pan evaporation station data
 
-ghcnd = 'C:/HSPF_new/07080106/climate/GHCND'
+ghcnd = 'C:/HSPF_data/07080106/climate/GHCND'
 
 stations = {'USC00130200': 'Ames, IA', 
             'USC00134101': 'Iowa City, IA'}
 
 # daily climate time series
 
-p = 'C:/HSPF_new/07080106/climate/daily'
+p = 'C:/HSPF_data/07080106/climate/daily'
 
-dailyRET = 'C:/HSPF_new/07080106/climate/evapotranspiration/dailyRET'
+dailyRET = 'C:/HSPF_data/07080106/climate/evapotranspiration/dailyRET'
 
 # name of the plot
 

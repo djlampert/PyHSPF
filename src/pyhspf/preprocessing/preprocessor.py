@@ -200,9 +200,10 @@ class Preprocessor:
 
         if os.name != 'nt':
 
-            if not os.path.ismount(self.network):
-                print('\nerror: network ' +
-                      '{} does not seem to be mounted\n'.format(self.network))
+            if (not os.path.ismount(self.network) and
+                not os.path.isdir(self.network)):
+                print('\nerror: network {} '.format(self.network) +
+                      'does not exist or is not mounted\n')
                 raise
 
         # check that all the required information has been supplied

@@ -1,4 +1,4 @@
-# make_figure4.py
+# make_figure5.py
 
 import os, pickle, datetime, numpy
 
@@ -14,7 +14,7 @@ warmup    = 1
 run       = False
 output    = 'Figure5'
 
-directory = 'C:/HSPF_new'
+directory = 'C:/HSPF_data'
 
 run_dates     = (datetime.datetime(start, 1, 1),
                  datetime.datetime(end, 1, 1))

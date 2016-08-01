@@ -1065,6 +1065,10 @@ class Precip3240Station:
         """Calls 7zip to decompress the files."""
 
         if os.name == 'nt':
+            if not os.path.isfile(self.path_to_7z):
+                print('\nerror: path to 7zip ' +
+                      '{} does not exist'.format(self.path_to_7z))
+                raise
             self.decompress7z(filepath, directory, path_to_7z = self.path_to_7z)
         else:
             self.decompresszcat(filepath, directory)

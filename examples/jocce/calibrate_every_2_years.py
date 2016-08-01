@@ -1,4 +1,4 @@
-# two_year_calibration.py
+# calibrate_every_2_years.py
 #
 # David J. Lampert
 #
@@ -20,7 +20,7 @@ from pyhspf.calibration   import AutoCalibrator
 # paths to the HSPF/watershed data files
 
 network     = 'D:'
-destination = 'C:/HSPF_new'
+destination = 'C:/HSPF_data'
 
 # 8-digit hydrologic unit code of interest (North Skunk River, IA)
 
@@ -91,6 +91,11 @@ if __name__ == '__main__':
     # path to the baseline model
 
     filename = '{}/{}baseline'.format(directory, landuseyear)
+
+    if not os.path.isfile(filename):
+        print('error, file {} does not exist!'.format(filename) +
+              '(generate the baseline model first)')
+        raise
 
     # directory for results
 
