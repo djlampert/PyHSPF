@@ -80,8 +80,7 @@ of examples is provided to illustrate PyHSPF usage.
 """
 )
 
-_s = """Python Extensions for utilizing the Hydrological 
-Simulation Program in Fortran (HSPF)"""
+_s = """Python Extensions for utilizing the Hydrological Simulation Program in Fortran (HSPF)"""
 
 _l = (
 """
@@ -130,6 +129,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 if os.name == 'nt':
 
+    #lflags = ['-static']
     python = sys.executable[:-10]
     gnu = python + 'lib/site-packages/numpy/distutils/fcompiler/gnu.py'
     with open(gnu, 'r') as f: s = f.read()
@@ -140,12 +140,12 @@ if os.name == 'nt':
 
     # numpy/f2py need this configuration file setup to work right
 
+if 1==2:
     distfile = '{}/Lib/distutils/distutils.cfg'.format(python)
     if not os.path.isfile(distfile):
         print('adding a configuration file to the Python library...\n')
         with open(distfile, 'w') as f:
             f.write('[build]\ncompiler=mingw32')
-    lflags = ['-static']
 
 else: lflags = []
 

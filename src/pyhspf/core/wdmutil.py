@@ -349,7 +349,7 @@ class WDMUtil:
         if self.verbose: print('renumbering dsn {}'.format(odsn))
         wdmfp = self.openfiles[wdmpath]
 
-        retcode = hspf.wddsrn(wdmfp, odsn, ndsn)
+        retcode = hspf.wddsrnpy(wdmfp, odsn, ndsn)
         self.retcode_check(retcode, function = 'wddsrn')
 
     def delete_dataset(self, 
@@ -362,7 +362,7 @@ class WDMUtil:
 
         if self.verbose: print('deleting dsn {}'.format(dsn))
         wdmfp = self.openfiles[wdmpath]
-        retcode = self.wddsdl(wdmfp, int(dsn))
+        retcode = hspf.wddsdlpy(wdmfp, int(dsn))
         self.retcode_check(retcode, function = 'wddsdl')
 
     def get_attribute(self, 
