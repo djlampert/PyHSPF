@@ -4,7 +4,7 @@
 #
 # the setup file for PyHSPF
 
-_version   = '0.2.2'
+_version   = '0.2.3'
 
 # check for the required and optional dependencies
 
@@ -125,29 +125,9 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 """.format(_version))
 
-# minor issue with some windows
+# link flags
 
-if os.name == 'nt':
-
-    #lflags = ['-static']
-    python = sys.executable[:-10]
-    gnu = python + 'lib/site-packages/numpy/distutils/fcompiler/gnu.py'
-    with open(gnu, 'r') as f: s = f.read()
-    #i = s.index('raise NotImplementedError')
-    #if s[i-5:i] != 'pass#': 
-    #    s = s[:i] + 'pass#' + s[i:]
-    #    with open(gnu, 'w') as f: f.write(s)
-
-    # numpy/f2py need this configuration file setup to work right
-
-if 1==2:
-    distfile = '{}/Lib/distutils/distutils.cfg'.format(python)
-    if not os.path.isfile(distfile):
-        print('adding a configuration file to the Python library...\n')
-        with open(distfile, 'w') as f:
-            f.write('[build]\ncompiler=mingw32')
-
-else: lflags = []
+lflags = []
 
 # any additional files that are needed (blank for now)
 
@@ -159,10 +139,11 @@ data_directory = sysconfig.get_python_lib()
 
 package_data = ['hspfmsg.wdm', 'attributes']
 
-# files
+# find all the fortran and c files
 
 files = ['hspf13/{}'.format(f) 
-         for f in os.listdir('hspf13') if f[-1] == 'c' or f[-1] == 'f']
+         for f in os.listdir('hspf13')
+         if f[-1] == 'c' or f[-1] == 'f']
 
 fflags = ['-O3', '-fno-automatic', '-fno-align-commons']
 requires = ['numpy', 'scipy', 'matplotlib']
@@ -172,7 +153,7 @@ setup(
     version = _version,
     description = _s,
     author = 'David Lampert',
-    author_email = 'djlampert@gmail.com',
+    author_email = 'david.lampert@okstate.edu',
     url = 'https://github.com/djlampert/PyHSPF',
     license = _l,
     long_description = _d,
