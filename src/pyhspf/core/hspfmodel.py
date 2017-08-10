@@ -945,6 +945,11 @@ class HSPFModel:
             directory = os.path.dirname(hspf.__file__)
             self.messagepath = '{}/pyhspf/core/hspfmsg.wdm'.format(directory)
 
+        toolong = ('Unable to find the message file "hspfmsf.wdm"; ' +
+                   'Verify that the path to the file does not exceed ' +
+                   'the 64 character limit.')
+        assert os.path.isfile(self.messagepath), toolong
+
         if verbose: 
             print('attempting HSPF simulation for {}\n'.format(self.ucifile))
 

@@ -2,7 +2,7 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# last updated: 07/13/2015
+# last updated: 08/10/2017
 #
 # The WDMUtil class can be used to ineract with WDM files using Python. 
 # The class was inspired by the Python extensions "wdmtoolbox," although
@@ -32,7 +32,9 @@ class WDMUtil:
         elif os.path.isfile(messagepath):
             self.messagepath = messagepath
         else:
-            print('error: unable to open message file {}'.format(messagepath))
+            print('error: unable to open message file: {}'.format(messagepath))
+            print('The path to the message file must not exceed 64 characters.')
+            print('Place the file in a directory with a shorter path.')
             raise
 
         self.verbose = verbose

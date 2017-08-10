@@ -4,7 +4,7 @@
 #
 # the setup file for PyHSPF
 
-_version   = '0.2.3'
+_version   = '0.2.4'
 
 # check for the required and optional dependencies
 
@@ -127,7 +127,8 @@ POSSIBILITY OF SUCH DAMAGE.
 
 # link flags
 
-lflags = []
+if os.name == 'nt': lflags = ['-static']
+else:               lflags = []
 
 # any additional files that are needed (blank for now)
 
