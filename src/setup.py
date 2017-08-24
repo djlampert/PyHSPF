@@ -184,7 +184,7 @@ setup(
     package_data = {'pyhspf': ['HSPF13.zip'],
                     'pyhspf.core': package_data
                     },
-    install_requires = requires,
+    #install_requires = requires,
     data_files = [(data_directory, data_files)],
     ext_modules=[Extension(name = 'hspf', 
                            sources = files, 
