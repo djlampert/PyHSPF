@@ -32,6 +32,10 @@ class WDMUtil:
         elif os.path.isfile(messagepath):
             self.messagepath = messagepath
         else:
+            print('error: supplied path {}'.format(messagepath) +
+                  ' to message file does not exist')
+
+        if len(self.messagepath) > 64:
             print('error: unable to open message file: {}'.format(messagepath))
             print('The path to the message file must not exceed 64 characters.')
             print('Place the file in a directory with a shorter path.')
