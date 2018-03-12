@@ -154,12 +154,8 @@ areas   = []
 widths  = []
 
 # get the data from the measurements
-print('we are here')
+
 for t, data in station.measurements:
-    print('we are in the loop')
-    print(station.measurements)
-    print(t)
-    print(data)
     flows.append(data['flow (cfs)'])
     heights.append(data['height (ft)'])
     areas.append(data['area (ft2)'])
