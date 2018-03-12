@@ -26,12 +26,12 @@ class FtableCalculator:
                  xupper = None,
                  ):
         """
-        Opens the NWIS gage station data stored as an instance of the PyHSPF 
+        Opens the NWIS gage station data stored as an instance of the PyHSPF
         GageStation class from the file path and reads the stage-discharge
         data and channel geometry estimates.
         """
 
-        with open(gagedata, 'rb') as f: station = pickle.load(f)        
+        with open(gagedata, 'rb') as f: station = pickle.load(f)
 
         self.station = station
 
@@ -45,7 +45,6 @@ class FtableCalculator:
         # get the data from the measurements
 
         for t, data in self.station.measurements:
-
             self.flows.append(data['flow (cfs)'])
             self.heights.append(data['height (ft)'])
             self.areas.append(data['area (ft2)'])
@@ -61,7 +60,7 @@ class FtableCalculator:
         self.xupper = xupper # maximum stage value for FTABLE
 
     def power_fit(self,
-                  xs, 
+                  xs,
                   ys,
                   ):
         """
@@ -147,16 +146,16 @@ class FtableCalculator:
         Uses the regressions for channel width and flow and the supplied
         channel length to compute an HSPF FTABLE for the reach. The FTABLE
         is a list of up to 18 values of channel discharge, volume, and surface
-        area as a function of the channel depth. The algorithm assumes the 
-        data are in default NWIS units (cfs, ft, etc.) but will compute in 
-        either English or Metric units. The length must be provided in miles 
+        area as a function of the channel depth. The algorithm assumes the
+        data are in default NWIS units (cfs, ft, etc.) but will compute in
+        either English or Metric units. The length must be provided in miles
         or kilometers consistent with the unit selection.
         """
 
         required = self.a1, self.a2, self.b1, self.b2, self.xmin, self.xupper
 
         if any([r is None for r in required]):
-            
+
             print('error, insufficient information supplied')
             raise
 
@@ -173,7 +172,7 @@ class FtableCalculator:
             xupper = self.xupper * 0.3048
 
             # conversion factors
-            
+
             c1 = 0.1     # m * km to hectares
             c2 = 0.001   # m2 * km to Mm3
 
@@ -181,7 +180,7 @@ class FtableCalculator:
 
             a1 = self.a1
             a2 = self.a2
- 
+
             xmin = self.xmin
             xupper = self.xupper
 
@@ -217,7 +216,7 @@ class FtableCalculator:
 
             area = w * length * c1
             volume = x * w * length / (b2 + 1) * c2
-            
+
             # add the data to the table
 
             ftable.append([x, area, volume, q])
@@ -232,7 +231,7 @@ class FtableCalculator:
                       ):
         """
         Estimates an FTABLE for a hydraulically-similar reach to the gage
-        with average flow "qref" to a new reach based on its average flow 
+        with average flow "qref" to a new reach based on its average flow
         "qavg" and length "length." The units can be Metric or English, and
         the cutoff is the lower limit on adjustments to depth limits.
         """
@@ -240,7 +239,7 @@ class FtableCalculator:
         required = self.a1, self.a2, self.b1, self.b2, self.xmin, self.xupper
 
         if any([r is None for r in required]):
-            
+
             print('error, insufficient information supplied')
             raise
 
@@ -249,7 +248,7 @@ class FtableCalculator:
         if units == 'Metric':
 
             # conversion factors
-            
+
             c1 = 0.3048                          # ft to m
             c2 = 0.1                             # m * km to hectares
             c3 = 0.001                           # m2 * km to Mm3
@@ -276,7 +275,7 @@ class FtableCalculator:
 
         a2 = self.a2 * (qavg / qref)**0.5
         b2 = self.b2
-       
+
         # iterate through each depth from the reference equation, adjust it
         # to the new depth given the relative flows, calculate the width
         # and cross-sectional area, then get the flow with Manning's Equation
@@ -299,9 +298,9 @@ class FtableCalculator:
 
             # use the reach length and conversion factors to fill in the table
 
-            row = [H * c1, 
-                   W * c1 * length * c2, 
-                   A * c1**2 * length * c3, 
+            row = [H * c1,
+                   W * c1 * length * c2,
+                   A * c1**2 * length * c3,
                    Q * c1**3]
 
             ftable.append(row)
@@ -319,7 +318,7 @@ class FtableCalculator:
         required = self.a1, self.a2, self.b1, self.b2, self.xmin, self.xupper
 
         if any([r is None for r in required]):
-            
+
             print('error, insufficient information supplied')
             raise
 
@@ -337,8 +336,8 @@ class FtableCalculator:
 
         # formula for the text box
 
-        q_regression = ('$q={:.3f}$'.format(self.a1) + '$H^{' + 
-                        '{:.2f}'.format(self.b1) + '}$\n' + '$r^2\!=' + 
+        q_regression = ('$q={:.3f}$'.format(self.a1) + '$H^{' +
+                        '{:.2f}'.format(self.b1) + '}$\n' + '$r^2\!=' +
                         '{:.3f}$'.format(self.r1**2))
 
         # calculate the widths for each stage point
@@ -348,8 +347,8 @@ class FtableCalculator:
         wmin = self.a2 * self.xmin**self.b2
         wmax = self.a2 * self.xmax**self.b2
 
-        w_regression = ('$w={:.3f}$'.format(self.a2) + '$H^{' + 
-                        '{:.2f}'.format(self.b2) + '}$\n' + '$r^2\!=' + 
+        w_regression = ('$w={:.3f}$'.format(self.a2) + '$H^{' +
+                        '{:.2f}'.format(self.b2) + '}$\n' + '$r^2\!=' +
                         '{:.3f}$'.format(self.r2**2))
 
         # calculate the implied area
@@ -359,7 +358,7 @@ class FtableCalculator:
         amin = self.a2 * self.xmin**(self.b2 + 1) / (self.b2 + 1)
         amax = self.a2 * self.xmax**(self.b2 + 1) / (self.b2 + 1)
 
-        a_equation = ('$A={:.3f}$'.format(self.a2 / (self.b2 + 1)) + 
+        a_equation = ('$A={:.3f}$'.format(self.a2 / (self.b2 + 1)) +
                       '$H^{' + '{:.2f}'.format(self.b2 + 1) + '}$')
 
         # make the plot
@@ -376,9 +375,9 @@ class FtableCalculator:
 
         # stage-discharge
 
-        sub1.plot(depths, self.flows, '+', color = 'blue', 
+        sub1.plot(depths, self.flows, '+', color = 'blue',
                   label = 'observations')
-        sub1.plot((self.xmin, self.xmax), (qmin, qmax), '-', color = 'black', 
+        sub1.plot((self.xmin, self.xmax), (qmin, qmax), '-', color = 'black',
                   label = 'regression')
         sub1.plot(xs, qs, '*', color = 'red', label = 'ftable values')
 
@@ -397,9 +396,9 @@ class FtableCalculator:
 
         # stage-width
 
-        sub2.plot(depths, self.widths, '+', color = 'blue', 
+        sub2.plot(depths, self.widths, '+', color = 'blue',
                   label = 'observations')
-        sub2.plot((self.xmin, self.xmax), (wmin, wmax), '-', color = 'black', 
+        sub2.plot((self.xmin, self.xmax), (wmin, wmax), '-', color = 'black',
                   label = 'regression')
         sub2.plot(xs, ws, '*', color = 'red', label = 'ftable values')
 
@@ -418,11 +417,11 @@ class FtableCalculator:
 
         # stage-area
 
-        sub3.plot(depths, self.areas, '+', color = 'blue', 
+        sub3.plot(depths, self.areas, '+', color = 'blue',
                   label = 'observations')
         sub3.plot((self.xmin, self.xmax), (amin, amax), '-', color = 'black',
                   label = 'regression')
-        sub3.plot(xs, implied_areas, '*', color = 'red', 
+        sub3.plot(xs, implied_areas, '*', color = 'red',
                   label = 'ftable values')
 
         # formatting

@@ -18,14 +18,14 @@ class GageStation:
     A class to store data from a USGS NWIS gage station.
     """
 
-    def __init__(self, 
-                 gageid, 
-                 name, 
-                 state, 
-                 day1, 
-                 dayn, 
-                 drain, 
-                 ave, 
+    def __init__(self,
+                 gageid,
+                 name,
+                 state,
+                 day1,
+                 dayn,
+                 drain,
+                 ave,
                  web,
                  ):
         """
@@ -41,8 +41,8 @@ class GageStation:
         self.ave    = float(ave)
         self.web    = web
 
-    def import_csv(self, 
-                   csvfile, 
+    def import_csv(self,
+                   csvfile,
                    verbose = True,
                    ):
         """
@@ -63,17 +63,17 @@ class GageStation:
 
         # convert dates to datetime and flows to integers
 
-        self.dailydates = [datetime.datetime.strptime(d, '%Y-%m-%d') 
+        self.dailydates = [datetime.datetime.strptime(d, '%Y-%m-%d')
                           for d in gagedates]
         self.dailyflows = [float(g) if g else None for g in gageflows]
 
-    def download_daily_discharge(self, 
-                                 start, 
-                                 end, 
+    def download_daily_discharge(self,
+                                 start,
+                                 end,
                                  verbose = True,
                                  ):
         """
-        Downloads the daily discharge data for an NWIS station for the 
+        Downloads the daily discharge data for an NWIS station for the
         dates (default set in the init method).
         """
 
@@ -100,16 +100,16 @@ class GageStation:
 
             org, gagename, gagedates, gageflows, gageflags = zip(*rows)
 
-            self.dailydates = [datetime.datetime.strptime(d, '%Y-%m-%d') 
+            self.dailydates = [datetime.datetime.strptime(d, '%Y-%m-%d')
                               for d in gagedates]
             self.dailyflows = [float(g) if g else None for g in gageflows]
 
             if verbose: print('successfully downloaded data\n')
 
-        except: 
+        except:
 
             print('warning: unable to download daily discharge data\n')
-            
+
             self.dailydates = []
             self.dailyflows = []
 
@@ -169,12 +169,12 @@ class GageStation:
 
             if verbose: print('successfully downloaded data\n')
 
-        except: 
+        except:
 
             self.instantaneous = []
             print('warning: unable to download instantaneous flow data\n')
 
-    def download_water_quality(self, 
+    def download_water_quality(self,
                                verbose = True,
                                ):
         """
@@ -229,10 +229,10 @@ class GageStation:
 
             if verbose: print('successfully downloaded data\n')
 
-        except: 
+        except:
 
             print('warning: unable to download water quality data\n')
-            
+
             self.waterquality = {}
 
     def download_measurements(self,
@@ -255,20 +255,34 @@ class GageStation:
 
         # store the data in a list
 
-        self.measurements = [] 
+        self.measurements = []
 
         try:
 
             # snip the headings and comments
+            # get column indexes into a list
+            columns = rows[14]
+            dindex = columns.index('measurement_dt')
+            hindex = columns.index('gage_height_va')
+            qindex = columns.index('discharge_va')
+            findex = columns.index('q_meas_used_fg')
+            windex = columns.index('chan_width')
+            aindex = columns.index('chan_area')
+            vindex = columns.index('chan_velocity')
 
             rows = [row for row in rows if row[0][0] != '#'][2:]
+            ds,hs,qs,fs,ws,areas,vs = [],[],[],[],[],[],[]
 
-            (x, x, x, ds, x, x, m, x, hs, qs, x, x, x, fs, x, x,  
-             x, x, x, x, x, x, x, x, ws, areas, vs, x, x, x, x, 
-             x, x, x, x) = zip(*rows)
+            for row in rows:
+                ds.append(row[dindex])
+                hs.append(row[hindex])
+                qs.append(row[qindex])
+                fs.append(row[findex])
+                ws.append(row[windex])
+                areas.append(row[aindex])
+                vs.append(row[vindex])
 
             for d, h, q, f, w, a, v in zip(ds, hs, qs, fs, ws, areas, vs):
-
                 # d = date/time
                 # h = gage height (ft)
                 # q = flow (cfs)
@@ -281,11 +295,10 @@ class GageStation:
 
                 try:    hr, mi = int(d[11:13]), int(d[14:16])
                 except: hr, mi = 0, 0
-                
+
                 t = datetime.datetime(yr, mo, da, hr, mi)
 
                 try:
-
                     q = float(q)
                     h = float(h)
                     w = float(w)
@@ -306,7 +319,7 @@ class GageStation:
 
                 except: pass
 
-            if verbose: 
+            if verbose:
 
                 print('successfully downloaded data\n')
 
@@ -314,10 +327,10 @@ class GageStation:
 
             print('warning: unable to download stage-discharge measurements\n')
 
-    def plot(self, 
-             output, 
-             fmin = 0.001, 
-             titlesize = 12, 
+    def plot(self,
+             output,
+             fmin = 0.001,
+             titlesize = 12,
              axsize = 11,
              ):
         """
@@ -331,7 +344,7 @@ class GageStation:
         start, end = min(self.dailydates), max(self.dailydates)
 
         s1.plot_date(self.dailydates, self.dailyflows, fmt = 'r-')
-        s1.set_title('Hydrograph for {}: {}'.format(self.gageid, self.name), 
+        s1.set_title('Hydrograph for {}: {}'.format(self.gageid, self.name),
                      size = titlesize)
         s1.set_xlim(start, end)
         s1.set_xlabel('Date', size = axsize)
@@ -381,8 +394,8 @@ class GageStation:
         pyplot.clf()
         pyplot.close()
 
-    def make_timeseries(self, 
-                        start = None, 
+    def make_timeseries(self,
+                        start = None,
                         end = None,
                         ):
         """
@@ -402,7 +415,7 @@ class GageStation:
             i = self.dailydates.index(start)
 
         else:
-            
+
             print('warning, requested dates exceed available data' +
                   ', filling with Nones\n')
             while t < self.dailydates[0]:

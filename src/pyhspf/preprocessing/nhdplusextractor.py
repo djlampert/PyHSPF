@@ -1,156 +1,747 @@
 # nhdplusextractor.py
 #
-# David J. Lampert (djlampert@gmail.com)
+# Mitchell Sawtelle (mitchell.sawtelle@okstate.edu)
 #
-# last updated: 07/06/2015
+# last updated: 01/20/2018
 #
 # contains the NHDPlus Extractor class, which can be used to retrieve source
 # data from the NHDPlus V2 dataset online, and then extract the data from
 # the larger source files for a given 8-digit Hydrologic Unit Code (HUC8).
-# Example at the bottom for the Patuxent watershed.
 
-from ftplib import FTP
 
-import shutil, os, time, pickle, subprocess, gdal, numpy
-
-from gdalconst               import GA_ReadOnly
-from shapefile               import Reader, Writer
-from matplotlib              import pyplot, path, ticker
-from matplotlib              import patches, colors 
+import subprocess, time, os, numpy, struct, datetime, shutil
+from osgeo import gdal
+from osgeo import osr
+from urllib.request import urlopen, Request
+from urllib.error import HTTPError, URLError
+from gdalconst import GA_ReadOnly
+from matplotlib import pyplot, path, ticker
+from matplotlib import patches, colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-# local imports
-
-from .dbfutils               import read_dbf
-from .rasterutils            import get_raster_table
-from .rasterutils            import get_degree_transform
-from .rasterutils            import get_raster
-from .vectorutils            import merge_shapes
-
 from .flowline import Flowline
+from .vectorutils import merge_shapes
+from shapefile import Reader, Writer
+import pickle
+import socket
 
-class NHDPlusExtractor:
-    """A class to download and extract data from the NHDPlus V2 database."""
-        
-    def __init__(self, 
-                 VPU,
-                 destination,
-                 path_to_7zip = r'C:\Program Files\7-Zip\7z.exe',
-                 url = 'ec2-54-227-241-43.compute-1.amazonaws.com',
-                 ftp = None,
-                 timeout = 3600,
-                 ):
 
-        # NHDPlus vector processing units (VPUs) in each drainage area
+class NHDPlusExtractor(object):
+    """class which holds various methods to manipulate, gather, and unpack the NHDPlus Dataset
+       updated email list
+       destination argument of the init method denotes the working directory for all ndhplus work
+     """
 
-        self.da_to_vpu = {'CA': ['18'],
-                          'CO': ['14', '15'],
-                          'GB': ['16'],
-                          'GL': ['04'],
-                          'MA': ['02'],
-                          'MS': ['05', '06', '07', '08', '10L', '10U', '11'],
-                          'NE': ['01'],
-                          'PN': ['17'],
-                          'RG': ['13'],
-                          'SA': ['03N', '03S', '03W'],
-                          'SR': ['09'],
-                          'TX': ['12'],
-                          }
+    def __init__(self, destination):
+        '''
+        init method for NHDPlusExtractor class
 
-        # NHDPlus raster processing units (RPUs) in each drainage area
+        arguments:
+            destination is the path to where the user would like the nhdplus data to be stored
+            if no argument is given the location of this file is used
+        '''
+        if destination is None: #if no destination given in init method set destination to current directory
+            self. destination = os.path.dirname(__file__)
+        if not os.path.isdir(destination): os.mkdir(destination)
+        #base_url to EPA's hosting of the NHDPlusV21 Dataset
+        self.base_url = 'https://s3.amazonaws.com/nhdplus/NHDPlusV21/Data/NHDPlus'
+        self.destination = destination #set destination
+        self.currentpath = os.path.dirname(__file__) #currentpath variable
+        self.path_to_7zip = r'C:\Program Files\7-Zip\7z.exe' #path to 7zip will vary per User
 
-        self.da_to_rpu = {'CA': ['18a', '18b', '18c'],
-                          'CO': ['14a', '14b', '15a', '15b'],
-                          'GB': ['16a', '16b'],
-                          'GL': ['04a', '04b', '04c', '04d'],
-                          'MA': ['02a', '02b'],
-                          'MS': ['05a', '05b', '05c', '05d', 
-                                 '06a', 
-                                 '07a', '07b', '07c', 
-                                 '08a', '08b', '08g',
-                                 '10a', '10b', '10c', '10d', 
-                                 '10e', '10f', '10g', '10h', '10i',  
-                                 '11a', '11b', '11c', '11d'],
-                          'NE': ['01a'],
-                          'PN': ['17a', '17b', '17c', '17d'],
-                          'RG': ['13a', '13b', '13c', '13d'],
-                          'SA': ['03a', '03b', '03c', '03d', '03e', '03f'], 
-                          'SR': ['09a'],
-                          'TX': ['12a', '12b', '12c', '12d'],
-                          }
+        socket.getaddrinfo('127.0.0.1', 8080)
+        #names of the Drainage areas with respective abbreviations
+        self.DD = {'AMERICAN SAMOA': 'PI',
+              'ARK-RED-WHITE': 'MS',
+              'CALIFORNIA': 'CA',
+              'GREAT BASIN': 'GB',
+              'GREAT LAKES': 'GL',
+              'GUAM': 'PI',
+              'HAWAII': 'HI',
+              'LOWER COLORADO': 'CO',
+              'LOWER MISSISSIPPI': 'MS',
+              'LOWER MISSOURI': 'MS',
+              'MID-ATLANTIC': 'MA',
+              'NORTHEAST': 'NE',
+              'NORTHERN MARIANA ISLANDS': 'PI',
+              'OHIO': 'MS',
+              'PACIFIC NORTHWEST': 'PN',
+              'PUERTO RICO/U.S. VIRGIN ISLANDS': 'CI',
+              'RIO GRANDE': 'RG',
+              'SOURIS-RED-RAINY': 'SR',
+              'SOUTH ATLANTIC NORTH': 'SA',
+              'SOUTH ATLANTIC SOUTH': 'SA',
+              'SOUTH ATLANTIC WEST': 'SA',
+              'TENNESSEE': 'MS',
+              'TEXAS': 'TX',
+              'UPPER COLORADO': 'CO',
+              'UPPER MISSISSIPPI': 'MS',
+              'UPPER MISSOURI': 'MS',
+              }
+        # VPU in each drainage area
+        self.DA_to_VPU = {'PN': ['17'],
+                     'CA': ['18'],
+                     'GB': ['16'],
+                     'CO': ['14', '15'],
+                     'MS': ['05', '06', '07', '08', '10U', '10L', '11'],
+                     'TX': ['12'],
+                     'RG': ['13'],
+                     'SR': ['09'],
+                     'SA': ['03N', '03S', '03W'],
+                     'GL': ['04'],
+                     'MA': ['02'],
+                     'NE': ['01'],
+                     'PI': ['22AS', '22GU', '22MP'],
+                     'HI': ['20'],
+                     'CI': ['21'],
+                     }
+        #VPU numbers to Drainage Area abbreviations
+        self.VPU_to_DA = {'01': 'NE',
+                     '02': 'MA',
+                     '03N': 'SA',
+                     '03S': 'SA',
+                     '03W': 'SA',
+                     '04': 'GL',
+                     '05': 'MS',
+                     '06': 'MS',
+                     '07': 'MS',
+                     '08': 'MS',
+                     '09': 'SR',
+                     '10U': 'MS',
+                     '10L': 'MS',
+                     '11': 'MS',
+                     '12': 'TX',
+                     '13': 'RG',
+                     '14': 'CO',
+                     '15': 'CO',
+                     '16': 'GB',
+                     '17': 'PN',
+                     '18': 'CA',
+                     '20': 'HI',
+                     '21': 'CI',
+                     '22AS': 'PI',
+                     '22GU': 'PI',
+                     '22MP': 'PI',
+                     }
+        #VPU numbers to Drainage Area name
+        self.VPU_names = {'01': 'NORTHEAST',
+                     '02': 'MID-ATLANTIC',
+                     '03N': 'SOUTH ATLANTIC NORTH',
+                     '03S': 'SOUTH ATLANTIC SOUTH',
+                     '03W': 'SOUTH ATLANTIC WEST',
+                     '04': 'GREAT LAKES',
+                     '05': 'OHIO',
+                     '06': 'TENNESSEE',
+                     '07': 'UPPER MISSISSIPPI',
+                     '08': 'LOWER MISSISSIPPI',
+                     '09': 'SOURIS-RED-RAINY',
+                     '10U': 'UPPER MISSOURI',
+                     '10L': 'LOWER MISSOURI',
+                     '11': 'ARK-RED-WHITE',
+                     '12': 'TEXAS',
+                     '13': 'RIO GRANDE',
+                     '14': 'UPPER COLORADO',
+                     '15': 'LOWER COLORADO',
+                     '16': 'GREAT BASIN',
+                     '17': 'PACIFIC NORTHWEST',
+                     '18': 'CALIFORNIA',
+                     '20': 'HAWAII',
+                     '21': 'PUERTO RICO/U.S. VIRGIN ISLANDS',
+                     '22AS': 'AMERICAN SAMOA',
+                     '22GU': 'GUAM',
+                     '22MP': 'NORTHERN MARIANA ISLANDS',}
+        #VPU number to RPU numbers
+        self.VPU_to_RPU = {'01': ['01a'],
+                      '02': ['02a', '02b'],
+                      '03N': ['03a', '03b'],
+                      '03S': ['03c', '03d'],
+                      '03W': ['03e', '03f'],
+                      '04': ['04a', '04b', '04c', '04d'],
+                      '05': ['05a', '05b', '05c', '05d'],
+                      '06': ['06a'],
+                      '07': ['07a', '07b', '07c'],
+                      '08': ['08a', '08b', '03g'],
+                      '09': ['09a'],
+                      '10U': ['10e', '10f', '10g', '10h', '10i'],
+                      '10L': ['10a', '10b', '10c', '10d'],
+                      '11': ['11a', '11b', '11c', '11d'],
+                      '12': ['12a', '12b', '12c', '12d'],
+                      '13': ['13a', '13b', '13c', '13d'],
+                      '14': ['14a', '14b'],
+                      '15': ['15a', '15b'],
+                      '16': ['16a', '16b'],
+                      '17': ['17a', '17b', '17c', '17d'],
+                      '18': ['18a', '18b', '18c'],
+                      '20': ['20a', '20b', '20c', '20d', '20e', '20f', '20g', '20h'],
+                      '21': ['21a', '21b', '21c'],
+                      '22AS': ['22c'],
+                      '22GU': ['22a'],
+                      '22MP': ['22b'],
+                      }
 
-        # NHDPlus raster processing units (RPUs) in each vector processing unit
+        #RPU numbers to VPU numbers
+        self.RPU_to_VPU = {'01a': '01',
+                      '02a': '02',
+                      '02b': '02',
+                      '03a': '03N',
+                      '03b': '03N',
+                      '03c': '03S',
+                      '03d': '03S',
+                      '03e': '03W',
+                      '03f': '03W',
+                      '03g': '08',
+                      '04a': '04',
+                      '04b': '04',
+                      '04c': '04',
+                      '04d': '04',
+                      '05a': '05',
+                      '05b': '05',
+                      '05c': '05',
+                      '05d': '05',
+                      '06a': '06',
+                      '07a': '07',
+                      '07b': '07',
+                      '07c': '07',
+                      '08a': '08',
+                      '08b': '08',
+                      '09a': '09',
+                      '10a': '10L',
+                      '10b': '10L',
+                      '10c': '10L',
+                      '10d': '10L',
+                      '10e': '10U',
+                      '10f': '10U',
+                      '10g': '10U',
+                      '10h': '10U',
+                      '10i': '10U',
+                      '11a': '11',
+                      '11b': '11',
+                      '11c': '11',
+                      '11d': '11',
+                      '12a': '12',
+                      '12b': '12',
+                      '12c': '12',
+                      '12d': '12',
+                      '13a': '13',
+                      '13b': '13',
+                      '13c': '13',
+                      '13d': '13',
+                      '14a': '14',
+                      '14b': '14',
+                      '15a': '15',
+                      '15b': '15',
+                      '16a': '16',
+                      '16b': '16',
+                      '17a': '17',
+                      '17b': '17',
+                      '17c': '17',
+                      '17d': '17',
+                      '18a': '18',
+                      '18b': '18',
+                      '18c': '18',
+                      '20a': '20',
+                      '20b': '20',
+                      '20c': '20',
+                      '20d': '20',
+                      '20e': '20',
+                      '20f': '20',
+                      '20g': '20',
+                      '20h': '20',
+                      '21a': '21',
+                      '21b': '21',
+                      '21c': '21',
+                      '22a': '22GU',
+                      '22b': '22MP',
+                      '22c': '22AS',
+                    }
+        #names of the Raster files
+        self.RPU_Files = ['CatSeed', 'FdrFac', 'FdrNull', 'FilledAreas',
+                          'HydroDem', 'NEDSnapshot','Hydrodem','Catseed']
 
-        self.vpu_to_rpu = {'18':  ['18a', '18b', '18c'],
-                           '14':  ['14a', '14b'],
-                           '15':  ['15a', '15b'],
-                           '16':  ['16a', '16b'],
-                           '04':  ['04a', '04b', '04c', '04d'],
-                           '02':  ['02a', '02b'],
-                           '05':  ['05a', '05b', '05c', '05d'],
-                           '06':  ['06a'],
-                           '07':  ['07a', '07b', '07c'], 
-                           '08':  ['08a', '08b', '08g'],
-                           '10L': ['10a', '10b', '10c', '10d'], 
-                           '10U': ['10e', '10f', '10g', '10h', '10i'],  
-                           '11':  ['11a', '11b', '11c', '11d'],
-                           '01':  ['01a'],
-                           '17':  ['17a', '17b', '17c', '17d'],
-                           '13':  ['13a', '13b', '13c', '13d'],
-                           '03N': ['03a', '03b'], 
-                           '03S': ['03c', '03d'], 
-                           '03W': ['03e', '03f'], 
-                           '09':  ['09a'],
-                           '12':  ['12a', '12b', '12c', '12d'],
-                           }
 
-        self.vpu_to_da = {i:k for k, v in self.da_to_vpu.items() for i in v}
+        #some of the files on the website do not follow the nomenclature this dictionary makes up for human errors
+        self.problematic_rpu_files = {'Catseed':['Catseed','CatSeed'],
+                                      'CatSeed':['Catseed','CatSeed'],
+                                      'HydroDem':['HydroDem','Hydrodem'],
+                                      'Hydrodem':['HydroDem','Hydrodem']}
 
-        self.url          = url
-        self.destination  = destination
-        self.path_to_7zip = path_to_7zip
+        #names of the Vector files
+        self.VPU_Files = ['EROMExtension', 'NHDPlusAttributes', 'NHDPlusBurnComponents',
+                          'NHDPlusCatchment', 'NHDSnapshot','VPUAttributeExtension',
+                          'VogelExtension', 'WBDSnapshot', 'NHDSnapshotFGDB',]
+        #some vpu regions dont follow the standard url for the other regions this list notes those
+        self.problematic_vpu_list = ['03N', '03S', '03W','05', '06', '07', '08',
+                                '10U', '14', '15', '10L', '11','22AS', '22GU', '22MP']
+        self.link_file = 'data/link.txt' #path to link file
+        self.known_exceptions = {(self.base_url+'CO/NHDPlus15/NHDPlusV21_CO_15_VogelExtension'):(self.base_url+'CO/NHDPlus15/NHDPlusV21_CO_15_VogelEXtension')}
 
-        if VPU in self.vpu_to_da:
-            self.DA = self.vpu_to_da[VPU]
+        #headers to use when pinging the amazon servers
+        self.headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.81 Safari/537.36'}
+        self.verify_links()
+
+
+    def gather_rpu_links(self,max_version=15, rpu_input=None, filename_input=None):
+        '''
+        A function to gather the working rpu links for the metadata text file
+
+        max_version takes the highest know version of the files in the NHDPLUS Dataset
+
+        the two optional arguments facilitate getting one link in the case that the metadata file is not up to date
+        rpu_input takes a specific rpu region to gather one link
+        filename_input takes a specific rpu filename to gather one link
+
+        '''
+
+        working_urls = []
+
+
+        if rpu_input is None and filename_input is None: #if no arguments given loop over all rpus
+            for rpu in sorted(self.RPU_to_VPU.keys()): #iterate over rpus in order
+
+                vpu = self.RPU_to_VPU[rpu] #set variable
+                DA = self.VPU_to_DA[vpu] #set variable
+
+                for filename in self.RPU_Files: #iterate over different rpu filetypes
+
+                    if vpu in self.problematic_vpu_list: #catch exceptions
+                        url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu, filename)
+
+                        i = 1
+                        while i < max_version+1: #find current version of NHDPlus
+
+                            final_url = '{}_{:02d}.7z'.format(url,i) #final url
+
+                            try:
+                                time.sleep(0.1) #delay
+                                req = Request(final_url, data=None,headers=self.headers)
+                                response = urlopen(req)
+                                working_urls.append(final_url)
+                                print('FOUND ' + final_url)
+                                break
+                            except HTTPError or URLError:
+                                pass
+                            i += 1
+
+                    else:
+                        url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu, filename)
+
+                        i = 1
+
+                        while i < max_version+1:
+
+                            final_url = '{}_{:02d}.7z'.format(url, i)
+
+
+                            try:
+                                time.sleep(0.1)
+                                req = Request(final_url, data=None,headers=self.headers)
+                                response = urlopen(req)
+                                working_urls.append(final_url)
+                                print('FOUND '+ final_url)
+                                break
+                            except HTTPError or URLError:
+                                pass
+                            i+= 1
+
+                    if i > max_version:
+                        print('no link found for ', final_url)
+                        pass
+
+            return working_urls
+
         else:
-            print('')
-            print('error: VPU "{}" is not a valid choice!'.format(VPU))
-            print('valid VPU choices are:')
-            print(*self.vpu_to_da.keys())
-            print('')
-            raise
-        
-        self.VPU          = VPU
-        self.ftp          = ftp
-        self.start        = time.time()
-        self.timeout      = timeout
 
-    def decompress(self, filename):
-        """
-        points to the right decompression method for the operating system.
-        """
+            assert rpu_input in self.RPU_to_VPU.keys(), 'RPU must be one of the following ' + str(sorted(self.RPU_to_VPU.keys()))
 
-        if os.name == 'posix': 
+            assert filename_input in self.RPU_Files, 'filename must be one of the following ' + str(sorted(self.RPU_Files))
+
+            vpu = self.RPU_to_VPU[rpu_input]
+            DA = self.VPU_to_DA[vpu]
+
+            if vpu in problematic_vpu_list:
+                url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu_input, filename_input)
+
+                i = 1
+                while i < max_version+1:
+
+                    final_url = '{}_{:02d}.7z'.format(url,i)
+
+                    try:
+                        time.sleep(0.1)
+                        req = Request(final_url, data=None,headers=self.headers)
+                        response = urlopen(req)
+                        working_link = final_url
+                        print('FOUND ' + final_url)
+                        break
+                    except HTTPError or URLError:
+                            pass
+                    i += 1
+
+            else:
+
+                url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu_input, filename_input)
+
+                i = 1
+
+                while i < max_version+1:
+
+                    final_url = '{}_{:02d}.7z'.format(url, i)
+
+
+                    try:
+                        time.sleep(0.1)
+                        req = Request(final_url, data=None,headers=self.headers)
+                        response = urlopen(req)
+                        working_link = final_url
+                        print('FOUND '+ final_url)
+                        break
+                    except HTTPError or URLError:
+                        pass
+                    i+= 1
+
+            if i > max_version:
+                print('no link found for ', final_url)
+                pass
+
+            return working_link
+
+    def gather_vpu_links(self,max_version=15, vpu_input=None, filename_input=None):
+        '''
+        A function to gather the working vpu links for the metadata text file
+        max_version takes the highest known version of the files in the NHDPLUS Dataset
+        the two optional arguments facilitate getting one link in the case that the metadata file is not up to date
+        vpu_input takes a specific vpu region to gather one link
+        filename_input takes a specific vpu filename to gather one link
+        '''
+        working_urls = []
+
+        if vpu_input is None and filename_input is None:
+
+            for vpu in sorted(self.VPU_to_DA.keys()):
+
+                DA = self.VPU_to_DA[vpu]
+
+                for filename in self.VPU_Files:
+
+                    if vpu in self.problematic_vpu_list:
+
+                        url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}'.format(self.base_url,DA,vpu,filename)
+                        if url in self.known_exceptions.keys():
+                            url = self.known_exceptions[url]
+
+                        i = 1
+                        while i < max_version+1:
+
+                            final_url = '{}_{:02d}.7z'.format(url,i)
+
+                            try:
+                                time.sleep(0.)
+                                req = Request(final_url, data=None,headers=self.headers)
+                                response = urlopen(req)
+                                working_urls.append(final_url)
+                                print('FOUND '+ final_url)
+                                break
+                            except HTTPError or URLError:
+                                pass
+                            i += 1
+
+
+                    else:
+
+                        url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}'.format(self.base_url,DA,vpu,filename)
+                        if url in self.known_exceptions.keys():
+                            url = self.known_exceptions[url]
+                        i = 1
+                        while i < max_version+1:
+                            final_url = '{}_{:02d}.7z'.format(url,i)
+
+                            try:
+                                time.sleep(0.1)
+                                req = Request(final_url, data=None,headers=self.headers)
+                                response = urlopen(req)
+                                working_urls.append(final_url)
+                                print('FOUND '+ final_url)
+                                break
+                            except HTTPError or URLError:
+                                pass
+                            i += 1
+
+                    if i > max_version:
+                        print('no link found for ', final_url)
+                        pass
+
+            return working_urls
+
+        else:
+
+            assert vpu_input in self.VPU_to_RPU.keys(), 'VPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
+
+            assert filename_input in self.VPU_Files, 'filename must be one of ' + str(self.VPU_Files)
+
+            DA = self.VPU_to_DA[vpu_input]
+
+            if vpu_input in self.problematic_vpu_list:
+
+                url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}'.format(self.base_url,DA,vpu_input,filename_input)
+                if url in self.known_exceptions.keys():
+                    url = self.known_exceptions[url]
+
+                i = 1
+                while i < max_version+1:
+
+                    final_url = '{}_{:02d}.7z'.format(url,i)
+
+                    try:
+                        time.sleep(0.1)
+                        req = Request(final_url, data=None,headers=self.headers)
+                        response = urlopen(req)
+                        working_link = final_url
+                        print('FOUND '+ final_url)
+                        break
+                    except HTTPError or URLError:
+                        pass
+                    i += 1
+
+
+            else:
+
+                url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}'.format(self.base_url,DA,vpu_input,filename_input)
+                if url in self.known_exceptions.keys():
+                    url = self.known_exceptions[url]
+                i = 1
+                while i < max_version+1:
+                    final_url = '{}_{:02d}.7z'.format(url,i)
+
+                    try:
+                        time.sleep(0.1)
+                        req = Request(final_url, data=None,headers=self.headers)
+                        response = urlopen(req)
+                        working_link = final_url
+                        print('FOUND '+ final_url)
+                        break
+                    except HTTPError or URLError:
+                        pass
+                    i += 1
+
+            if i > max_version:
+                print('no link found for ', final_url)
+                pass
+
+            return working_link
+
+    def getvpufile(self, vpu, filename):
+
+        '''
+        A function to return the desired VPU File
+
+        Arguments:
+            vpu takes any of the keys in the VPU_to_RPU dictionary as strings
+            filename takes any of the values in the VPU_Files list as strings
+
+        '''
+
+
+        assert vpu in self.VPU_to_RPU.keys(), 'VPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
+
+        assert filename in self.VPU_Files, 'filename must be one of ' + str(self.VPU_Files)
+
+        DA = self.VPU_to_DA[vpu]
+
+        with open(self.link_file) as f:
+
+            verified_links = f.read().splitlines()
+
+        if vpu in self.problematic_vpu_list:
+
+            url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}'.format(self.base_url, DA, vpu, filename)
+            if url in self.known_exceptions.keys():
+                url = self.known_exceptions[url]
+
+        else:
+
+            url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}'.format(self.base_url,DA,vpu,filename)
+            if url in self.known_exceptions.keys():
+                url = self.known_exceptions[url]
+
+        for link in verified_links:
+
+            if url in link:
+                working_link = link
+                print('the link to your selected vpu and filename is ' + working_link)
+                return working_link
+            else:
+                pass
+
+        try:
+            working_link
+        except NameError:
+            working_link = None
+            print('no link found for {} {}'.format(vpu, filename))
+            return working_link
+
+    def getrpufile(self, rpu, filename):
+        '''
+        A function to return the desired RPU file
+
+        Arguments:
+            rpu takes any of the keys in the the RPU_to_VPU dictionary
+            filename takes any of the value in the RPU_Files list
+        '''
+
+        rpu = rpu.lower()
+
+        assert rpu in self.RPU_to_VPU.keys(), 'RPU must be one of the following ' + str(sorted(self.RPU_to_VPU.keys()))
+
+        assert filename in self.RPU_Files, 'filename must be one of the following ' + str(sorted(self.RPU_Files))
+
+        with open(self.link_file) as f:
+
+            verified_links = f.read().splitlines()
+
+        vpu = self.RPU_to_VPU[rpu]
+        DA = self.VPU_to_DA[vpu]
+        possible_urls = []
+
+        if filename in self.problematic_rpu_files.keys():
+            possible_filenames = self.problematic_rpu_files[filename]
+
+            if vpu in self.problematic_vpu_list:
+
+                for items in possible_filenames:
+                    url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu, items)
+                    possible_urls.append(url)
+
+
+            else:
+                for items in possible_filenames:
+                    url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu, items)
+                    possible_urls.append(url)
+
+
+            for link in verified_links:
+
+                for item in possible_urls:
+
+                    if item in link:
+                        working_link = link
+                        print('the link to your selected rpu and filename is ' + working_link)
+                        return working_link
+
+                    else:
+                        pass
+
+            try:
+                working_link
+            except NameError:
+                working_link = None
+                print('no link found for {} {}'.format(rpu, filename))
+                return working_link
+
+        else:
+
+            if vpu in self.problematic_vpu_list:
+                url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu, filename)
+            else:
+                url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu, filename)
+
+            for link in verified_links:
+
+                if url in link:
+                    working_link = link
+                    print('the link to your selected rpu and filename is ' + working_link)
+                    return working_link
+
+                else:
+                    pass
+
+            try:
+                working_link
+            except NameError:
+                working_link = None
+                print('no link found for {} {}'.format(vpu, filename))
+                return working_link
+
+
+    def downloadrpufile(self, rpu, filename):
+        '''
+        function to download rpu files
+        arguments:
+            rpu: raster processing unit
+            filename: possible raster files listed in self.RPU_Files
+        '''
+
+        assert rpu in self.RPU_to_VPU.keys(), 'RPU must be one of the following ' + str(sorted(self.RPU_to_VPU.keys()))
+        assert os.path.isfile(self.link_file), 'no link file run verify_links fucntion'
+        assert filename in self.RPU_Files, 'filename must be one of the following ' + str(sorted(self.RPU_Files))
+
+        link = self.getrpufile(rpu, filename)
+        filename = link.split('/')[-1]
+        req = Request(link, data = None, headers = self.headers)
+        response = urlopen(req)
+        CHUNK = 1024 * 1024
+        with open(os.path.join(self.destination, filename), 'wb') as f:
+            while True:
+                chunk = response.read(CHUNK)
+                if not chunk:
+                    break
+                f.write(chunk)
+
+    def downloadvpufile(self, vpu, filename):
+        '''
+        function to download vpu files
+        arguments:
+            vpu: vector processing unit
+            filename: possible vector files listed in self.VPU_Files
+        '''
+
+        assert vpu in self.VPU_to_RPU.keys(), 'VPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
+        assert os.path.isfile(self.link_file), 'no link_file run verify_links function'
+        assert filename in self.VPU_Files, 'filename must be one of ' + str(self.VPU_Files)
+
+
+        link = self.getvpufile(vpu, filename)
+        filename = link.split('/')[-1]
+        req = Request(link, data = None, headers = self.headers)
+        response = urlopen(req)
+        CHUNK = 1024 * 1024
+        with open(os.path.join(self.destination, filename), 'wb') as f:
+            while True:
+                chunk = response.read(CHUNK)
+                if not chunk:
+                    break
+                f.write(chunk)
+
+    def decompress(self,filename):
+
+        '''
+        identifies operating system and decompresses with the appropriate method
+        filename takes full path to file to be decompressed
+        '''
+
+        if os.name == 'posix':
             self.decompress_linux(filename)
         elif os.name == 'nt':
             self.decompress_windows(filename)
-        else:     
+        else:
             print('unknown operating system')
             raise
 
-    def decompress_windows(self, 
-                           filename, 
+
+    def decompress_windows(self,
+                           filename,
                            ):
         """
         Spawns a subprocess to use 7zip to decompress the file.
+        filename takes fullpath of file to be decompressed
         """
+
+
 
         if not os.path.isfile(self.path_to_7zip):
             print('error: specified path to 7zip ' +
                   '{} does not exist!\n'.format(self.path_to_7zip))
             raise
 
-        args = [self.path_to_7zip, 'x', '-o{}'.format(self.destination), 
+        args = [self.path_to_7zip, 'x', '-o{}'.format(self.destination),
                 filename]
 
         try:
@@ -165,6 +756,7 @@ class NHDPlusExtractor:
     def decompress_linux(self, filename):
         """
         Unzips the archive on linux.
+        filename takes fullpath of file of be decompressed
         """
 
         args = ['7z', 'x', '-o{}'.format(self.destination), filename]
@@ -178,310 +770,444 @@ class NHDPlusExtractor:
             print('error: unable to decompress files')
             print('is 7zip installed?')
 
-    def handler(self, chunk):
-        """
-        Tracks download progress and writes data to a file from the server.
-        """
-        
-        self.count += 1
-        self.downloaded += len(chunk)
+    def verify_links(self):
 
-        if time.time() - self.start > self.timeout - 60:
+        '''
+        function to verify all the links in the metadata file are up to date
+        '''
+        print('verifying links')
+        working_links = []
 
-            print('error: connection timeout\nresume or increase timeout\n')
-            raise
+        if os.path.isfile(self.link_file):
 
-        # report ever 1000 chunks (approximately 8 MB with 10-bit chunksize)
+            source = open(self.link_file)
+            links = source.read().splitlines()
+            print(str(self.link_file) + ' has been read')
+            source.close()
 
-        if self.count % 1000 == 0:
+            for link in links:
 
-            if self.downloaded < self.filesize:
+                try:
+                        time.sleep(0.)
+                        print('trying ' + link)
+                        req = Request(link, data=None,headers=self.headers)
+                        response = urlopen(req)
+                        working_links.append(link)
+                        print('success')
 
-                its = self.downloaded / 10**6, self.filesize / 10**6
-                print('{:<5.1f} MB of {:<5.1f}'.format(*its), 
-                      'MB transferred')
+                except HTTPError or URLError:
+                    print('the following link was broken ' + link)
+                    a = link.split('/')[-1]
+                    b = a.split('_')
 
-        self.openfile.write(chunk)
+                    if len(b) == 5:
+                        working_links.append(str(self.gather_vpu_links(vpu_input=b[2], filename_input=b[3])))
 
-    def download_compressed(self, 
-                            webfile, 
-                            name,
-                            blocksize = 8192,
-                            verbose = True,
-                            ):
-        """
-        Private method to download a compressed file.
-        """
+                    else:
+                        working_links.append(str(self.gather_rpu_links(rpu_input=b[3], filename_input=b[4])))
 
-        # compressed file name on local machine
+                with open(self.link_file,'w') as corrected:
 
-        compressed = '{}/{}'.format(self.destination, webfile)
+                    for items in working_links:
 
-        # if the files doesn't exist, download it
+                        corrected.write('%s\n' %items)
 
-        if not os.path.isfile(compressed):
-        
-            if verbose: print('downloading {} file {}\n'.format(name, webfile))
+        else:
+            print('no file: {} creating new instance this will take awhile'.format(self.link_file) )
 
-            # get some info for download progress tracking
+            vpu_links = self.gather_vpu_links()
+            rpu_links = self.gather_rpu_links()
 
-            self.filesize   = self.ftp.size(webfile)
-            self.blocksize  = blocksize
-            self.downloaded = 0
-            self.count      = 0
+            with open(self.link_file,'w') as destination:
 
-            # download the file
-            
-            if os.name == 'nt':
+                for items in vpu_links:
+                    destination.write('%s\n' % items)
 
-                with open(compressed, 'wb') as self.openfile:
-                    
-                    self.ftp.retrbinary('RETR {}'.format(webfile), self.handler,
-                                        blocksize = self.blocksize)
+                for items in rpu_links:
+                    destination.write('%s\n' % items)
 
-            # work around needed for retrbinary on linux for some reason
-            
-            else:
-                
-                cmd = 'RETR {}'.format(webfile)
-                rest = None
-                conn = self.ftp.transfercmd(cmd, rest)
+    def download_decompress(self,vpu=None,decompress=True):
+        '''
+        function to download and decompress the data from the NHDPlus DataSet
+        this function will download all of the raster and vector data for a specified Drainage area
+        **kwargs
+        vpu: string, the VPU corresponding to the Drainage Area ID to be downloaded ie DA = 'MA' vpu = '02' if set to None the function downloads the entirety of the NHDPlus Dataset
+        decomrpess: if True decompress files with 7zip
+        '''
+        assert vpu in self.VPU_to_RPU.keys() or vpu is None, 'VPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
 
-                with open(compressed, 'wb') as self.openfile:
-                
-                    i = 0
-                    while self.openfile.tell() < self.filesize:
+        if not os.path.isfile(self.link_file):
+            print('the file {} was not found, running verify_links()'.format(self.link_file))
+            self.verify_links()
 
-                        data = conn.recv(self.blocksize)
-                        self.openfile.write(data)
-
-                        i+=1
-
-                        if i % 1000 == 0:
-
-                            c = 10**6
-                            s = self.openfile.tell() / c
-                            it = s, 'MB of', self.filesize / c, 'completed'
-                            print('{:>6.1f} {} {:>6.1f} MB {}'.format(*it))
-
-                print('')
-                print(self.ftp.voidresp())
-
-            print('')
-
-        elif verbose: print('file {} exists'.format(compressed))
-
-    def download_data(self,
-                      verbose = True,
-                      ):
-        """
-        Downloads the compressed source data files from NHDPlus.
-        """
-
-        if not os.path.isdir(self.destination): 
-
-            if verbose: print('No NHDPlus data present in destination\n')
-            os.mkdir(self.destination)
-
-        else: 
-
-            print('NHDPlus destination directory ' +
-                  '{} exists\n'.format(self.destination))
-
-        destination = '{}/NHDPlus{}'.format(self.destination, self.DA)
-        if not os.path.isdir(destination):
-
-            if verbose: 
-                print('NHDPlus data for {} not present'.format(self.DA))
-            os.mkdir(destination)
-        
-        # directory path to decompressed NHDPlus data for the VPU
-
-        self.NHDPlus = '{}/NHDPlus{}'.format(destination, self.VPU)
-
-        # download all the compressed files from the NHDPlus ftp server
-
-        if verbose: print('checking for source NHDPlus data files...\n')
-
-        # check if the needed files have been downloaded already
-
-        if os.path.isdir(self.NHDPlus):
-
-            if verbose:
- 
-                print('NHDPlus directory for VPU {} exists\n'.format(self.VPU))
-
-            flag = False
-
-            # make a list of all the files in the local directory and those 
-            # needed from the WWW
-
-            localfiles = [f for f in os.listdir(self.NHDPlus)]
-
-            needed = ('NHDPlusCatchment', 
-                      'NHDSnapshot', 
-                      'NHDPlusAttributes',
-                      'EROMExtension', 
-                      'NEDSnapshot',
-                      )
-
-            for f in needed:
-
-                # see if the needed file is in the local file list somewhere
-
-                if any([f in localfile for localfile in localfiles]):
-
-                    if verbose: print(f, 'exists')
-
+        if vpu is not None:
+            for files in self.VPU_Files:
+                print(vpu + ' ' + files)
+                linktofile = self.getvpufile(vpu,files)
+                if linktofile is not None:
+                    filename = linktofile.split('/')[-1]
                 else:
+                    continue
+                if os.path.exists(os.path.join(self.destination,filename)):
+                    print(filename + ' already exists moving on')
+                    pass
+                else:
+                    self.downloadvpufile(vpu,files)
 
-                    if verbose: print(f, 'does not exist')
-                    flag = True
+            for rpu in self.VPU_to_RPU[vpu]:
+                for files in self.RPU_Files:
+                    print(rpu + ' ' + files)
+                    linktofile = self.getrpufile(rpu, files)
+                    if linktofile is not None:
+                        rpufilename = linktofile.split('/')[-1]
+                    else:
+                        continue
 
-            if verbose: print('')
+                    if os.path.exists(os.path.join(self.destination, rpufilename)):
+                        print(rpufilename + ' already exists moving on')
+                        pass
 
-        else: 
+                    else:
+                        self.downloadrpufile(rpu, files)
 
-            if verbose: print('NHDPlus data for VPU ' +
-                              '{} need to be downloaded\n'.format(self.VPU))
-            flag = True
+        else:
+            for vpus in sorted(self.VPU_to_RPU.keys()):
+                for files in self.VPU_Files:
+                    print(vpus + ' ' + files)
+                    linktofile = self.getvpufile(vpus, files)
+                    if linktofile is not None:
+                        filename = y.split('/')[-1]
+                    else:
+                        continue
+                    if os.path.exists(os.path.join(self.destination, filename)):
+                        print(filename + ' already exists moving on')
+                        pass
+                    else:
+                        self.downloadvpufile(vpus,files)
 
-        # if any of the files are needed, go to the NHDPlus FTP site
+            for rpu in sorted(self.RPU_to_VPU.keys()):
 
-        if flag:
+                for files in self.RPU_Files:
+                    print(rpu + ' ' + files)
+                    linktofile = self.getrpufile(rpu, files)
+                    if linktofile is not None:
+                        rpufilename = y.split('/')[-1]
+                    else:
+                        continue
+
+                    if os.path.exists(os.path.join(self.destination, rpufilename)):
+                        print(rpufilename + ' already exists moving on')
+                        pass
+
+                    else:
+                        self.downloadrpufile(rpu, files)
+
+        if decompress is True:
+
+            for dirpath, subdir, files in os.walk(self.destination):
+
+                for data in files:
+                    self.decompress(os.path.join(dirpath, data))
+
+    def get_degree_transform(self, dataset):
+        """
+        Gets a GDAL transform to convert coordinate latitudes and longitudes
+        to northings and eastings associated with the NAD 1983 projection.
+        """
+
+        # get the old coordinate system
+
+        old = osr.SpatialReference()
+        old.ImportFromWkt(dataset.GetProjection())
+
+        # create the new coordinate system
+
+        nad83_wkt = (
+            """
+            GEOGCS["NAD83",
+            DATUM["North_American_Datum_1983",
+            SPHEROID["GRS 1980",6378137,298.257222101,
+            AUTHORITY["EPSG","7019"]],
+            AUTHORITY["EPSG","6269"]],
+            PRIMEM["Greenwich",0,
+            AUTHORITY["EPSG","8901"]],
+            UNIT["degree",0.0174532925199433,
+            AUTHORITY["EPSG","9108"]],
+            AUTHORITY["EPSG","4269"]]
+            """
+            )
+
+        new = osr.SpatialReference()
+        new.ImportFromWkt(nad83_wkt)
+
+        # create a transform object to convert between coordinate systems
+
+        transform = osr.CoordinateTransformation(old, new)
+
+        return transform
+
+    def get_raster(self, filename, points, quiet = False):
+        """
+        Reads the value of attributes in a raster file at a list of points.
+        """
+
+        if quiet: gdal.PushErrorHandler('CPLQuietErrorHandler')
+
+        # register all of the drivers
+
+        gdal.AllRegister()
+
+        # open the image
+
+        dataset = gdal.Open(filename, GA_ReadOnly)
+
+        # get the coordinate transformation
+
+        transform = self.get_NAD1983_transform(dataset)
+
+        # get image size
+
+        rows  = dataset.RasterYSize
+        cols  = dataset.RasterXSize
+        bands = dataset.RasterCount
+
+        # get georeference info
+
+        x0, width, x_rotation, y0, y_rotation, height = dataset.GetGeoTransform()
+
+        # loop through the points and get the raster values
+
+        values = []
+        for point in points:
+
+            # get x,y
+
+            x, y, z = transform.TransformPoint(point[0], point[1])
+
+            # transform the easting and northing to pixel space
+
+            pixel_x = int((x - x0) / width)
+            pixel_y = int((y - y0) / height)
+
+            # loop through the bands and find the values
+
+            for i in range(1, bands + 1):
+
+                band = dataset.GetRasterBand(i)
+
+                # read data and add the value to the string
+
+                value = band.ReadRaster(pixel_x, pixel_y, 1, 1)
+                if value is None: value = -1
+                else: value = int.from_bytes(value, byteorder = 'little')
+
+            values.append(value)
+
+        return values
+
+    def get_NAD1983_transform(self,dataset):
+        """
+        Gets a GDAL transform to convert coordinate northings and eastings
+        associated with the NAD 1983 projection to latitudes and longitudes.
+        """
+
+        # get the old coordinate system
+
+        old = osr.SpatialReference()
+        old.ImportFromWkt(dataset.GetProjection())
+
+        # create the new coordinate system
+
+        nad83_wkt = (
+            """
+            GEOGCS["NAD83",
+            DATUM["North_American_Datum_1983",
+            SPHEROID["GRS 1980",6378137,298.257222101,
+            AUTHORITY["EPSG","7019"]],
+            AUTHORITY["EPSG","6269"]],
+            PRIMEM["Greenwich",0,
+            AUTHORITY["EPSG","8901"]],
+            UNIT["degree",0.0174532925199433,
+            AUTHORITY["EPSG","9108"]],
+            AUTHORITY["EPSG","4269"]]
+            """
+            )
+
+        new = osr.SpatialReference()
+        new.ImportFromWkt(nad83_wkt)
+
+        # create a transform object to convert between coordinate systems
+
+        transform = osr.CoordinateTransformation(new, old)
+
+        return transform
+
+    def get_raster_table(self,
+                         filename,
+                         extent,
+                         dtype,
+                         locations = False,
+                         quiet = False,
+                         ):
+        """
+        Gets the values of a DEM raster over a rectangular plot with corners
+        located at longmin, latmin, longmin, and latmax as specified by extents.
+        Returns a matrix of values and the corresponding latitude and longitude.
+        """
+
+        start = time.time()
+
+        longmin, latmin, longmax, latmax = extent
+
+        if quiet: gdal.PushErrorHandler('CPLQuietErrorHandler')
+
+        # register all of the drivers
+
+        gdal.AllRegister()
+
+        # open the image
+
+        dataset = gdal.Open(filename, GA_ReadOnly)
+
+        # get image size
+
+        rows  = dataset.RasterYSize
+        cols  = dataset.RasterXSize
+        bands = dataset.RasterCount
+
+        # get georeference info
+
+        x0, w, x_rotation, y0, y_rotation, h = dataset.GetGeoTransform()
+
+        # transform the to/from NAD 1983 and latitudes/longitudes
+
+        NAD1983_transform = self.get_NAD1983_transform(dataset)
+        degree_transform  = self.get_degree_transform(dataset)
+
+        # transform the corner points to NAD 1983
+
+        points = zip([longmin] * 2 + [longmax] * 2, [latmin, latmax] * 2)
+
+        xs, ys, zs = zip(*[NAD1983_transform.TransformPoint(*point)
+                           for point in points])
+
+        # get the pixel values of the min longitudes and latitudes and the number
+        # of pixels in each direction
+
+        pxmin  = min([self.get_pixel(x, x0, w) for x in xs])
+        pymin  = min([self.get_pixel(y, y0, h) for y in ys])
+        width  = max([self.get_pixel(x, x0, w) for x in xs]) - pxmin
+        height = max([self.get_pixel(y, y0, h) for y in ys]) - pymin
+
+        # find the location of the origin (pixels are integers, degrees are reals)
+
+        rx = self.get_remainder(min(xs), x0, w)
+        ry = self.get_remainder(min(ys), y0, h)
+
+        origin = [min(xs), min(ys)]
+
+        # pre-allocate some space to store the lat/long of each pixel and the value
+
+        latitudes  = numpy.empty((height, width), dtype = 'float')
+        longitudes = numpy.empty((height, width), dtype = 'float')
+
+        # read the band
+
+        band = dataset.GetRasterBand(1)
+
+        # iterate through the file, noting that pixels start at top left and move
+        # down and right, and the y values move up
+
+        values = numpy.empty((height, width), dtype = dtype)
+
+        if locations:
+
+            # need to return the latitudes and longitudes, which takes time
+
+            for row in range(height):
+                values[height - row - 1] = band.ReadAsArray(pxmin, pymin + row,
+                                                            width, 1)
+                for column in range(width):
+                    x, y, z = degree_transform.TransformPoint(origin[0] + w *column,
+                                                              origin[1] + h * row)
+                    latitudes[height - row - 1,  column] = y
+                    longitudes[height - row - 1, column] = x
+
+            return longitudes, latitudes, values
+
+        else:
+
+            # just return the location of the origin
 
             try:
 
-                # create an FTP handler to use to get the data
-
-                self.ftp = FTP(self.url, timeout = self.timeout)
-
-                # anonymous login
-
-                self.ftp.login()
-
-                print('connected to NHDPlus FTP server\n')
+                for row in range(height):
+                    b = band.ReadAsArray(pxmin, pymin + row, width, 1)
+                    values[height - row - 1] = b
 
             except:
 
-                print('unable to access NHDPlus FTP server; verify that you ' +
-                      'have internet access\n')
-                raise
+                if not quiet: print('warning: unable to read data\n')
+                values = None
 
-            # change into the NHDPlus V21 Data directory
+            return values, [origin[0] - rx, origin[1] - ry]
 
-            self.ftp.cwd('NHDplus/NHDPlusV21/Data')
+    def read_dbf(self, source, comids, attributes = None,verbose=True):
+        '''
+        function to read database files, .dbf,
+        arguments:
+            source: dbf file to be read
+            comids: comids of flowlines to  from source
+        kwargs:
+            attributes: attributes of flowline to be extracted from source if None
+                        all attributes are returned
+            verbose: verbosity of function
+        '''
+        record=[] #empty list to hold singular record
+        records=[] #empty list to hold multiple record
+        temp = {} #dictionary mapping values to fields example temp['COMID'] = [7621376,24557283]
+        index=[] #index of the requested attributes in the dbf
+        mydbf = open(source,'rb')#open dbf file
+        sf = Reader(dbf=mydbf)#use PyShp to read dbf
+        fields = sf.fields[1:]#list of the fields from the dbf excluding the DeletionFlag
+        fields = [item[0].upper() for item in fields]#capitalize the names of the fields and remove the other qualitites of the fields
 
-            # change into the DA directory
 
-            self.ftp.cwd('NHDPlus{}'.format(self.DA))
+        #iterate over the dbf file accessing the records using attributes as a fields
+        ##query. if attributes is none return all the records for all the fields
+        if attributes is None: attributes = fields
 
-            # some DA have multiple VPUs while others don't; change directories
-            # to the VPU if it exists otherwise this is the right directory
+        #find comid index in the dbf file
+        for attribute in attributes:
+            if attribute == ['COMID', 'N', 9, 0]:
+                comid_index = [pos for pos,j in enumerate(fields) if attribute[0] == j]
+                if verbose is True:
+                    print('the comid_index is ' + str(comid_index[0]))
 
-            VPUpath = 'NHDPlus{}'.format(self.VPU)
-            if VPUpath in self.ftp.nlst(): self.ftp.cwd(VPUpath)
+            index.append([pos for pos,j in enumerate(fields) if attribute[0] == j][0])
 
-            # get a list of all the files for the VPU
+        if verbose is True:
+            print('iterating over records finding matching comids from list given')
+        #iterate over records finding matching comids
+        for pos,rec in enumerate(sf.records()):
 
-            files = self.ftp.nlst()
+            if rec[comid_index[0]] in comids:
+                for indice in index:
+                    record.append(rec[indice])
+                if verbose is True:
+                    print('data for {} has been collected'.format(rec[comid_index[0]]))
+                records.append(record)
+                record = []
+        #write records to dictionary linking the attributes to all their respective records
+        for field in attributes:
+            y = attributes.index(field)
+            field = field[0]
+            temp[field]=[]
+            for record in records:
+                temp[field].append(record[y])
 
-            # find and download the catchment file(s)
+        return temp
 
-            catchmentfiles = [f for f in files if 'NHDPlusCatchment' in f]
-
-            for f in catchmentfiles: 
-                self.download_compressed(f, 'catchment')
-
-            # find and download the flowline shapefile(s)
-
-            flowlinefiles = [f for f in files if 'NHDSnapshot' in f]
-
-            for f in flowlinefiles: 
-                self.download_compressed(f, 'flowline')
-
-            # find and download the NHDPlus attributes database files
-
-            attributefiles = [f for f in files if 'NHDPlusAttributes' in f]
-
-            for f in attributefiles: 
-                self.download_compressed(f, 'attribute database')
-
-            # find the EROM database files
-
-            eromfiles = [f for f in files if 'EROMExtension' in f]
-
-            for f in eromfiles:
-                self.download_compressed(f, 'EROM database')
-
-            # find the NED raster files
-            
-            nedfiles = [f for f in files if 'NEDSnapshot' in f]
-            
-            for f in nedfiles:
-                self.download_compressed(f, 'NED raster')
-
-            # close the connection
-
-            self.ftp.quit()
-            self.ftp = None
-
-        # decompress the downloaded files
-
-        # decompressed catchment shapefile name on local machine
-
-        its = self.NHDPlus, 'Catchment'
-        self.catchmentfile = '{0}/NHDPlus{1}/{1}'.format(*its)
-
-        # decompress if not done already
-
-        if not os.path.isfile(self.catchmentfile + '.shp'):
-            print('decompressing the catchment file\n')
-            self.decompress('{}/{}'.format(self.destination, catchmentfiles[0]))
-
-        # decompressed flowline shapefile name on local machine
-
-        its = self.NHDPlus, 'NHDSnapshot', 'Hydrography', 'NHDFlowline'
-        self.flowlinefile = '{}/{}/{}/{}'.format(*its)
-        self.projection   = '{}/{}/{}/{}.prj'.format(*its)
-
-        # decompress if not done already
-
-        if not os.path.isfile(self.flowlinefile + '.shp'): 
-            print('decompressing the flowline file\n')
-            self.decompress('{}/{}'.format(self.destination, flowlinefiles[0]))
-
-        # NHDPlus attribute databases
-
-        its = self.NHDPlus, 'NHDPlusAttributes'
-        self.elevslopefile       = '{}/{}/elevslope.dbf'.format(*its)
-        self.PlusFlowlineVAAfile = '{}/{}/PlusFlowlineVAA.dbf'.format(*its)
-
-        # decompress if not done already
-        
-        if not os.path.isfile(self.elevslopefile):
-            print('decompressing the database files\n')
-            self.decompress('{}/{}'.format(self.destination, attributefiles[0]))
-
-        # EROM database
-
-        self.eromfile = '{}/EROMExtension/EROM_MA0001.DBF'.format(self.NHDPlus)
-
-        # decompress if not done already
-
-        if not os.path.isfile(self.eromfile): 
-            print('decompressing the EROM files\n')
-            self.decompress('{}/{}'.format(self.destination, eromfiles[0]))
-
-        # NED rasters -- there is more than one per VPU
-
-        self.nedfiles = ['{}/NEDSnapshot/Ned{}/elev_cm'.format(self.NHDPlus,RPU)
-                         for RPU in self.vpu_to_rpu[self.VPU]]
-
-        if not any([os.path.isfile(f + '.aux') for f in self.nedfiles]):
-            for compressed, decompressed in zip(nedfiles, self.nedfiles):
-                print('decompressing the elevation raster\n'.format(compressed))
-                self.decompress('{}/{}'.format(self.destination, compressed))
 
     def get_comids(self, flowlinefile):
         """
@@ -493,8 +1219,10 @@ class NHDPlusExtractor:
         shapefile = Reader(flowlinefile)
 
         # find the index of the comids
-
-        comid_index = shapefile.fields.index(['COMID', 'N', 9,  0]) - 1
+        try:
+            comid_index = shapefile.fields.index(['COMID', 'N', 9,  0]) - 1
+        except:
+            comid_index = shapefile.fields.index(['ComID', 'N', 9, 0]) - 1
 
         # make a list of the comids
 
@@ -502,10 +1230,10 @@ class NHDPlusExtractor:
 
         return comids
 
-    def extract_flowlines(self, 
-                          source, 
-                          destination, 
-                          HUC8, 
+    def extract_flowlines(self,
+                          source,
+                          destination,
+                          HUC8,
                           verbose = True,
                           ):
         """
@@ -514,23 +1242,28 @@ class NHDPlusExtractor:
         """
 
         # open the flowline file
-    
+
         if verbose: print('reading the flowline file\n')
-    
+
         shapefile = Reader(source, shapeType = 3)
         records   = shapefile.records()
-    
+
         # figure out which field codes are the Reach code and comid
-    
-        reach_index = shapefile.fields.index(['REACHCODE', 'C', 14, 0]) - 1
-    
+
+        fields = shapefile.fields[1:]
+        fields = [item[0].upper() for item in fields]
+
+        for pos, j in enumerate(fields):
+            if j == 'REACHCODE':
+                reach_index = pos
+
         # go through the reach indices, add add them to the list of flowlines
         # if in the watershed; also make a list of the corresponding comids
-    
+
         if verbose: print('searching for flowlines in the watershed\n')
-    
+
         indices = []
-       
+
         i = 0
         for record in records:
             if record[reach_index][:8] == HUC8: indices.append(i)
@@ -539,38 +1272,38 @@ class NHDPlusExtractor:
         if len(indices) == 0:
             if verbose: print('error: query returned no values')
             raise
-    
+
         # write the data from the HUC8 to a new shapefile
-    
+
         w = Writer(shapeType = 3)
-    
+
         for field in shapefile.fields:  w.field(*field)
-    
+
         for i in indices:
             shape = shapefile.shape(i)
             w.poly(shapeType = 3, parts = [shape.points])
-    
+
             record = records[i]
-    
-            # little work around for blank GNIS_ID and GNIS_NAME values
-    
+
+            #little work around for blank GNIS_ID and GNIS_NAME values
+
             if isinstance(record[3], bytes):
-                record[3] = record[3].decode('utf-8')
+                record[3] = record[3].decode('cp1252')
             if isinstance(record[4], bytes):
-                record[4] = record[4].decode('utf-8')
-    
+                record[4] = record[4].decode('cp1252')
+
             w.record(*record)
-    
+
         w.save(destination)
-    
-        if verbose: 
+
+        if verbose:
             l = len(indices)
             print('queried {} flowlines from original shapefile\n'.format(l))
 
-    def extract_catchments(self, 
-                           source, 
-                           destination, 
-                           flowlinefile, 
+    def extract_catchments(self,
+                           source,
+                           destination,
+                           flowlinefile,
                            verbose = True,
                            ):
         """
@@ -583,61 +1316,100 @@ class NHDPlusExtractor:
         comids = self.get_comids(flowlinefile)
 
         # open the catchment shapefile
-    
+
         if verbose: print('reading the catchment shapefile\n')
-    
+
         shapefile = Reader(source)
-    
+
         # get the index of the feature id, which links to the flowline comid
-    
+        print(shapefile.fields)
         featureid_index = shapefile.fields.index(['FEATUREID', 'N', 9, 0]) - 1
-    
-        # go through the comids from the flowlines and add the corresponding 
+
+        # go through the comids from the flowlines and add the corresponding
         # catchment to the catchment list
-    
+
         if verbose: print('searching the catchments in the watershed\n')
-    
+
         records = shapefile.records()
         indices = []
-    
+
         i = 0
         for record in records:
             if record[featureid_index] in comids: indices.append(i)
             i+=1
-    
+
         if len(indices) == 0:
             print('query returned no values, returning\n')
             raise
 
         # create the new shapefile
-    
+
         if verbose: print('writing the new catchment shapefile\n')
-        
+
         w = Writer()
-    
+
         for field in shapefile.fields:  w.field(*field)
-    
+
         for i in indices:
             shape = shapefile.shape(i)
             w.poly(shapeType = 5, parts = [shape.points])
             w.record(*records[i])
-    
-        w.save(destination)
 
-    def extract_NED(self, 
-                    nedfiles,
-                    catchmentfile, 
+        w.save(destination)
+    def combine_NED(self, nedfiles, VPU):
+        '''
+        combines all NED files in the RPU regions for specified VPU into one big file for simplicity
+
+        arguments:
+            nedfiles: list of nedfiles for specified region
+            VPU Vector Proecessing Unit specified
+        '''
+        DA = self.VPU_to_DA[VPU]
+
+
+        destination = '{}/NHDPlus{}'.format(self.destination, DA)
+        NHDPlus = '{}/NHDPlus{}'.format(destination, VPU)
+
+        inmosaic = 'mosaic_{}.vrt'.format(DA)
+        vrtcommand = 'gdalbuildvrt {}'.format(inmosaic)
+        outmosaic = 'mosaic_{}.tif'.format(DA)
+
+        #path to combined NED file
+        nedfilepath = '{}/NEDSnapshot/Combined_NED'.format(NHDPlus)
+        if not os.path.exists(nedfilepath):
+            os.makedirs(nedfilepath)
+        newfile = '{}/{}'.format(nedfilepath, outmosaic)
+        for f in nedfiles:
+            vrtcommand = vrtcommand + ' ' + f
+
+        print('making combined file this might take awhile')
+        os.system(vrtcommand)
+        warpcommand = 'gdalwarp {} -co BIGTIFF=YES --config GDAL_CACHEMAX 6000 -wm 1500 {}'.format(inmosaic, newfile)
+        os.system(warpcommand)
+        raster = gdal.Open(newfile, GA_ReadOnly)
+        band = raster.GetRasterBand(1)
+        band.ComputeStatistics(False)
+        newfile = None #save changes to file
+        os.remove(inmosaic) #delete vrt
+        combinednedfile = newfile = '{}/{}'.format(nedfilepath, outmosaic)
+
+    def get_pixel(self, x, x0, width):
+        """returns the pixel number for a coordinate value."""
+
+        return int((x - x0) // width)
+
+    def extract_NED(self,
+                    nedfile,
+                    catchmentfile,
                     destination,
                     zmin = -100000,
-                    space = 0.05, 
+                    space = 0.05,
                     verbose = True,
                     quiet = True,
                     ):
         """
         Extracts elevation data as a raster file from the National Elevation
-        Dataset located in the NHDPlus directory. Because NED data are 
-        distributed in multiple files, each must be parsed and then combined
-        into the final file.
+        Dataset located in the NHDPlus directory.
         """
 
         if verbose: print('copying the elevation data from NED\n')
@@ -648,7 +1420,7 @@ class NHDPlusExtractor:
 
         xmin, ymin, xmax, ymax = shapefile.bbox
 
-        if quiet: gdal.PushErrorHandler('CPLQuietErrorHandler') 
+        if quiet: gdal.PushErrorHandler('CPLQuietErrorHandler')
 
         # adjust to make the map just larger than the extents
 
@@ -660,46 +1432,43 @@ class NHDPlusExtractor:
         # get data for each file and store the values
 
         values = None
-        for NED in nedfiles:
 
-            if verbose: print('reading data from {}'.format(NED))
 
-            try:
+        if verbose: print('reading data from {}'.format(nedfile))
 
-                # get the values of the DEM raster as an array and origin
 
-                array, corner = get_raster_table(NED, 
-                                                 [xmin, ymin, xmax, ymax], 
-                                                 dtype = 'int32',
-                                                 quiet = quiet)
 
-                if values is None: values = array
+            # get the values of the DEM raster as an array and origin
 
-                else:
+        array, corner = self.get_raster_table(nedfile, [xmin, ymin, xmax, ymax], dtype = 'float')
 
-                    # find the indices of the missing data
+        if values is None: values = array
 
-                    missing = numpy.where(values < zmin)
 
-                    # fill in the values
 
-                    values[missing] = array[missing]
+        # find the indices of the missing data
 
-                # open the file
+        missing = numpy.where(values < zmin)
 
-                source = gdal.Open(NED)
+        # fill in the values
 
-                # set the transform to the new origin
+        values[missing] = array[missing]
 
-                transform = source.GetGeoTransform()
-                transform = (corner[0], transform[1], transform[2], 
-                             corner[1], transform[4], transform[1])
+        # open the file
 
-                # get the source band
+        source = gdal.Open(nedfile)
 
-                band = source.GetRasterBand(1)
+        # set the transform to the new origin
 
-            except: pass
+        transform = source.GetGeoTransform()
+        transform = (corner[0], transform[1], transform[2],
+                     corner[1], transform[4], transform[1])
+
+        # get the source band
+
+        band = source.GetRasterBand(1)
+
+
 
         if verbose: print('')
 
@@ -707,13 +1476,13 @@ class NHDPlusExtractor:
 
         driver = gdal.GetDriverByName('GTiff')
 
-        dest = driver.Create(destination, len(values[0]), len(values), 1,  
+        dest = driver.Create(destination, len(values[0]), len(values), 1,
                              gdal.GDT_UInt16)
 
         dest.SetProjection(source.GetProjection())
         dest.SetMetadata(source.GetMetadata())
         dest.SetGeoTransform(transform)
-    
+
         dest.GetRasterBand(1).WriteArray(values, 0, 0)
         dest.GetRasterBand(1).SetNoDataValue(band.GetNoDataValue())
         #dest.GetRasterBand(1).SetStatistics(*band.GetStatistics(0,1))
@@ -725,7 +1494,8 @@ class NHDPlusExtractor:
 
         if verbose: print('successfully extracted elevation data to new file\n')
 
-    def extract_HUC8(self, 
+    def extract_HUC8(self,
+                     VPU,
                      HUC8,                             # HUC8
                      output,                           # output directory
                      flowlinefile  = 'flowlines',      # flowline shapefile
@@ -735,19 +1505,45 @@ class NHDPlusExtractor:
                      elevfile      = 'elevations.tif', # NED raster file
                      plotfile      = 'watershed',      # plot of the results
                      verbose       = True,             # print verbosity
-                     vverbose      = False,            # print verbosity
+                     vverbose      = True,            # print verbosity
                      ):
         """
-        Creates shapefiles for the NHDPlus flowlines and catchments for an 
+        Creates shapefiles for the NHDPlus flowlines and catchments for an
         8-digit hydrologic unit code from the NHDPlus Version 2 source data.
         Output shapefiles are written to the optional "output" directory.
         """
 
-        # if the source data doesn't exist locally, download it
-
-        self.download_data()
-
+        #getting proper files for vpu and huc8 selected
         start = time.time()
+        DA = self.VPU_to_DA[VPU]
+
+        destination = '{}/NHDPlus{}'.format(self.destination, DA)
+        NHDPlus = '{}/NHDPlus{}'.format(destination, VPU)
+
+        #catchment shapefile
+        its = NHDPlus, 'Catchment'
+        sourececatchmentfile = '{0}/NHDPlus{1}/{1}'.format(*its)
+
+        #flowline shapefile
+        its = NHDPlus, 'NHDSnapshot', 'Hydrography', 'NHDFlowline'
+        sourceflowlinefile = '{}/{}/{}/{}'.format(*its)
+        projection   = '{}/{}/{}/{}.prj'.format(*its)
+
+        #NHDPlus attribute databases
+        its = NHDPlus, 'NHDPlusAttributes'
+        elevslopefile       = '{}/{}/elevslope.dbf'.format(*its)
+        PlusFlowlineVAAfile = '{}/{}/PlusFlowlineVAA.dbf'.format(*its)
+
+        #EROM database
+        eromfile = '{}/EROMExtension/EROM_MA0001.dbf'.format(NHDPlus)
+
+        # NED rasters -- there is more than one per VPU
+        nedfiles = ['{}/NEDSnapshot/Ned{}/elev_cm'.format(NHDPlus,RPU)
+                         for RPU in self.VPU_to_RPU[VPU]]
+
+        newnedfile = '{}/NEDSnapshot/Combined_NED/mosaic_{}.tif'.format(NHDPlus,DA)
+        if not os.path.isfile(newnedfile):
+            self.combine_NED(nedfiles, VPU) #combine all the NED files into one big one
 
         # if the destination folder for the HUC8 does not exist, make it
 
@@ -758,115 +1554,130 @@ class NHDPlusExtractor:
         if vverbose: print('\ncopying the projections from NHDPlus\n')
 
         p = '{}/{}.prj'.format(output, flowlinefile)
-        if not os.path.isfile(p): shutil.copy(self.projection, p)
+        if not os.path.isfile(p): shutil.copy(projection, p)
 
         p = '{}/{}.prj'.format(output, catchmentfile)
-        if not os.path.isfile(p): shutil.copy(self.projection, p)
+        if not os.path.isfile(p): shutil.copy(projection, p)
 
         # extract the flowlines and get the NHDPlus comids
 
         p = '{}/{}'.format(output, flowlinefile)
         if not os.path.isfile(p + '.shp'):
-            if verbose: 
+            if verbose:
                 print('extracting flowline shapefile for {}\n'.format(HUC8))
-            self.extract_flowlines(self.flowlinefile, p, HUC8,
+            self.extract_flowlines(sourceflowlinefile, p, HUC8,
                                    verbose = vverbose)
 
         # extract the different files from the sources sequentially
 
         p = '{}/{}'.format(output, catchmentfile)
         if not os.path.isfile(p + '.shp'):
-            ffile = '{}/{}'.format(output, flowlinefile)
-            if verbose: 
+
+            if verbose:
                 print('extracting catchment shapefile for {}\n'.format(HUC8))
-            self.extract_catchments(self.catchmentfile, p, ffile,
+            self.extract_catchments(sourececatchmentfile, p, '{}/{}'.format(output, flowlinefile),
                                     verbose = vverbose)
 
         p = '{}/{}'.format(output, VAAfile)
         if not os.path.isfile(p):
 
-            # get the comids using the flowline shapefile
-
+        # get the comids using the flowline shapefile
             ffile = '{}/{}'.format(output, flowlinefile)
             comids = self.get_comids(ffile)
 
-            # read hydrologic sequence and drainage attributes from the database
-    
-            flowattributes = ['ComID', 'Hydroseq', 'DnHydroseq', 'UpHydroseq', 
-                              'TotDASqKM', 'AreaSqKM', 'DivDASqKM','ReachCode']
-    
-            if verbose: 
-                print('reading flowline value added attributes for ' +
-                      '{}\n'.format(HUC8))
-            flowvalues = read_dbf(self.PlusFlowlineVAAfile, 
-                                  attributes = flowattributes, 
-                                  comids = comids, 
-                                  verbose = vverbose)
-    
-            # read the slope data from the database
-    
-            slopeattributes = ['COMID', 'MAXELEVSMO', 'MINELEVSMO', 
-                               'SLOPELENKM']
-    
-            if verbose: 
+        # read hydrologic sequence and drainage attributes from the database
+
+
+
+            if verbose:
+                print('reading flowline value added attributes for ' + '{}\n'.format(HUC8))
+
+            flowattributes = [['COMID', 'N', 9, 0], ['HYDROSEQ', 'N', 11, 0], ['UPHYDROSEQ','N', 11, 0],
+                              ['DNHYDROSEQ','N', 11, 0], ['REACHCODE', 'C', 14, 0],['AREASQKM', 'N', 15, 6],
+                              ['TOTDASQKM','N', 15, 6], ['DIVDASQKM','N', 15, 6]]
+            flowvalues = self.read_dbf(PlusFlowlineVAAfile,
+                                      attributes = flowattributes,
+                                      comids = comids,
+                                      verbose = vverbose)
+                # read the slope data from the database
+
+
+
+            if verbose:
                 print('reading slope and elevation attributes for ' +
-                      '{}\n'.format(HUC8))
-            slopevalues = read_dbf(self.elevslopefile, 
-                                   attributes = slopeattributes, 
-                                   comids = comids, 
-                                   verbose = vverbose)
-            
+                          '{}\n'.format(HUC8))
+
+            slopeattributes = [['COMID', 'N',9, 0], ['MAXELEVSMO', 'N', 12, 3], ['MINELEVSMO', 'N', 12, 3],['SLOPELENKM', 'N', 8, 3]]
+            slopevalues = self.read_dbf(elevslopefile,
+                                       attributes = slopeattributes,
+                                       comids = comids,
+                                       verbose = vverbose)
+
             # get the flow and velocity data
-    
-            eromattributes = ['ComID', 'Q0001E', 'V0001E', 'SMGageID']
+            for key, values in slopevalues.items():
+                for i in range(len(values)):
+                    print(values[i],type(values[i]))
+            eromattributes = [['COMID', 'N', 9, 0],  ['Q0001E', 'N', 15, 3], ['V0001E', 'N', 14, 5], ['SMGAGEID', 'C', 16, 0]]
 
             if verbose: print('reading EROM model attributes for ' +
-                              '{}\n'.format(HUC8))
-            eromvalues = read_dbf(self.eromfile, 
-                                  attributes = eromattributes, 
-                                  comids = comids, 
-                                  verbose = vverbose)
-    
-            # store the flowline data in a dictionary using hydroseqs as keys 
+                                  '{}\n'.format(HUC8))
+            eromvalues = self.read_dbf(eromfile,
+                                      attributes = eromattributes,
+                                      comids = comids,
+                                      verbose = vverbose)
+
+            # store the flowline data in a dictionary using hydroseqs as keys
             # and make a dictionary linking the comids to hydroseqs
-    
+
             flowlines = {}
-    
-            for flowlineVAAs in zip(*(flowvalues[a] for a in flowattributes)):
+            print('making flowline dictionary')
+
+            for flowlineVAAs in zip(*(flowvalues[a[0]] for a in flowattributes)):
                 flowlines[flowlineVAAs[1]] = Flowline(*flowlineVAAs)
 
             for f in flowlines:
-                i = slopevalues['COMID'].index(flowlines[f].comid)
-                flowlines[f].add_slope(slopevalues['MAXELEVSMO'][i], 
-                                       slopevalues['MINELEVSMO'][i],
-                                       slopevalues['SLOPELENKM'][i])
-                i = eromvalues['ComID'].index(flowlines[f].comid)
-                flowlines[f].add_flow(eromvalues['Q0001E'][i], 
-                                      eromvalues['V0001E'][i],
-                                      eromvalues['SMGageID'][i])
-                flowlines[f].estimate_traveltime()
-    
-            # save the data in a dictionary for future use
-    
+
+                if flowlines[f].comid in slopevalues['COMID']:
+                    i = slopevalues['COMID'].index(flowlines[f].comid)
+
+                    flowlines[f].add_slope(slopevalues['MAXELEVSMO'][i],
+                                           slopevalues['MINELEVSMO'][i],
+                                           slopevalues['SLOPELENKM'][i])
+
+                if flowlines[f].comid in eromvalues['COMID']:
+                    i = eromvalues['COMID'].index(flowlines[f].comid)
+                    flowlines[f].add_flow(eromvalues['Q0001E'][i],
+                                          eromvalues['V0001E'][i],
+                                          eromvalues['SMGAGEID'][i])
+
+                #catch for missing elevslope data points
+                try:
+                    flowlines[f].estimate_traveltime()
+                except AttributeError:
+                    pass
+
+                # save the data in a dictionary for future use
+
+
             with open(p, 'wb') as f: pickle.dump(flowlines, f)
 
         # find the right NED DEM and extract the elevation raster
 
         p = '{}/{}'.format(output, elevfile)
         if not os.path.isfile(p):
-            if verbose: 
+            if verbose:
                 print('extracting the NED raster file for {}\n'.format(HUC8))
             cfile = '{}/{}'.format(output, catchmentfile)
-            self.extract_NED(self.nedfiles, cfile, p, verbose = verbose)
+            self.extract_NED(newnedfile, cfile, p, verbose = verbose)
 
         end = time.time()
         t = end - start
-
-        if verbose: 
+        print('stop')
+        if verbose:
 
             print('successfully queried NHDPlus data for {} '.format(HUC8) +
                   'in {:.1f} seconds\n'.format(t))
-    
+
         # merge the shapes into a watershed
 
         bfile = '{}/{}'.format(output, boundaryfile)
@@ -884,15 +1695,16 @@ class NHDPlusExtractor:
             bfile    = '{}/{}'.format(output, boundaryfile)
             VAAfile  = '{}/{}'.format(output, VAAfile)
             elevfile = '{}/{}'.format(output, elevfile)
+            plotfiledestination = '{}/{}'.format(output, plotfile)
 
-            if not os.path.isfile(plotfile + '.png'):
+            if not os.path.isfile(plotfiledestination + '.png'):
 
                 self.plot_HUC8(flowfile, cfile, bfile, VAAfile, elevfile,
-                               output = plotfile)
+                               output = plotfiledestination)
 
     def get_distance(self, p1, p2):
-        """Approximates the distance in kilometers between two points on the 
-        Earth's surface designated in decimal degrees using an ellipsoidal 
+        """Approximates the distance in kilometers between two points on the
+        Earth's surface designated in decimal degrees using an ellipsoidal
         projection. per CFR 73.208 it is applicable for up to 475 kilometers.
         p1 and p2 are listed as (longitude, latitude).
         """
@@ -903,10 +1715,10 @@ class NHDPlusExtractor:
         phim = 0.5 * (p1[1] + p2[1])
         dlam = p1[0] - p2[0]
 
-        k1 = (111.13209 - 0.56605 * numpy.cos(2 * phim * deg_rad) + 0.00120 * 
+        k1 = (111.13209 - 0.56605 * numpy.cos(2 * phim * deg_rad) + 0.00120 *
               numpy.cos(4 * phim * deg_rad))
-        k2 = (111.41513 * numpy.cos(phim * deg_rad) - 0.09455 * 
-              numpy.cos(3 * phim * deg_rad) + 0.0012 * 
+        k2 = (111.41513 * numpy.cos(phim * deg_rad) - 0.09455 *
+              numpy.cos(3 * phim * deg_rad) + 0.0012 *
               numpy.cos(5 * phim * deg_rad))
 
         return numpy.sqrt(k1**2 * dphi**2 + k2**2 * dlam**2)
@@ -931,13 +1743,20 @@ class NHDPlusExtractor:
 
         return xmin, ymin, xmax, ymax
 
+    def get_remainder(self, x, x0, width):
+        """
+        returns the remainder for the pixel.
+        """
+
+        return (x - x0) % width
+
     def make_patch(self,
-                   points, 
-                   facecolor, 
-                   edgecolor = 'Black', 
-                   width = 1, 
+                   points,
+                   facecolor,
+                   edgecolor = 'Black',
+                   width = 1,
                    alpha = None,
-                   hatch = None, 
+                   hatch = None,
                    label = None,
                    ):
         """Uses a list or array of points to generate a matplotlib patch."""
@@ -948,21 +1767,21 @@ class NHDPlusExtractor:
         codes     = [path.Path.LINETO for i in range(len(points) + 1)]
         codes[0]  = path.Path.MOVETO
 
-        patch = patches.PathPatch(path.Path(vertices, codes), 
+        patch = patches.PathPatch(path.Path(vertices, codes),
                                   facecolor = facecolor,
-                                  edgecolor = edgecolor, 
-                                  lw = width, 
+                                  edgecolor = edgecolor,
+                                  lw = width,
                                   hatch = hatch,
-                                  alpha = alpha, 
+                                  alpha = alpha,
                                   label = label)
         return patch
 
-    def add_raster(self, 
-                   fig, 
-                   filename, 
-                   resolution, 
-                   extent, 
-                   colormap, 
+    def add_raster(self,
+                   fig,
+                   filename,
+                   resolution,
+                   extent,
+                   colormap,
                    scale,
                    ):
         """
@@ -974,9 +1793,9 @@ class NHDPlusExtractor:
 
         xmin, ymin, xmax, ymax = extent
 
-        xs = numpy.array([xmin + (xmax - xmin) / resolution * i 
+        xs = numpy.array([xmin + (xmax - xmin) / resolution * i
                           for i in range(resolution + 1)])
-        ys = numpy.array([ymax  - (ymax  - ymin)  / resolution * i 
+        ys = numpy.array([ymax  - (ymax  - ymin)  / resolution * i
                           for i in range(resolution + 1)])
 
         zs = numpy.zeros((resolution + 1, resolution + 1))
@@ -984,7 +1803,7 @@ class NHDPlusExtractor:
         # iterate through the grid and fill the array
 
         for i in range(len(ys)):
-            zs[i, :] = get_raster(filename, zip(xs, [ys[i]] * (resolution + 1)),
+            zs[i, :] = self.get_raster(filename, zip(xs, [ys[i]] * (resolution + 1)),
                                   quiet = True)
 
         # scale the values
@@ -1002,21 +1821,21 @@ class NHDPlusExtractor:
 
         # plot the grid
 
-        return fig.imshow(zs, extent = [xmin, xmax, ymin, ymax], norm = norm, 
+        return fig.imshow(zs, extent = [xmin, xmax, ymin, ymax], norm = norm,
                           cmap = colormap)
 
-    def plot_HUC8(self, 
-                  flowfile, 
+    def plot_HUC8(self,
+                  flowfile,
                   cfile,
                   bfile,
-                  VAAfile, 
+                  VAAfile,
                   elevfile,
                   vmin = 0.1,
                   patchcolor = None,
                   resolution = 400,
                   colormap = 'gist_earth',
                   grid = False,
-                  title = None, 
+                  title = None,
                   verbose = True,
                   output = None,
                   show = False,
@@ -1058,8 +1877,8 @@ class NHDPlusExtractor:
 
         points_per_width = 72 * 8
         ft_per_km = 3280.84
-        scale_factor = (points_per_width / 
-                        self.get_distance([xmin, ymin], [xmax, ymin]) / 
+        scale_factor = (points_per_width /
+                        self.get_distance([xmin, ymin], [xmax, ymin]) /
                         ft_per_km)
 
         # make patches of the catchment area
@@ -1069,7 +1888,7 @@ class NHDPlusExtractor:
             points = numpy.array(catchment.points)
             subplot.add_patch(self.make_patch(points, facecolor, width = 0.1))
 
-        # get the flowline attributes, make an "updown" dictionary to follow 
+        # get the flowline attributes, make an "updown" dictionary to follow
         # flow, and change the keys to comids
 
         with open(VAAfile, 'rb') as f: flowlineVAAs = pickle.load(f)
@@ -1080,7 +1899,7 @@ class NHDPlusExtractor:
                 updown[flowlineVAAs[f].comid] = \
                     flowlineVAAs[flowlineVAAs[f].down].comid
 
-        flowlineVAAs = {flowlineVAAs[f].comid:flowlineVAAs[f] 
+        flowlineVAAs = {flowlineVAAs[f].comid:flowlineVAAs[f]
                         for f in flowlineVAAs}
 
         # open up and show the flowfiles
@@ -1089,9 +1908,9 @@ class NHDPlusExtractor:
         comid_index = f.fields.index(['COMID', 'N',  9, 0]) - 1
 
         all_comids = [r[comid_index] for r in f.records()]
-        
+
         # get the flows and velocities from the dictionary
-        
+
         widths = []
         comids = []
         for comid in all_comids:
@@ -1099,13 +1918,13 @@ class NHDPlusExtractor:
                 flow = flowlineVAAs[comid].flow
                 velocity = flowlineVAAs[comid].velocity
 
-                # estimate flow width (ft) assuming triangular 90 d channel 
+                # estimate flow width (ft) assuming triangular 90 d channel
 
                 comids.append(comid)
 
                 if velocity < 0: widths.append(numpy.sqrt(4 * flow / vmin))
                 else:            widths.append(numpy.sqrt(4 * flow / velocity))
-        
+
         # convert widths in feet to points on the figure; exaggerated by 10
 
         widths = [w * scale_factor * 20 for w in widths]
@@ -1126,8 +1945,8 @@ class NHDPlusExtractor:
 
         # add the NED raster
 
-        im = self.add_raster(subplot, elevfile, resolution, extent, 
-                             colormap, 100) 
+        im = self.add_raster(subplot, elevfile, resolution, extent,
+                             colormap, 100)
 
         divider = make_axes_locatable(subplot)
         cax = divider.append_axes('right', size = 0.16, pad = 0.16)

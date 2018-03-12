@@ -4,7 +4,7 @@
 #
 # illustrates how to download data from the Cropland Data Layer (CDL),
 # extract a Geotiff for a HUC8 from the source, and calculate the landuse
-# data for each polygon in the shapefile. Example utilizes the subbasin 
+# data for each polygon in the shapefile. Example utilizes the subbasin
 # shapefile for the Patuxent River Watershed (HUC 02060006), in Maryland.
 #
 # last updated: 08/03/2015
@@ -12,27 +12,27 @@
 import os
 
 # adjustable input parameters
-
-output = 'CDL'                  # path to place state CDL source rasters
-state  = 'Maryland'             # state name
-years  = [2008, 2009, 2010]     # years to extract data (CDL is annual)
-sfile  = 'data/boundary'        # catchment file for land use calculation
+cwd = os.path.dirname(__file__) #current working directory
+output = os.path.join(cwd, 'CDL') # path to place state CDL source rasters
+state  = 'Maryland'               # state name
+years  = [2008, 2009, 2010]       # years to extract data (CDL is annual)
+sfile  = os.path.join(cwd, 'data/boundary' )        # catchment file for land use calculation
 
 # the aggregate file (CSV); maps integers in the CDL raster to landuse groups
 
-aggregate = 'data/cdlaggregation.csv'
+aggregate = os.path.join(cwd,'data/cdlaggregation.csv')
 
-# the land use codes file (CSV); maps land use categories defined in the 
+# the land use codes file (CSV); maps land use categories defined in the
 # aggregate file to properties including RGB color tuple and crop coefficients
 
-lucfile = 'data/lucs.csv'
+lucfile = os.path.join(cwd,'data/lucs.csv')
 
 # look at these files to understand how the raw categories map to user-specified
 # information for each land use category
 
 # make sure the essential input data files exist
 
-if not os.path.isdir('data'):
+if not os.path.isdir(os.path.join(cwd,'data')):
     print('\nerror: please ensure that the "data" directory has been created ' +
           'and contains the essential files before running the script!\n')
     raise
@@ -57,38 +57,38 @@ cdlextractor = CDLExtractor(output)
 
 cdlextractor.download_data(state, years)
 
-# extract the data for the bounding box of the patuxent catchment shapefile 
-# that is located in the "output" directory in the previous step and place it 
+# extract the data for the bounding box of the patuxent catchment shapefile
+# that is located in the "output" directory in the previous step and place it
 # in the "output" directory (in this case the same directory is used for both)
 
 cdlextractor.extract_shapefile(sfile, output)
 
-# calculate the 2008 land use fraction for each category in each shape in the 
-# catchmentfile using the "FEATUREID" feature attribute, and then make an 
+# calculate the 2008 land use fraction for each category in each shape in the
+# catchmentfile using the "FEATUREID" feature attribute, and then make an
 # (optional) csv file of the output
 
 year = 2008
 extracted = '{}/{}landuse.tif'.format(output, year)
-csvfile   = 'basin_landuse.csv'
+csvfile   = '{}/basin_landuse.csv'.format(output)
 attribute = 'FEATUREID'
 
-landuse = cdlextractor.calculate_landuse(extracted, sfile, aggregate, 
+landuse = cdlextractor.calculate_landuse(extracted, sfile, aggregate,
                                          attribute, csvfile = csvfile)
 
-# the results returned to the "landuse" variable are return as a dictionary of 
+# the results returned to the "landuse" variable are return as a dictionary of
 # dictionaries as follows:
 #
-# the keys to the first dictionary level are the field values for the 
+# the keys to the first dictionary level are the field values for the
 # 'FEATUREID' attribute (or whatever field from the shapefile is supplied)
 #
 # the keys to the second level dictionary are the unique values of the landuse
 # specified in "aggregate" (data/patuxent/cdlaggregation.csv)
 #
-# to understand how this works, it's a good idea to spend some time looking at 
+# to understand how this works, it's a good idea to spend some time looking at
 # the aggregate file and CDL rasters and the output; there are 255 unique codes
 # in the CDL that are mapped into 10 categories in this example
 
-# the processing can be visualized using the plot_landuse method. the 
+# the processing can be visualized using the plot_landuse method. the
 # "datatype" keyword of 'raw' or 'results' can be used to see the aggregated
 # values before and a "band chart" where the area of the stripes corresponds
 # to the area of the land use fraction (this is how HSPF "thinks" about landuse)
@@ -103,9 +103,9 @@ cdlextractor.plot_landuse(extracted, sfile, attribute, lucfile,
 
 # now repeat it using the catchment rather than just the boundary
 
-sfile   = 'data/catchments'
-csvfile = 'catchment_landuse.csv'
-landuse = cdlextractor.calculate_landuse(extracted, sfile, aggregate, 
+sfile   = os.path.join(cwd,'data/catchments')
+csvfile = os.path.join(cwd,'data/catchment_landuse.csv')
+landuse = cdlextractor.calculate_landuse(extracted, sfile, aggregate,
                                          attribute, csvfile = csvfile)
 
 # this WILL take a while (adjust the border linewidth for clarity)
@@ -113,5 +113,5 @@ landuse = cdlextractor.calculate_landuse(extracted, sfile, aggregate,
 print('this will take a while...\n')
 
 cdlextractor.plot_landuse(extracted, sfile, attribute, lucfile, lw = 0.1,
-                          output = 'catchmentresults'.format(extracted), 
+                          output = '{}/catchmentresults'.format(output),
                           datatype = 'results')
