@@ -18,8 +18,8 @@ from gdalconst import GA_ReadOnly
 from matplotlib import pyplot, path, ticker
 from matplotlib import patches, colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-# from .flowline import Flowline
-# from .vectorutils import merge_shapes
+from .flowline import Flowline
+from .vectorutils import merge_shapes
 from shapefile import Reader, Writer
 import pickle
 import xml.etree.ElementTree as ET
