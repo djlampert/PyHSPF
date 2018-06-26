@@ -2,7 +2,7 @@
 #
 # Mitchell Sawtelle (mitchell.sawtelle@okstate.edu)
 #
-# last updated: 01/20/2018
+# last updated: 06/25/2018
 #
 # contains the NHDPlus Extractor class, which can be used to retrieve source
 # data from the NHDPlus V2 dataset online, and then extract the data from
@@ -18,11 +18,11 @@ from gdalconst import GA_ReadOnly
 from matplotlib import pyplot, path, ticker
 from matplotlib import patches, colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from .flowline import Flowline
-from .vectorutils import merge_shapes
+# from .flowline import Flowline
+# from .vectorutils import merge_shapes
 from shapefile import Reader, Writer
 import pickle
-import socket
+import xml.etree.ElementTree as ET
 
 
 class NHDPlusExtractor(object):
@@ -42,13 +42,13 @@ class NHDPlusExtractor(object):
         if destination is None: #if no destination given in init method set destination to current directory
             self. destination = os.path.dirname(__file__)
         if not os.path.isdir(destination): os.mkdir(destination)
-        #base_url to EPA's hosting of the NHDPlusV21 Dataset
-        self.base_url = 'https://s3.amazonaws.com/nhdplus/NHDPlusV21/Data/NHDPlus'
+        #base_url to EPA's hosting of the NHDPlusV21 Dataset on amazon servers
+        self.base_url = 'https://s3.amazonaws.com/nhdplus/'
         self.destination = destination #set destination
         self.currentpath = os.path.dirname(__file__) #currentpath variable
         self.path_to_7zip = r'C:\Program Files\7-Zip\7z.exe' #path to 7zip will vary per User
 
-        socket.getaddrinfo('127.0.0.1', 8080)
+
         #names of the Drainage areas with respective abbreviations
         self.DD = {'AMERICAN SAMOA': 'PI',
               'ARK-RED-WHITE': 'MS',
@@ -253,462 +253,64 @@ class NHDPlusExtractor(object):
                       '22b': '22MP',
                       '22c': '22AS',
                     }
-        #names of the Raster files
-        self.RPU_Files = ['CatSeed', 'FdrFac', 'FdrNull', 'FilledAreas',
-                          'HydroDem', 'NEDSnapshot','Hydrodem','Catseed']
+        #files needed
+        self.files = ('NHDPlusCatchment',
+                      'NHDSnapshot',
+                      'NHDPlusAttributes',
+                      'EROMExtension',
+                      'NEDSnapshot',
+                      )
 
-
-        #some of the files on the website do not follow the nomenclature this dictionary makes up for human errors
-        self.problematic_rpu_files = {'Catseed':['Catseed','CatSeed'],
-                                      'CatSeed':['Catseed','CatSeed'],
-                                      'HydroDem':['HydroDem','Hydrodem'],
-                                      'Hydrodem':['HydroDem','Hydrodem']}
-
-        #names of the Vector files
-        self.VPU_Files = ['EROMExtension', 'NHDPlusAttributes', 'NHDPlusBurnComponents',
-                          'NHDPlusCatchment', 'NHDSnapshot','VPUAttributeExtension',
-                          'VogelExtension', 'WBDSnapshot', 'NHDSnapshotFGDB',]
-        #some vpu regions dont follow the standard url for the other regions this list notes those
-        self.problematic_vpu_list = ['03N', '03S', '03W','05', '06', '07', '08',
-                                '10U', '14', '15', '10L', '11','22AS', '22GU', '22MP']
-        self.link_file = 'data/link.txt' #path to link file
-        self.known_exceptions = {(self.base_url+'CO/NHDPlus15/NHDPlusV21_CO_15_VogelExtension'):(self.base_url+'CO/NHDPlus15/NHDPlusV21_CO_15_VogelEXtension')}
 
         #headers to use when pinging the amazon servers
         self.headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.81 Safari/537.36'}
-        self.verify_links()
+        self.vpu_links = {'01': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusNE/',
+                          '02': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusMA/',
+                          '03N': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusSA/NHDPlus03N/',
+                          '03S': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusSA/NHDPlus03S/',
+                          '03W': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusSA/NHDPlus03W/',
+                          '04': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusGL/',
+                          '05': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusMS/NHDPlus05/',
+                          '06': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusMS/NHDPlus06/',
+                          '07': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusMS/NHDPlus07/',
+                          '08': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusMS/NHDPlus08/',
+                          '09': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusSR/',
+                          '10U':'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusMS/NHDPlus10U/',
+                          '10L':'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusMS/NHDPlus10L/',
+                          '11': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusMS/NHDPlus11/',
+                          '12': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusTX/',
+                          '13': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusRG/',
+                          '14': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusCO/NHDPlus14/',
+                          '15': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusCO/NHDPlus15/',
+                          '16': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusGB/',
+                          '17': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusPN/',
+                          '18': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusCA/',
+                          '20': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusHI/',
+                          '21': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusCI/',
+                          '22AS':'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusPI/NHDPlus22AS/',
+                          '22GU':'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusPI/NHDPlus22GU/',
+                          '22MP':'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusPI/NHDPlus22MP/'
+                         }
 
-
-    def gather_rpu_links(self,max_version=15, rpu_input=None, filename_input=None):
+    def get_links(self,vpu):
         '''
-        A function to gather the working rpu links for the metadata text file
-
-        max_version takes the highest know version of the files in the NHDPLUS Dataset
-
-        the two optional arguments facilitate getting one link in the case that the metadata file is not up to date
-        rpu_input takes a specific rpu region to gather one link
-        filename_input takes a specific rpu filename to gather one link
-
+        grab the download links for self.files from the amazon xml pages
         '''
-
-        working_urls = []
-
-
-        if rpu_input is None and filename_input is None: #if no arguments given loop over all rpus
-            for rpu in sorted(self.RPU_to_VPU.keys()): #iterate over rpus in order
-
-                vpu = self.RPU_to_VPU[rpu] #set variable
-                DA = self.VPU_to_DA[vpu] #set variable
-
-                for filename in self.RPU_Files: #iterate over different rpu filetypes
-
-                    if vpu in self.problematic_vpu_list: #catch exceptions
-                        url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu, filename)
-
-                        i = 1
-                        while i < max_version+1: #find current version of NHDPlus
-
-                            final_url = '{}_{:02d}.7z'.format(url,i) #final url
-
-                            try:
-                                time.sleep(0.1) #delay
-                                req = Request(final_url, data=None,headers=self.headers)
-                                response = urlopen(req)
-                                working_urls.append(final_url)
-                                print('FOUND ' + final_url)
-                                break
-                            except HTTPError or URLError:
-                                pass
-                            i += 1
-
-                    else:
-                        url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu, filename)
-
-                        i = 1
-
-                        while i < max_version+1:
-
-                            final_url = '{}_{:02d}.7z'.format(url, i)
-
-
-                            try:
-                                time.sleep(0.1)
-                                req = Request(final_url, data=None,headers=self.headers)
-                                response = urlopen(req)
-                                working_urls.append(final_url)
-                                print('FOUND '+ final_url)
-                                break
-                            except HTTPError or URLError:
-                                pass
-                            i+= 1
-
-                    if i > max_version:
-                        print('no link found for ', final_url)
-                        pass
-
-            return working_urls
-
-        else:
-
-            assert rpu_input in self.RPU_to_VPU.keys(), 'RPU must be one of the following ' + str(sorted(self.RPU_to_VPU.keys()))
-
-            assert filename_input in self.RPU_Files, 'filename must be one of the following ' + str(sorted(self.RPU_Files))
-
-            vpu = self.RPU_to_VPU[rpu_input]
-            DA = self.VPU_to_DA[vpu]
-
-            if vpu in problematic_vpu_list:
-                url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu_input, filename_input)
-
-                i = 1
-                while i < max_version+1:
-
-                    final_url = '{}_{:02d}.7z'.format(url,i)
-
-                    try:
-                        time.sleep(0.1)
-                        req = Request(final_url, data=None,headers=self.headers)
-                        response = urlopen(req)
-                        working_link = final_url
-                        print('FOUND ' + final_url)
-                        break
-                    except HTTPError or URLError:
-                            pass
-                    i += 1
-
-            else:
-
-                url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu_input, filename_input)
-
-                i = 1
-
-                while i < max_version+1:
-
-                    final_url = '{}_{:02d}.7z'.format(url, i)
-
-
-                    try:
-                        time.sleep(0.1)
-                        req = Request(final_url, data=None,headers=self.headers)
-                        response = urlopen(req)
-                        working_link = final_url
-                        print('FOUND '+ final_url)
-                        break
-                    except HTTPError or URLError:
-                        pass
-                    i+= 1
-
-            if i > max_version:
-                print('no link found for ', final_url)
-                pass
-
-            return working_link
-
-    def gather_vpu_links(self,max_version=15, vpu_input=None, filename_input=None):
-        '''
-        A function to gather the working vpu links for the metadata text file
-        max_version takes the highest known version of the files in the NHDPLUS Dataset
-        the two optional arguments facilitate getting one link in the case that the metadata file is not up to date
-        vpu_input takes a specific vpu region to gather one link
-        filename_input takes a specific vpu filename to gather one link
-        '''
-        working_urls = []
-
-        if vpu_input is None and filename_input is None:
-
-            for vpu in sorted(self.VPU_to_DA.keys()):
-
-                DA = self.VPU_to_DA[vpu]
-
-                for filename in self.VPU_Files:
-
-                    if vpu in self.problematic_vpu_list:
-
-                        url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}'.format(self.base_url,DA,vpu,filename)
-                        if url in self.known_exceptions.keys():
-                            url = self.known_exceptions[url]
-
-                        i = 1
-                        while i < max_version+1:
-
-                            final_url = '{}_{:02d}.7z'.format(url,i)
-
-                            try:
-                                time.sleep(0.)
-                                req = Request(final_url, data=None,headers=self.headers)
-                                response = urlopen(req)
-                                working_urls.append(final_url)
-                                print('FOUND '+ final_url)
-                                break
-                            except HTTPError or URLError:
-                                pass
-                            i += 1
-
-
-                    else:
-
-                        url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}'.format(self.base_url,DA,vpu,filename)
-                        if url in self.known_exceptions.keys():
-                            url = self.known_exceptions[url]
-                        i = 1
-                        while i < max_version+1:
-                            final_url = '{}_{:02d}.7z'.format(url,i)
-
-                            try:
-                                time.sleep(0.1)
-                                req = Request(final_url, data=None,headers=self.headers)
-                                response = urlopen(req)
-                                working_urls.append(final_url)
-                                print('FOUND '+ final_url)
-                                break
-                            except HTTPError or URLError:
-                                pass
-                            i += 1
-
-                    if i > max_version:
-                        print('no link found for ', final_url)
-                        pass
-
-            return working_urls
-
-        else:
-
-            assert vpu_input in self.VPU_to_RPU.keys(), 'VPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
-
-            assert filename_input in self.VPU_Files, 'filename must be one of ' + str(self.VPU_Files)
-
-            DA = self.VPU_to_DA[vpu_input]
-
-            if vpu_input in self.problematic_vpu_list:
-
-                url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}'.format(self.base_url,DA,vpu_input,filename_input)
-                if url in self.known_exceptions.keys():
-                    url = self.known_exceptions[url]
-
-                i = 1
-                while i < max_version+1:
-
-                    final_url = '{}_{:02d}.7z'.format(url,i)
-
-                    try:
-                        time.sleep(0.1)
-                        req = Request(final_url, data=None,headers=self.headers)
-                        response = urlopen(req)
-                        working_link = final_url
-                        print('FOUND '+ final_url)
-                        break
-                    except HTTPError or URLError:
-                        pass
-                    i += 1
-
-
-            else:
-
-                url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}'.format(self.base_url,DA,vpu_input,filename_input)
-                if url in self.known_exceptions.keys():
-                    url = self.known_exceptions[url]
-                i = 1
-                while i < max_version+1:
-                    final_url = '{}_{:02d}.7z'.format(url,i)
-
-                    try:
-                        time.sleep(0.1)
-                        req = Request(final_url, data=None,headers=self.headers)
-                        response = urlopen(req)
-                        working_link = final_url
-                        print('FOUND '+ final_url)
-                        break
-                    except HTTPError or URLError:
-                        pass
-                    i += 1
-
-            if i > max_version:
-                print('no link found for ', final_url)
-                pass
-
-            return working_link
-
-    def getvpufile(self, vpu, filename):
-
-        '''
-        A function to return the desired VPU File
-
-        Arguments:
-            vpu takes any of the keys in the VPU_to_RPU dictionary as strings
-            filename takes any of the values in the VPU_Files list as strings
-
-        '''
-
-
-        assert vpu in self.VPU_to_RPU.keys(), 'VPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
-
-        assert filename in self.VPU_Files, 'filename must be one of ' + str(self.VPU_Files)
-
-        DA = self.VPU_to_DA[vpu]
-
-        with open(self.link_file) as f:
-
-            verified_links = f.read().splitlines()
-
-        if vpu in self.problematic_vpu_list:
-
-            url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}'.format(self.base_url, DA, vpu, filename)
-            if url in self.known_exceptions.keys():
-                url = self.known_exceptions[url]
-
-        else:
-
-            url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}'.format(self.base_url,DA,vpu,filename)
-            if url in self.known_exceptions.keys():
-                url = self.known_exceptions[url]
-
-        for link in verified_links:
-
-            if url in link:
-                working_link = link
-                print('the link to your selected vpu and filename is ' + working_link)
-                return working_link
-            else:
-                pass
-
-        try:
-            working_link
-        except NameError:
-            working_link = None
-            print('no link found for {} {}'.format(vpu, filename))
-            return working_link
-
-    def getrpufile(self, rpu, filename):
-        '''
-        A function to return the desired RPU file
-
-        Arguments:
-            rpu takes any of the keys in the the RPU_to_VPU dictionary
-            filename takes any of the value in the RPU_Files list
-        '''
-
-        rpu = rpu.lower()
-
-        assert rpu in self.RPU_to_VPU.keys(), 'RPU must be one of the following ' + str(sorted(self.RPU_to_VPU.keys()))
-
-        assert filename in self.RPU_Files, 'filename must be one of the following ' + str(sorted(self.RPU_Files))
-
-        with open(self.link_file) as f:
-
-            verified_links = f.read().splitlines()
-
-        vpu = self.RPU_to_VPU[rpu]
-        DA = self.VPU_to_DA[vpu]
-        possible_urls = []
-
-        if filename in self.problematic_rpu_files.keys():
-            possible_filenames = self.problematic_rpu_files[filename]
-
-            if vpu in self.problematic_vpu_list:
-
-                for items in possible_filenames:
-                    url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu, items)
-                    possible_urls.append(url)
-
-
-            else:
-                for items in possible_filenames:
-                    url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu, items)
-                    possible_urls.append(url)
-
-
-            for link in verified_links:
-
-                for item in possible_urls:
-
-                    if item in link:
-                        working_link = link
-                        print('the link to your selected rpu and filename is ' + working_link)
-                        return working_link
-
-                    else:
-                        pass
-
-            try:
-                working_link
-            except NameError:
-                working_link = None
-                print('no link found for {} {}'.format(rpu, filename))
-                return working_link
-
-        else:
-
-            if vpu in self.problematic_vpu_list:
-                url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu, filename)
-            else:
-                url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu, filename)
-
-            for link in verified_links:
-
-                if url in link:
-                    working_link = link
-                    print('the link to your selected rpu and filename is ' + working_link)
-                    return working_link
-
-                else:
-                    pass
-
-            try:
-                working_link
-            except NameError:
-                working_link = None
-                print('no link found for {} {}'.format(vpu, filename))
-                return working_link
-
-
-    def downloadrpufile(self, rpu, filename):
-        '''
-        function to download rpu files
-        arguments:
-            rpu: raster processing unit
-            filename: possible raster files listed in self.RPU_Files
-        '''
-
-        assert rpu in self.RPU_to_VPU.keys(), 'RPU must be one of the following ' + str(sorted(self.RPU_to_VPU.keys()))
-        assert os.path.isfile(self.link_file), 'no link file run verify_links fucntion'
-        assert filename in self.RPU_Files, 'filename must be one of the following ' + str(sorted(self.RPU_Files))
-
-        link = self.getrpufile(rpu, filename)
-        filename = link.split('/')[-1]
-        req = Request(link, data = None, headers = self.headers)
-        response = urlopen(req)
-        CHUNK = 1024 * 1024
-        with open(os.path.join(self.destination, filename), 'wb') as f:
-            while True:
-                chunk = response.read(CHUNK)
-                if not chunk:
-                    break
-                f.write(chunk)
-
-    def downloadvpufile(self, vpu, filename):
-        '''
-        function to download vpu files
-        arguments:
-            vpu: vector processing unit
-            filename: possible vector files listed in self.VPU_Files
-        '''
-
-        assert vpu in self.VPU_to_RPU.keys(), 'VPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
-        assert os.path.isfile(self.link_file), 'no link_file run verify_links function'
-        assert filename in self.VPU_Files, 'filename must be one of ' + str(self.VPU_Files)
-
-
-        link = self.getvpufile(vpu, filename)
-        filename = link.split('/')[-1]
-        req = Request(link, data = None, headers = self.headers)
-        response = urlopen(req)
-        CHUNK = 1024 * 1024
-        with open(os.path.join(self.destination, filename), 'wb') as f:
-            while True:
-                chunk = response.read(CHUNK)
-                if not chunk:
-                    break
-                f.write(chunk)
+        xml = self.vpu_links[vpu]
+        req = Request(xml, data = None, headers = self.headers)
+        response = urlopen(req).read().decode('ascii')
+        tree = ET.ElementTree(ET.fromstring(response))
+        root = tree.getroot()
+        links = []
+        for i,child in enumerate(root.iter(r'{http://s3.amazonaws.com/doc/2006-03-01/}Contents')):
+            if i == 0 or i ==1:
+                continue
+            link = child.find(r'{http://s3.amazonaws.com/doc/2006-03-01/}Key').text
+            for files in self.files:
+                if files.lower() in link.lower():
+                    dwn_link = self.base_url + link
+                    links.append(dwn_link)
+        return links
 
     def decompress(self,filename):
 
@@ -770,144 +372,45 @@ class NHDPlusExtractor(object):
             print('error: unable to decompress files')
             print('is 7zip installed?')
 
-    def verify_links(self):
-
-        '''
-        function to verify all the links in the metadata file are up to date
-        '''
-        print('verifying links')
-        working_links = []
-
-        if os.path.isfile(self.link_file):
-
-            source = open(self.link_file)
-            links = source.read().splitlines()
-            print(str(self.link_file) + ' has been read')
-            source.close()
-
-            for link in links:
-
-                try:
-                        time.sleep(0.)
-                        print('trying ' + link)
-                        req = Request(link, data=None,headers=self.headers)
-                        response = urlopen(req)
-                        working_links.append(link)
-                        print('success')
-
-                except HTTPError or URLError:
-                    print('the following link was broken ' + link)
-                    a = link.split('/')[-1]
-                    b = a.split('_')
-
-                    if len(b) == 5:
-                        working_links.append(str(self.gather_vpu_links(vpu_input=b[2], filename_input=b[3])))
-
-                    else:
-                        working_links.append(str(self.gather_rpu_links(rpu_input=b[3], filename_input=b[4])))
-
-                with open(self.link_file,'w') as corrected:
-
-                    for items in working_links:
-
-                        corrected.write('%s\n' %items)
-
-        else:
-            print('no file: {} creating new instance this will take awhile'.format(self.link_file) )
-
-            vpu_links = self.gather_vpu_links()
-            rpu_links = self.gather_rpu_links()
-
-            with open(self.link_file,'w') as destination:
-
-                for items in vpu_links:
-                    destination.write('%s\n' % items)
-
-                for items in rpu_links:
-                    destination.write('%s\n' % items)
-
-    def download_decompress(self,vpu=None,decompress=True):
+    def download_decompress(self,vpu,decompress=True):
         '''
         function to download and decompress the data from the NHDPlus DataSet
         this function will download all of the raster and vector data for a specified Drainage area
         **kwargs
-        vpu: string, the VPU corresponding to the Drainage Area ID to be downloaded ie DA = 'MA' vpu = '02' if set to None the function downloads the entirety of the NHDPlus Dataset
+        vpu: string, the VPU corresponding to the Drainage Area ID to be downloaded ie DA = 'MA' vpu = '02'
         decomrpess: if True decompress files with 7zip
         '''
         assert vpu in self.VPU_to_RPU.keys() or vpu is None, 'VPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
+        links = self.get_links(vpu)
+        local_files = [f for f in os.listdir(self.destination)]
+        for f in self.files:
+            dwn_link = None
+            if any([f in localfile for localfile in local_files]):
+                print(f,'for vpu:',vpu,'exists')
+            else:
+                print(f,'for vpu:',vpu,'does not exist starting download')
+                for link in links:
+                    if f.lower() in link.lower():
+                        dwn_link = link
+            if dwn_link is not None:
+                filename = os.path.basename(dwn_link)
+                req = Request(dwn_link, data = None, headers = self.headers)
+                response = urlopen(req)
+                CHUNK = 1024 * 1024
+                with open(os.path.join(self.destination, filename), 'wb') as f:
+                    while True:
+                        chunk = response.read(CHUNK)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                print(filename,'for vpu:',vpu,'downloaded')
+            del(dwn_link)
 
-        if not os.path.isfile(self.link_file):
-            print('the file {} was not found, running verify_links()'.format(self.link_file))
-            self.verify_links()
-
-        if vpu is not None:
-            for files in self.VPU_Files:
-                print(vpu + ' ' + files)
-                linktofile = self.getvpufile(vpu,files)
-                if linktofile is not None:
-                    filename = linktofile.split('/')[-1]
-                else:
-                    continue
-                if os.path.exists(os.path.join(self.destination,filename)):
-                    print(filename + ' already exists moving on')
-                    pass
-                else:
-                    self.downloadvpufile(vpu,files)
-
-            for rpu in self.VPU_to_RPU[vpu]:
-                for files in self.RPU_Files:
-                    print(rpu + ' ' + files)
-                    linktofile = self.getrpufile(rpu, files)
-                    if linktofile is not None:
-                        rpufilename = linktofile.split('/')[-1]
-                    else:
-                        continue
-
-                    if os.path.exists(os.path.join(self.destination, rpufilename)):
-                        print(rpufilename + ' already exists moving on')
-                        pass
-
-                    else:
-                        self.downloadrpufile(rpu, files)
-
-        else:
-            for vpus in sorted(self.VPU_to_RPU.keys()):
-                for files in self.VPU_Files:
-                    print(vpus + ' ' + files)
-                    linktofile = self.getvpufile(vpus, files)
-                    if linktofile is not None:
-                        filename = y.split('/')[-1]
-                    else:
-                        continue
-                    if os.path.exists(os.path.join(self.destination, filename)):
-                        print(filename + ' already exists moving on')
-                        pass
-                    else:
-                        self.downloadvpufile(vpus,files)
-
-            for rpu in sorted(self.RPU_to_VPU.keys()):
-
-                for files in self.RPU_Files:
-                    print(rpu + ' ' + files)
-                    linktofile = self.getrpufile(rpu, files)
-                    if linktofile is not None:
-                        rpufilename = y.split('/')[-1]
-                    else:
-                        continue
-
-                    if os.path.exists(os.path.join(self.destination, rpufilename)):
-                        print(rpufilename + ' already exists moving on')
-                        pass
-
-                    else:
-                        self.downloadrpufile(rpu, files)
-
-        if decompress is True:
-
-            for dirpath, subdir, files in os.walk(self.destination):
-
-                for data in files:
-                    self.decompress(os.path.join(dirpath, data))
+        if decompress == True:
+            local_files = [os.path.join(self.destination,f) for f in os.listdir(self.destination) if f.endswith('.7z')]
+            print(local_files)
+            for file in local_files:
+                self.decompress(file)
 
     def get_degree_transform(self, dataset):
         """
@@ -1356,6 +859,7 @@ class NHDPlusExtractor(object):
             w.record(*records[i])
 
         w.save(destination)
+
     def combine_NED(self, nedfiles, VPU):
         '''
         combines all NED files in the RPU regions for specified VPU into one big file for simplicity
