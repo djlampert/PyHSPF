@@ -380,7 +380,7 @@ class NHDPlusExtractor(object):
         vpu: string, the VPU corresponding to the Drainage Area ID to be downloaded ie DA = 'MA' vpu = '02'
         decomrpess: if True decompress files with 7zip
         '''
-        assert vpu in self.VPU_to_RPU.keys() or vpu is None, 'VPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
+        assert vpu in self.VPU_to_RPU.keys(), 'VPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
         links = self.get_links(vpu)
         local_files = [f for f in os.listdir(self.destination)]
         for f in self.files:
@@ -897,6 +897,7 @@ class NHDPlusExtractor(object):
         os.remove(inmosaic) #delete vrt
         combinednedfile = newfile = '{}/{}'.format(nedfilepath, outmosaic)
 
+
     def get_pixel(self, x, x0, width):
         """returns the pixel number for a coordinate value."""
 
@@ -1090,9 +1091,6 @@ class NHDPlusExtractor(object):
             comids = self.get_comids(ffile)
 
         # read hydrologic sequence and drainage attributes from the database
-
-
-
             if verbose:
                 print('reading flowline value added attributes for ' + '{}\n'.format(HUC8))
 
@@ -1103,10 +1101,8 @@ class NHDPlusExtractor(object):
                                       attributes = flowattributes,
                                       comids = comids,
                                       verbose = vverbose)
-                # read the slope data from the database
 
-
-
+            # read the slope data from the database
             if verbose:
                 print('reading slope and elevation attributes for ' +
                           '{}\n'.format(HUC8))
@@ -1118,9 +1114,6 @@ class NHDPlusExtractor(object):
                                        verbose = vverbose)
 
             # get the flow and velocity data
-            for key, values in slopevalues.items():
-                for i in range(len(values)):
-                    print(values[i],type(values[i]))
             eromattributes = [['COMID', 'N', 9, 0],  ['Q0001E', 'N', 15, 3], ['V0001E', 'N', 14, 5], ['SMGAGEID', 'C', 16, 0]]
 
             if verbose: print('reading EROM model attributes for ' +
@@ -1134,7 +1127,8 @@ class NHDPlusExtractor(object):
             # and make a dictionary linking the comids to hydroseqs
 
             flowlines = {}
-            print('making flowline dictionary')
+
+            if verbose: print('making flowline dictionary')
 
             for flowlineVAAs in zip(*(flowvalues[a[0]] for a in flowattributes)):
                 flowlines[flowlineVAAs[1]] = Flowline(*flowlineVAAs)
@@ -1176,9 +1170,8 @@ class NHDPlusExtractor(object):
 
         end = time.time()
         t = end - start
-        print('stop')
-        if verbose:
 
+        if verbose:
             print('successfully queried NHDPlus data for {} '.format(HUC8) +
                   'in {:.1f} seconds\n'.format(t))
 
