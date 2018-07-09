@@ -1,14 +1,14 @@
 # climateprocessor08.py
-# 
+#
 # David J. Lampert (djlampert@gmail.com)
 #
 # last updated: 03/07/2015
 #
-# this example illustrates how to use the ClimateProcessor class to aggregate 
-# timeseries data using an inverse distance weighted average (IDWA). makes use 
-# of the "subbasin_catchments" shapefile in this directory that was generated 
-# using the NHDPlusExtractor and HUC8Delineator classes shown elsewhere. The 
-# result of the code is the same as the last example, but this shows how to 
+# this example illustrates how to use the ClimateProcessor class to aggregate
+# timeseries data using an inverse distance weighted average (IDWA). makes use
+# of the "subbasin_catchments" shapefile in this directory that was generated
+# using the NHDPlusExtractor and HUC8Delineator classes shown elsewhere. The
+# result of the code is the same as the last example, but this shows how to
 # use the ClimateProcessor's public methods rather than a manual aggregation.
 
 import os, datetime, pickle
@@ -32,7 +32,7 @@ processor = ClimateProcessor()
 
 # working directory location for all the data files
 
-output = 'HSPF_data'  
+output = 'HSPF_data'
 
 if not os.path.isdir(output): os.mkdir(output)
 
@@ -48,14 +48,14 @@ start = datetime.datetime(1980, 1, 1)
 end   = datetime.datetime(2011, 1, 1)
 
 # the space argument increases the bounding box area for the data download and
-# processing; let's use a larger area for this example to grab data from a 
+# processing; let's use a larger area for this example to grab data from a
 # few more stations
 
 space = 0.5
 
 # download/set the location of the data using the "download_shapefile" method
 
-processor.download_shapefile(filename, start, end, output, 
+processor.download_shapefile(filename, start, end, output,
                              datasets = ['precip3240'], space = 0.5)
 
 # the ClimateProcessor's aggregate method can be used with inverse-distance
@@ -119,11 +119,11 @@ from matplotlib import pyplot, dates, ticker
 
 fig, subs = pyplot.subplots(3,2, figsize = (10,8))
 
-fig.suptitle('Comparison of Precipitation Aggregation Techniques', 
+fig.suptitle('Comparison of Precipitation Aggregation Techniques',
              fontsize = 14)
 
-# let's compare results from several stations including BWI (COOP 180465), 
-# Beltsville (COOP 180700), Aberdeen (COOP  180015), the hunting creek 
+# let's compare results from several stations including BWI (COOP 180465),
+# Beltsville (COOP 180700), Aberdeen (COOP  180015), the hunting creek
 # watershed (ComID 11908470), and the unweighted average for some storm events
 
 storms = [(datetime.datetime(1989, 5, 1, 8),
@@ -165,20 +165,20 @@ for s, e, sub in storms:
     belts = station.make_timeseries('precip', s, e)
 
     # get the data for Aberdeen
-
-    p = '{}/precip3240/180015'.format(output)
-
-    with open(p, 'rb') as f: station = pickle.load(f)
-
-    aber = station.make_timeseries('precip', s, e)
+    #
+    # p = '{}/precip3240/180015'.format(output)
+    #
+    # with open(p, 'rb') as f: station = pickle.load(f)
+    #
+    # aber = station.make_timeseries('precip', s, e)
 
     # get the data for Millers
-
-    p = '{}/precip3240/185934'.format(output)
-
-    with open(p, 'rb') as f: station = pickle.load(f)
-
-    mill = station.make_timeseries('precip', s, e)
+    #
+    # p = '{}/precip3240/185934'.format(output)
+    #
+    # with open(p, 'rb') as f: station = pickle.load(f)
+    #
+    # mill = station.make_timeseries('precip', s, e)
 
     # get the simple aggregation
 
@@ -212,22 +212,22 @@ for s, e, sub in storms:
     delta = datetime.timedelta(hours = 1)
     times = [s + i * delta for i in range(j-i)]
 
-    sub.plot_date(times, IDWA, fmt = '--', color =  'black', lw = 2, 
+    sub.plot_date(times, IDWA, fmt = '--', color =  'black', lw = 2,
                   label = 'inverse distance weighting')
     sub.plot_date(times, simple, fmt = '-', color = 'red', lw = 2,
                   label = 'simple aggregation')
-    sub.plot_date(times, bwi, fmt = 's', markeredgecolor = 'green', 
-                  markersize = 6, alpha = 0.3, color = 'green', 
+    sub.plot_date(times, bwi, fmt = 's', markeredgecolor = 'green',
+                  markersize = 6, alpha = 0.3, color = 'green',
                   markeredgewidth = 2, label = 'BWI Airport')
-    sub.plot_date(times, belts, fmt = 'o', markeredgecolor = 'purple', 
+    sub.plot_date(times, belts, fmt = 'o', markeredgecolor = 'purple',
                   markersize = 6, alpha = 0.5, color = 'purple',
                   markeredgewidth = 2, label = 'Beltsville')
-    sub.plot_date(times, aber, fmt = 'x', markeredgecolor = 'orange', 
-                  markersize = 6, color = 'orange',
-                  markeredgewidth = 2, label = 'Aberdeen')
-    sub.plot_date(times, mill, fmt = 'd', markeredgecolor = 'brown', 
-                  markersize = 6, alpha = 0.5, color = 'brown',
-                  markeredgewidth = 2, label = 'Millers')
+    # sub.plot_date(times, aber, fmt = 'x', markeredgecolor = 'orange',
+    #               markersize = 6, color = 'orange',
+    #               markeredgewidth = 2, label = 'Aberdeen')
+    # sub.plot_date(times, mill, fmt = 'd', markeredgecolor = 'brown',
+    #               markersize = 6, alpha = 0.5, color = 'brown',
+    #               markeredgewidth = 2, label = 'Millers')
 
     sub.xaxis.set_major_locator(dates.DayLocator())
     sub.xaxis.set_minor_locator(dates.HourLocator((0, 4, 8, 12, 16, 20)))
@@ -238,7 +238,7 @@ for s, e, sub in storms:
 
     for t in (sub.xaxis.get_ticklabels() +
               sub.xaxis.get_minorticklabels() +
-              sub.yaxis.get_ticklabels()): 
+              sub.yaxis.get_ticklabels()):
         t.set_fontsize(11)
 
     sub.grid(which = 'minor')

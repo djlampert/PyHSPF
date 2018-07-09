@@ -483,7 +483,7 @@ def find_nsrdb(bbox,
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.81 Safari/537.36'}
         url = '{}/old_data/nsrdb/1961-1990/hourly/compressed'.format(NSRDB)
         req = request.Request(url,headers= headers)
-        response = urlopen(req).read().decode()
+        response = request.urlopen(req).read().decode()
 
         # make a list of the old stations available in the database
         tree = etree.HTML(response)
@@ -503,7 +503,7 @@ def find_nsrdb(bbox,
 
         source = '{}/{}'.format(NCDC, NCDCmeta)
 
-        req = request.Request(source)
+        req = request.Request(source,headers=headers)
 
         try:
 
@@ -515,11 +515,11 @@ def find_nsrdb(bbox,
 
                 metadata = [(l[:6], l[7:12])
                             for l in s.read().split('\n')
-                            if is_integer(l[:6]) and is_integer(l[8:13])]
+                            if is_integer(l[:6]) and is_integer(l[7:12])]
 
             wbans = {usaf:wban for usaf, wban in metadata
                      if wban in oldstations}
-
+            print(wbans)
         except:
 
             print('warning: unable to open the WBAN metadata')
@@ -530,7 +530,7 @@ def find_nsrdb(bbox,
 
     # find the solar metadata
 
-    req = request.Request('{}/{}'.format(NSRDB, metafile))
+    req = request.Request('{}/{}'.format(NSRDB, metafile),headers=headers)
 
     try:
 
@@ -539,7 +539,6 @@ def find_nsrdb(bbox,
         with io.StringIO(request.urlopen(req).read().decode()) as s:
 
             # parse it
-
             metadata = [l.split(',') for l in s.read().split('\r')
                         if len(l.split(',')) == 12]
 

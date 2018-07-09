@@ -1,5 +1,5 @@
 # climateprocessor01.py
-# 
+#
 # David J. Lampert (djlampert@gmail.com)
 #
 # illustrates how to use the ClimateProcessor class to download climate data
@@ -11,21 +11,21 @@ import os, datetime
 
 from pyhspf.preprocessing import ClimateProcessor
 
-# create an instance of the ClimateProcessor class--the previous climateutils 
-# examples show how to download data, and the ClimateProcessor has pointers 
-# to these methods essentially just to streamline the data download, 
+# create an instance of the ClimateProcessor class--the previous climateutils
+# examples show how to download data, and the ClimateProcessor has pointers
+# to these methods essentially just to streamline the data download,
 # aggregation, and time series calculation processes.
 
 processor = ClimateProcessor()
 
 # working directory location for all the data files
 
-output = 'HSPF_data'  
+output = 'HSPF_data'
 
 if not os.path.isdir(output): os.mkdir(output)
 
-# datasets to download--this keyword argument can be either a list of the 
-# particular datasets or 'all' (the default) which downloads all these: 
+# datasets to download--this keyword argument can be either a list of the
+# particular datasets or 'all' (the default) which downloads all these:
 # (GHCND, GSOD, precip3240, NSRDB)
 
 datasets = ['GHCND', 'GSOD', 'precip3240', 'NSRDB']
@@ -57,12 +57,12 @@ end   = datetime.datetime(2011, 1, 1)
 processor.path_to_7z = r'C:/Program Files/7-Zip/7z.exe'
 
 # download the data--worth noting there are some issues with the databases
-# sometimes. these are handled with warnings, but this will give you ALL the 
+# sometimes. these are handled with warnings, but this will give you ALL the
 # data available so it takes a while (obviously longer the bigger the area
 # requested) and further processing will be needed to develop "final" datasets
 # for a model simulation. if the subdirectories for the various databases in
 # the output directory already exist (i.e., if you have already done the data
-# download), this step will be skipped but it will  tell the processor the 
+# download), this step will be skipped but it will  tell the processor the
 # location of the data files and read the metadata for further processing.
 
 processor.download(bbox, start, end, output, datasets = datasets)
@@ -75,24 +75,24 @@ processor.download(bbox, start, end, output, datasets = datasets)
 
 # GHCND (daily precip, tmax, tmin, snowdepth, snowfall, wind, pan evaporation
 
-for k, v in processor.metadata.ghcndstations.items(): 
+for k, v in processor.metadata.ghcndstations.items():
 
     print('\n'.join(['{} {} {}'.format(k, p, val) for p, val in v.items()]))
 
 # GSOD (daily precip, tmax, tmin, wind, dewpoint)
 
-for k, v in processor.metadata.gsodstations.items(): 
+for k, v in processor.metadata.gsodstations.items():
 
     print('\n'.join(['{} {} {}'.format(k, p, val) for p, val in v.items()]))
 
 # hourly precipitation (only one dataset class)
 
-for k, v in processor.metadata.precip3240stations.items(): 
+for k, v in processor.metadata.precip3240stations.items():
 
     print('\n'.join(['{} {} {}'.format(k, p, val) for p, val in v.items()]))
 
 # NSRDB (legacy data (pre-1991), METSTAT model, SUNY model, observed (rare))
 
-for k, v in processor.metadata.nsrdbstations.items(): 
+for k, v in processor.metadata.nsrdbstations.items():
 
     print('\n'.join(['{} {} {}'.format(k, p, val) for p, val in v.items()]))
