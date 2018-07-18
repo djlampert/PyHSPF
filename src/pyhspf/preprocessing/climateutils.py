@@ -519,7 +519,7 @@ def find_nsrdb(bbox,
 
             wbans = {usaf:wban for usaf, wban in metadata
                      if wban in oldstations}
-            print(wbans)
+                     
         except:
 
             print('warning: unable to open the WBAN metadata')

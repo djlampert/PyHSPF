@@ -422,8 +422,8 @@ class ClimateProcessor:
         filename = '{}/metadata'.format(output)
         if not os.path.isfile(filename):
             with open(filename, 'wb') as f: pickle.dump(self.metadata, f)
-
-
+            return
+            
     def get_distance(self, p1, p2):
         """
         Approximates the distance in kilometers between two points on the
