@@ -422,9 +422,7 @@ class ClimateProcessor:
         filename = '{}/metadata'.format(output)
         if not os.path.isfile(filename):
             with open(filename, 'wb') as f: pickle.dump(self.metadata, f)
-        else:
-            os.remove(filename)
-            with open(filename, 'wb') as f: pickle.dump(self.metadata, f)
+
 
     def get_distance(self, p1, p2):
         """
