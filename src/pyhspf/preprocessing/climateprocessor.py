@@ -4,7 +4,7 @@
 #
 # Last updated: 02/15/2015
 #
-# Purpose: contains the ClimateProcessor class to import climate data files 
+# Purpose: contains the ClimateProcessor class to import climate data files
 # and generate time series for hydrologic modeling.
 
 import os, pickle, shutil, datetime, numpy
@@ -45,7 +45,7 @@ class ClimateProcessor:
         # the path to 7zip to decompress the archives
 
         self.path_to_7z = path_to_7z
-        
+
         # file metadata for all the different stations
 
         self.metadata = ClimateMetadata()
@@ -59,15 +59,15 @@ class ClimateProcessor:
         except:
             return False
 
-    def get_boundaries(self, 
+    def get_boundaries(self,
                        bbox = None,
-                       shapefile = None, 
+                       shapefile = None,
                        space = 0,
                        ):
         """Gets the boundaries for the plot."""
 
         if   bbox is not None: boundaries = [x for x in bbox]
-        elif shapefile is not None: 
+        elif shapefile is not None:
             r = Reader(shapefile)
             boundaries = [b for b in r.bbox]
         else:
@@ -80,34 +80,34 @@ class ClimateProcessor:
         ymax = boundaries[3] + (boundaries[3] - boundaries[1]) * space
 
         return xmin, ymin, xmax, ymax
- 
+
     def extract_ghcnd(self,
                       bbox,
-                      start, 
-                      end, 
-                      types = 'both', 
+                      start,
+                      end,
+                      types = 'both',
                       space = 0.1,
                       GHCND = 'http://www1.ncdc.noaa.gov/pub/data/ghcn/daily',
                       plot = True,
                       verbose = True,
                       ):
         """Extracts data from GHCND Stations."""
-    
+
         # find stations in the bounding box
 
         stations = find_ghcnd(bbox, types = types, dates = (start, end))
 
         # iterate through the stations and download the data
 
-        for s in stations: 
+        for s in stations:
 
             filename = '{}/{}'.format(self.GHCND, s.station)
 
             if not os.path.isfile(filename):
 
-                s.download_data(self.GHCND, start = start, end = end, 
+                s.download_data(self.GHCND, start = start, end = end,
                                 plot = plot)
-            
+
                 # save the metadata for the station
 
                 self.metadata.add_ghcndstation(filename, s)
@@ -116,7 +116,7 @@ class ClimateProcessor:
         # if need be
 
         if space < 0.5: space = 0.5
-        while all([len([d for d, e in s.evap if 0 <= e and start <= d and 
+        while all([len([d for d, e in s.evap if 0 <= e and start <= d and
                         d <= end]) == 0 for s in stations]):
 
             print('warning: insufficient evaporation data available in the ' +
@@ -134,15 +134,15 @@ class ClimateProcessor:
 
             # download the data for the extra stations found
 
-            for s in extrastations: 
+            for s in extrastations:
 
                 filename = '{}/{}'.format(self.GHCND, s.station)
-                
+
                 if not os.path.isfile(filename):
 
-                    s.download_data(self.GHCND, start = start, end = end, 
+                    s.download_data(self.GHCND, start = start, end = end,
                                     plot = plot)
-                    if len(s.evap) > 0: 
+                    if len(s.evap) > 0:
 
                         stations.append(s)
 
@@ -150,8 +150,8 @@ class ClimateProcessor:
 
     def extract_gsod(self,
                      bbox,
-                     start, 
-                     end, 
+                     start,
+                     end,
                      space = 0.1,
                      plot = True,
                      verbose = False,
@@ -167,7 +167,7 @@ class ClimateProcessor:
         # if more data are needed, expand the bounding box
 
         if space < 0.5: space = 0.5
-        while all([start.year < y for y in years]): 
+        while all([start.year < y for y in years]):
             print('GSOD files in the watershed do not contain sufficient data')
             print('looking for other stations')
 
@@ -175,10 +175,10 @@ class ClimateProcessor:
             stations += find_gsod(bbox, dates = (start, end))
             years = [s.start.year for s in stations if s.start is not None]
             space += 0.2
-    
+
         # iterate through the stations and download the data
 
-        for s in stations: 
+        for s in stations:
 
             filename = '{0}/{1:06d}'.format(self.GSOD, s.airforce)
             if not os.path.isfile(filename):
@@ -190,8 +190,8 @@ class ClimateProcessor:
 
     def extract_precip3240(self,
                            bbox,
-                           start, 
-                           end, 
+                           start,
+                           end,
                            plot = True,
                            verbose = True,
                            ):
@@ -199,7 +199,7 @@ class ClimateProcessor:
 
         # find the precipitation stations in the bounding box
 
-        stations = find_precip3240(bbox, dates = (start, end), 
+        stations = find_precip3240(bbox, dates = (start, end),
                                    verbose = verbose)
 
         # download/import the data for each station
@@ -208,8 +208,8 @@ class ClimateProcessor:
 
             filename = '{}/{}'.format(self.precip3240, s.coop)
             if not os.path.isfile(filename):
-        
-                s.download_data(self.precip3240, start, end, 
+
+                s.download_data(self.precip3240, start, end,
                                 path_to_7z = self.path_to_7z,
                                 clean = False, plot = plot)
 
@@ -221,11 +221,11 @@ class ClimateProcessor:
 
     def extract_NSRDB(self,
                       bbox,
-                      start, 
-                      end, 
+                      start,
+                      end,
                       space = 0.1,
-                      plot = True, 
-                      verbose = True, 
+                      plot = True,
+                      verbose = True,
                       vverbose = False,
                       ):
         """Makes pickled instances of the GageStation class for all the gages
@@ -246,14 +246,14 @@ class ClimateProcessor:
                        output = '{}/{}'.format(self.NSRDB, s.usaf))
 
     def download(self,
-                 bbox,
-                 start, 
-                 end,
-                 output,
-                 datasets = 'all',
-                 verbose = True,
-                 ):
-        """Downloads select climate data from the GHCND, GSOD, NSRDB, and 
+                      bbox,
+                      start,
+                      end,
+                      output,
+                      datasets = 'all',
+                      verbose = True,
+                     ):
+        """Downloads select climate data from the GHCND, GSOD, NSRDB, and
         NCDC 3240 (hourly precipitation) datasets."""
 
         # make sure the output directory exists
@@ -271,7 +271,7 @@ class ClimateProcessor:
                 os.mkdir(self.GHCND)
                 self.extract_ghcnd(bbox, start, end)
             elif verbose: print('GHCND data exist\n')
-                
+
         # download the GSOD data
 
         if datasets == 'all' or 'GSOD' in datasets:
@@ -308,7 +308,7 @@ class ClimateProcessor:
 
     def download_shapefile(self,
                            shapefile,
-                           start, 
+                           start,
                            end,
                            output,
                            space = 0,
@@ -357,8 +357,8 @@ class ClimateProcessor:
                 print('error: GHCND data do not exist\n')
                 raise
             else:
-                files = ['{}/{}'.format(self.GHCND, f) 
-                         for f in os.listdir(self.GHCND) 
+                files = ['{}/{}'.format(self.GHCND, f)
+                         for f in os.listdir(self.GHCND)
                          if f[-3:] != 'png']
 
                 for filename in files:
@@ -368,14 +368,14 @@ class ClimateProcessor:
         # set the GSOD data
 
         if datasets == 'all' or 'GSOD' in datasets:
-            
+
             self.GSOD = '{}/GSOD'.format(output)
             if not os.path.isdir(self.GSOD):
                 print('error: GSOD data do not exist\n')
                 raise
             else:
                 files = ['{}/{}'.format(self.GSOD, f)
-                         for f in os.listdir(self.GSOD) 
+                         for f in os.listdir(self.GSOD)
                          if f[-3:] != 'png']
 
                 for filename in files:
@@ -392,8 +392,8 @@ class ClimateProcessor:
                 raise
             else:
                 files = ['{}/{}'.format(self.precip3240, f)
-                         for f in os.listdir(self.precip3240) 
-                         if f[-3:] != 'png' and 
+                         for f in os.listdir(self.precip3240)
+                         if f[-3:] != 'png' and
                          not os.path.isdir('{}/{}'.format(self.precip3240, f))]
 
                 for filename in files:
@@ -410,7 +410,7 @@ class ClimateProcessor:
                 raise
             else:
                 files = ['{}/{}'.format(self.NSRDB, f)
-                         for f in os.listdir(self.NSRDB) 
+                         for f in os.listdir(self.NSRDB)
                          if f[-3:] != 'png']
 
                 for filename in files:
@@ -421,13 +421,13 @@ class ClimateProcessor:
 
         filename = '{}/metadata'.format(output)
         if not os.path.isfile(filename):
+            with open(filename, 'wb') as f: pickle.dump(self.metadata, f)
+            return
             
-            with open(filename, 'wb') as f: pickle.dump(self.metadata, f) 
-
     def get_distance(self, p1, p2):
         """
-        Approximates the distance in kilometers between two points on the 
-        Earth's surface designated in decimal degrees using an ellipsoidal 
+        Approximates the distance in kilometers between two points on the
+        Earth's surface designated in decimal degrees using an ellipsoidal
         projection. CFR 73.208 indicates applicability up to 475 kilometers.
         p1 and p2 are listed as (longitude, latitude).
         """
@@ -438,10 +438,10 @@ class ClimateProcessor:
         phim = 0.5 * (p1[1] + p2[1])
         dlam = p1[0] - p2[0]
 
-        k1 = (111.13209 - 0.56605 * numpy.cos(2 * phim * deg_rad) + 0.00120 * 
+        k1 = (111.13209 - 0.56605 * numpy.cos(2 * phim * deg_rad) + 0.00120 *
               numpy.cos(4 * phim * deg_rad))
-        k2 = (111.41513 * numpy.cos(phim * deg_rad) - 0.09455 * 
-              numpy.cos(3 *phim * deg_rad) + 0.0012 * 
+        k2 = (111.41513 * numpy.cos(phim * deg_rad) - 0.09455 *
+              numpy.cos(3 *phim * deg_rad) + 0.0012 *
               numpy.cos(5 * phim * deg_rad))
 
         return numpy.sqrt(k1**2 * dphi**2 + k2**2 * dlam**2)
@@ -460,7 +460,7 @@ class ClimateProcessor:
                   vverbose = False,
                   ):
         """
-        Aggregates data for "parameter" in the "database" from "start" to 
+        Aggregates data for "parameter" in the "database" from "start" to
         "end" for up to "nmax" series and returns the time series output.
         Optionally can perform an inverse distance-weighted average using the
         method to 'IDWA' and providing the latitude and longitude.
@@ -468,13 +468,13 @@ class ClimateProcessor:
 
         # some error handling
 
-        if   database == 'GHCND':      
+        if   database == 'GHCND':
             stations = self.metadata.ghcndstations
-        elif database == 'GSOD':       
+        elif database == 'GSOD':
             stations = self.metadata.gsodstations
-        elif database == 'NSRDB':      
+        elif database == 'NSRDB':
             stations = self.metadata.nsrdbstations
-        elif database == 'precip3240': 
+        elif database == 'precip3240':
             stations = self.metadata.precip3240stations
         else:
             print('error: database {} not recognized'.format(database))
@@ -492,7 +492,7 @@ class ClimateProcessor:
                 print('error: unknown weighting scheme ' +
                       '"{}" specified'.format(weights))
                 raise
-                
+
             elif latitude is None or longitude is None:
                 print('to use the distance weighted-average, the location ' +
                       '(latitude and longitude) must be specified\n')
@@ -500,7 +500,7 @@ class ClimateProcessor:
 
             elif not self.is_number(latitude) or not self.is_number(longitude):
                 print('latitude and longitude must be numeric')
-                raise                
+                raise
 
         # make sure the parameter exists in the database
 
@@ -514,7 +514,7 @@ class ClimateProcessor:
         if start >= end:
             print('error: end date must be after start date')
             raise
-            
+
         # find the longest "n" datasets
 
         datalengths = []
@@ -524,9 +524,9 @@ class ClimateProcessor:
 
         # save the station file names and locations
 
-        if len(datalengths) > nmax: 
+        if len(datalengths) > nmax:
             names = [k for v, k in datalengths[-nmax:]]
-        else:                       
+        else:
             names = [k for k in stations]
             nmax = len(stations)
 
@@ -548,8 +548,8 @@ class ClimateProcessor:
 
         for i, k in enumerate(names):
 
-            if verbose: 
-                
+            if verbose:
+
                 its = parameter, k
                 print('fetching {} data from {}'.format(*its))
 
@@ -570,7 +570,7 @@ class ClimateProcessor:
 
         if method is not None:
 
-            if method == 'IDWA': 
+            if method == 'IDWA':
 
                 p1 = float(longitude), float(latitude)
 
@@ -585,7 +585,7 @@ class ClimateProcessor:
                     for i in zip(lons, lats, descriptions, distances):
 
                         print('distance between ' +
-                              '{:.2f}, {:.2f} & '.format(*p1) 
+                              '{:.2f}, {:.2f} & '.format(*p1)
                               + '{:.2f}, {:.2f} {:22s}: {:.1f} km'.format(*i))
 
                 # use the inverse distance squared as the weighting factors
@@ -597,7 +597,7 @@ class ClimateProcessor:
         # transpose the series to switch the ordering from stations to days
 
         data = data.transpose()
-        
+
         # make a mask for missing data
 
         mask = numpy.invert(numpy.isnan(data))
@@ -608,13 +608,13 @@ class ClimateProcessor:
 
         if method is None:
 
-            averages = [row[m].mean() 
+            averages = [row[m].mean()
                         if row[m].size > 0 else None
                         for row, m in zip(data, mask)]
 
         elif method == 'IDWA':
 
-            averages = [(row[m] * weights[m]).sum() / weights[m].sum() 
+            averages = [(row[m] * weights[m]).sum() / weights[m].sum()
                         if row[m].size > 0 else None
                         for row, m in zip(data, mask)]
 
@@ -626,11 +626,11 @@ class ClimateProcessor:
             missing = [i for i in range(len(averages)) if averages[i] is None]
             print('warning: missing {} values;'.format(len(missing)) +
                   ' trying to fill with next day\n')
-            
+
             for i in missing:
 
                 if vverbose:
-                    if database in ['GSOD', 'GHCND']: 
+                    if database in ['GSOD', 'GHCND']:
                         delta = datetime.timedelta(days = 1)
                     elif database in ['NSRDB', 'precip3240']:
                         delta = datetime.timedelta(hours = 1)
@@ -643,4 +643,3 @@ class ClimateProcessor:
         # return the timeseries
 
         return averages
-

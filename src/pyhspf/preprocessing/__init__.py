@@ -14,6 +14,7 @@ __all__ = [
     'HUC8Delineator',
     'Climateprocessor',
     'FtableCalculator',
+    'Flowline'
     ]
 
 from .preprocessor      import Preprocessor
@@ -27,3 +28,4 @@ from .cdlextractor      import CDLExtractor
 from .climateprocessor  import ClimateProcessor
 from .etcalculator      import ETCalculator
 from .ftablecalculator  import FtableCalculator
+from .flowline          import Flowline

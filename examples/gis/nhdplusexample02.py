@@ -3,7 +3,7 @@
 # David J. Lampert (djlampert@gmail.com)
 #
 # Shows how to use the NHDPlusDelineator to delineate the watershed for a point
-# within a HUC8. Assumes the NHDPlus Hydrography data exist already. This 
+# within a HUC8. Assumes the NHDPlus Hydrography data exist already. This
 # example delineates the watershed for the location of the discontinued flow
 # gage at Hunting Creek, MD.
 

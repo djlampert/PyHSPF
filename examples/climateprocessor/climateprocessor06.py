@@ -1,10 +1,10 @@
 # climateprocessor06.py
-# 
+#
 # David J. Lampert (djlampert@gmail.com)
 #
 # last updated: 02/21/2015
 #
-# illustrates how to use the ClimateProcessor class to aggregate climate time 
+# illustrates how to use the ClimateProcessor class to aggregate climate time
 # series from the hourly precipitation database (similar to the last example)
 
 import os, datetime, pickle
@@ -50,7 +50,7 @@ processor.download(bbox, start, end, output, datasets = ['precip3240'])
 precip = processor.aggregate('precip3240', 'precip', start, end)
 
 # now these time series can be saved for later consistent with the structure
-# used by PyHSPF's HSPFModel class (start date, time step in minutes, data) 
+# used by PyHSPF's HSPFModel class (start date, time step in minutes, data)
 # this way the data are easy to access later
 
 name = '{}/precip3240_aggregated_precip'.format(output)
@@ -71,7 +71,7 @@ end   = datetime.datetime(2001, 6, 20)
 delta = datetime.timedelta(hours = 1)
 times = [start + i * delta for i in range((end-start).days * 24)]
 
-# let's use the processor to aggregate the NSRDB data together for the 
+# let's use the processor to aggregate the NSRDB data together for the
 # different data sources in the NSRDB
 
 precip = processor.aggregate('precip3240', 'precip', start, end)
@@ -93,4 +93,3 @@ pyplot.tight_layout()
 pyplot.subplots_adjust(top = 0.95)
 pyplot.savefig('aggregated precipitation')
 pyplot.show()
- 

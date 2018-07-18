@@ -71,8 +71,12 @@ class CDLParser(HTMLParser):
         self.option = False
         self.center = False
         self.tbody  = False
-        
-        # 
+        self.label  = False
+        self.h4     = False
+        self.caption = False
+        self.thead   = False
+        self.th      = False
+        #
         # keep track of states
 
         self.state = None
@@ -160,6 +164,7 @@ class CDLParser(HTMLParser):
         elif tag == 'title':    self.title  = True
         elif tag == 'link':     self.link   = True
         elif tag == 'meta':     self.meta   = True
+        elif tag == 'label':    self.label = True
         elif tag == 'script':   self.script = True
         elif tag == 'body':     self.body   = True
         elif tag == 'img':      self.img    = True
@@ -185,6 +190,10 @@ class CDLParser(HTMLParser):
         elif tag == 'option':   self.option = True
         elif tag == 'center':   self.center = True
         elif tag == 'tbody':    self.tbody  = True
+        elif tag == 'h4':       self.h4     = True
+        elif tag == 'caption':  self.caption = True
+        elif tag == 'thead':    self.thead = True
+        elif tag == 'th':       self.th    = True
         else:
             print('error: unknown tag {} specified'.format(tag))
             raise
@@ -246,6 +255,11 @@ class CDLParser(HTMLParser):
         elif tag == 'option':   self.option = False
         elif tag == 'center':   self.center = False
         elif tag == 'tbody':    self.tbody  = False
+        elif tag == 'label':    self.label  = False
+        elif tag == 'h4':       self.h4     = False
+        elif tag == 'caption':  self.caption = False
+        elif tag == 'thead':    self.thead = False
+        elif tag == 'th':       self.th    = False
         else:
             print('error: unknown tag {} specified'.format(tag))
             raise
@@ -263,7 +277,7 @@ class CDLParser(HTMLParser):
              ):
 
         u = '{}/{}'.format(USDA, meta)
-        
+
         with request.urlopen(u) as f: metadata = f.read().decode()
 
         self.feed(metadata)
@@ -293,7 +307,7 @@ class CDLExtractor:
 
             print('destination directory for CDL data does not exist\n')
 
-            try: 
+            try:
 
                 print('creating destination directory for CDL data\n')
                 os.mkdir(destination)
@@ -417,13 +431,13 @@ class CDLExtractor:
     def is_number(self, s):
         """Test if the string is a number."""
 
-        try: float(s) 
+        try: float(s)
         except ValueError: return False
         return True
 
     def shape_to_mask(self, shape, width = 1000):
         """Converts a shapefile into a raster mask."""
-        
+
         # separate the x and y values for the shape
 
         xs, ys = zip(*shape)
@@ -445,7 +459,7 @@ class CDLExtractor:
         pixel_polygon = [(get_pixel(x, x0, w), get_pixel(y, y0, h))
                          for x, y in zip(xs, ys)]
 
-        # make a PIL image with the appropriate dimensions to use as a mask 
+        # make a PIL image with the appropriate dimensions to use as a mask
 
         rasterpoly = Image.new('L', (width, height), 1)
         rasterize  = ImageDraw.Draw(rasterpoly)
@@ -462,8 +476,8 @@ class CDLExtractor:
 
     def poly_to_cdf(self, poly, n = 1000, dim = 'x'):
         """
-        Determines the cumulative distribution function of the area of the 
-        polygon (assumed to be made up of a list of points) in the chosen 
+        Determines the cumulative distribution function of the area of the
+        polygon (assumed to be made up of a list of points) in the chosen
         dimension for "n" values.
         """
 
@@ -474,7 +488,7 @@ class CDLExtractor:
         if dim == 'x':
 
             # convert the points to a mask array of ones (in) and zeros (out)
-        
+
             mask = shape_to_mask(poly, width = n)
 
             # get the total number of pixels in the shape
@@ -501,15 +515,15 @@ class CDLExtractor:
             print('error, unknown coordinate dimension, please specify x or y.')
             raise
 
-    def report(self, 
-               n, 
-               block, 
+    def report(self,
+               n,
+               block,
                size,
                ):
         """Private method to report the status of the file download."""
 
         if n % 200 == 0:
-            
+
             try:
                 t = (time.time() - self.r_start) * (size - block*n) / block / n
                 it = block * n / 10**6, size / 10**6, t
@@ -567,7 +581,7 @@ class CDLExtractor:
             y1 = round(transformed[1])
             x2 = round(transformed[2])
             y2 = round(transformed[3])
-                
+
             # request the file from the CDL server
 
             i = self.website, year, x1, y1, x2, y2
@@ -594,8 +608,8 @@ class CDLExtractor:
             print('downloading {} CDL data within '.format(year) +
                   '{:.4f}, {:.4f}, {:.4f}, {:.4f}\n'.format(*extent) +
                   'from {}\nto {}\n'.format(url, local))
-                
-            try: 
+
+            try:
 
                 self.r_start = time.time()
                 request.urlretrieve(url, local, self.report)
@@ -607,10 +621,10 @@ class CDLExtractor:
                 print('check that the requested data are available for ' +
                       'the requested year on the server')
                 raise
-                    
+
             print('')
 
-    def download_data(self, 
+    def download_data(self,
                       state,
                       years,
                       ):
@@ -632,12 +646,12 @@ class CDLExtractor:
             its = self.destination, year, fips
             local = '{}/CDL_{}_{}.tif'.format(*its)
 
-            if not os.path.isfile(local): 
+            if not os.path.isfile(local):
 
                 exists = False
                 print('file {} needs to be downloaded'.format(local))
 
-            else: 
+            else:
 
                 print('CDL raster for {} {} exists'.format(year, state))
                 self.years.append(year)
@@ -650,8 +664,8 @@ class CDLExtractor:
 
             parser = CDLParser()
 
-            try: 
-            
+            try:
+
                 parser.read()
 
                 # make a reverse dictionary to look up the state abbreviation
@@ -663,7 +677,7 @@ class CDLExtractor:
 
                 available_years = parser.stateyears[state]
 
-                print('CDL data for {} available for years:\n'.format(state) + 
+                print('CDL data for {} available for years:\n'.format(state) +
                       ', '.join(['{}'.format(y) for y in available_years])+'\n')
 
             except:
@@ -712,8 +726,8 @@ class CDLExtractor:
 
                 print('downloading CDL data for {} {} '.format(year, state) +
                       'from {}\n'.format(url))
-                
-                try: 
+
+                try:
 
                     self.r_start = time.time()
                     request.urlretrieve(url, local, self.report)
@@ -725,7 +739,7 @@ class CDLExtractor:
                     print('check that the requested data are available for ' +
                           'the requested year on the server')
                     raise
-                    
+
                 print('')
 
             elif year in available_years:
@@ -791,10 +805,10 @@ class CDLExtractor:
 
                 driver = gdal.GetDriverByName('GTiff')
 
-                destination = driver.Create(output, 
-                                            len(values[0]), 
-                                            len(values), 
-                                            1, 
+                destination = driver.Create(output,
+                                            len(values[0]),
+                                            len(values),
+                                            1,
                                             gdal.GDT_Byte)
                 destination.SetGeoTransform(transform)
                 destination.SetProjection(source.GetProjection())
@@ -803,14 +817,14 @@ class CDLExtractor:
 
                 destination.SetMetadata(source.GetMetadata())
                 destination_band = destination.GetRasterBand(1)
-                
+
                 # copy the pertinent attributes to the band
 
                 destination_band.WriteArray(values, 0, 0)
                 ct = source_band.GetColorTable().Clone()
                 destination_band.SetColorTable(ct)
 
-                # transform the projection from WGS 1984 to NAD 1983 
+                # transform the projection from WGS 1984 to NAD 1983
                 # (needs to be done)
 
                 # close up the files
@@ -819,12 +833,12 @@ class CDLExtractor:
                 destination = None
 
                 if verbose:
- 
+
                     print('successfully extracted cropland data to new file')
 
         if verbose: print('')
 
-    def extract_shapefile(self, 
+    def extract_shapefile(self,
                           shapefile,
                           directory,
                           space = 0.05,
@@ -833,7 +847,7 @@ class CDLExtractor:
         Extracts the cropland data for the bounding box of the shapefile.
         """
 
-        if not os.path.isdir(directory): 
+        if not os.path.isdir(directory):
             print('error, specified output directory does not exist\n')
             raise
 
@@ -850,7 +864,7 @@ class CDLExtractor:
 
     def read_aggregatefile(self, aggregatefile):
         """
-        Reads the information in the file that aggregates raw landuse 
+        Reads the information in the file that aggregates raw landuse
         categories together into homogeneous groups.
         """
 
@@ -909,16 +923,16 @@ class CDLExtractor:
                           '"{}" missing!'.format(g))
                     raise
 
-    def calculate_landuse(self, 
+    def calculate_landuse(self,
                           rasterfile,
-                          shapefile, 
-                          aggregatefile, 
+                          shapefile,
+                          aggregatefile,
                           attribute,
                           csvfile = None,
                           ):
         """
-        Calculates the land use for the given year for the "attribute" 
-        feature attribute in the polygon shapefile using the aggregate 
+        Calculates the land use for the given year for the "attribute"
+        feature attribute in the polygon shapefile using the aggregate
         mapping provided in the "aggregatefile."
         """
 
@@ -940,7 +954,7 @@ class CDLExtractor:
         attributes = [f[0] for f in sf.fields]
 
         try:    index = attributes.index(attribute) - 1
-        except: 
+        except:
             print('error: attribute ' +
                   '{} is not in the shapefile fields'.format(attribute))
             raise
@@ -960,7 +974,7 @@ class CDLExtractor:
 
             try:
 
-                values, origin = get_raster_in_poly(rasterfile, points, 
+                values, origin = get_raster_in_poly(rasterfile, points,
                                                     verbose = False)
                 values = values.flatten()
                 values = values[values.nonzero()]
@@ -968,23 +982,23 @@ class CDLExtractor:
                 tot_pixels = len(values)
 
                 # count the number of pixels of each land use type
-                                   
+
                 for v in numpy.unique(values):
 
                     # find all the indices for each pixel value
 
                     pixels = numpy.argwhere(values == v)
-                    
+
                     # normalize by the total # of pixels
 
                     f = len(values[pixels]) / tot_pixels
-                    
+
                     # add the landuse to the aggregated value
 
                     self.landuse[k][self.groups[v]] += f
-    
+
             # work around for small shapes
-            
+
             except: self.landuse[k][self.groups[0]] = 1
 
         if csvfile is not None:  self.make_csv(attribute, csvfile)
@@ -1008,7 +1022,7 @@ class CDLExtractor:
                 row = [k] + [d[r] for r in self.order]
                 writer.writerow(row)
 
-    def make_patch(self, points, facecolor, edgecolor = 'Black', width = 1, 
+    def make_patch(self, points, facecolor, edgecolor = 'Black', width = 1,
                    alpha = None, hatch = None, label = None):
         """
         Uses a list or array of points to generate a matplotlib patch.
@@ -1020,12 +1034,12 @@ class CDLExtractor:
         codes     = [path.Path.LINETO for i in range(len(points) + 1)]
         codes[0]  = path.Path.MOVETO
 
-        patch = patches.PathPatch(path.Path(vertices, codes), 
+        patch = patches.PathPatch(path.Path(vertices, codes),
                                   facecolor = facecolor,
-                                  edgecolor = edgecolor, 
-                                  lw = width, 
+                                  edgecolor = edgecolor,
+                                  lw = width,
                                   hatch = hatch,
-                                  alpha = alpha, 
+                                  alpha = alpha,
                                   label = label)
 
         return patch
@@ -1035,14 +1049,14 @@ class CDLExtractor:
                      catchments,
                      attribute,
                      categoryfile,
-                     output = None, 
-                     datatype = 'raw', 
+                     output = None,
+                     datatype = 'raw',
                      overwrite = False,
                      pixels = 1000,
                      border = 0.02,
                      lw = 0.5,
                      show = False,
-                     verbose = True, 
+                     verbose = True,
                      vverbose = False
                      ):
         """
@@ -1083,11 +1097,11 @@ class CDLExtractor:
 
         # set up a custom colormap using the rgbs supplied in the aggregate file
 
-        color_table = [(self.reds[g] / 255, self.greens[g] / 255, 
+        color_table = [(self.reds[g] / 255, self.greens[g] / 255,
                         self.blues[g] / 255) for g in self.order]
-            
+
         cmap = colors.ListedColormap(color_table)
-        
+
         # provide the cutoff boundaries for the mapping of values to the table
 
         bounds = [i-0.5 for i in range(len(self.order)+1)]
@@ -1111,7 +1125,7 @@ class CDLExtractor:
 
         # get the land use fraction for each category
 
-        if datatype == 'results': 
+        if datatype == 'results':
 
             # iterate through the shapes and make patches
 
@@ -1124,7 +1138,7 @@ class CDLExtractor:
                 pixel_polygon = [(get_pixel(x, xmin, w), get_pixel(y, ymin, h))
                                  for x, y in points]
 
-                # make a PIL image to use as a mask 
+                # make a PIL image to use as a mask
 
                 rasterpoly = Image.new('L', (pixels, height), 1)
                 rasterize  = ImageDraw.Draw(rasterpoly)
@@ -1141,12 +1155,12 @@ class CDLExtractor:
 
                 tot = mask.sum()
 
-                # iterate from left to right and get the fraction of the total 
-                # area inside the shape as a function of x (takes into account 
+                # iterate from left to right and get the fraction of the total
+                # area inside the shape as a function of x (takes into account
                 # the depth)
 
                 fractions = [column.sum() / tot for column in mask.transpose()]
-                area_cdf  = [sum(fractions[:i+1]) 
+                area_cdf  = [sum(fractions[:i+1])
                              for i in range(len(fractions))]
 
                 # convert the land use fractions into a land use cdf
@@ -1154,10 +1168,10 @@ class CDLExtractor:
                 fractions = [self.landuse[comid][g] for g in self.order]
                 land_cdf = [sum(fractions[:i+1]) for i in range(len(fractions))]
 
-                # use the area cdf to determine the break points for the land 
-                # use patches. note this array does not account for the masking 
-                # of the patch. thus there are n+1 vertical bands. the first 
-                # and last are the "empty" (first in the aggregate file). in 
+                # use the area cdf to determine the break points for the land
+                # use patches. note this array does not account for the masking
+                # of the patch. thus there are n+1 vertical bands. the first
+                # and last are the "empty" (first in the aggregate file). in
                 # between the break points are determined from the area cdf.
 
                 color_array = numpy.zeros(len(mask[0]), dtype = 'uint8')
@@ -1168,10 +1182,10 @@ class CDLExtractor:
                 i = 0
                 for p, n in zip(land_cdf, range(len(self.order))):
 
-                    # move from left to right nuntil the area_cdf exceeds 
+                    # move from left to right nuntil the area_cdf exceeds
                     # the land area cdf
 
-                    while area_cdf[i] <= p: 
+                    while area_cdf[i] <= p:
                         color_array[i] = n
                         if i < len(area_cdf) - 1: i += 1
                         else: break
@@ -1191,19 +1205,19 @@ class CDLExtractor:
             # show the bands
 
             bbox = s.bbox[0], s.bbox[2], s.bbox[1], s.bbox[3]
-            im = subplot.imshow(image_array, extent = bbox, 
-                                origin = 'upper left', 
-                                interpolation = 'nearest', 
+            im = subplot.imshow(image_array, extent = bbox,
+                                origin = 'upper left',
+                                interpolation = 'nearest',
                                 cmap = cmap, norm = norm)
 
-            # adjust the plot bounding box 
+            # adjust the plot bounding box
 
             xmin, xmax = xmin-border * (xmax-xmin), xmax + border * (xmax-xmin)
             ymin, ymax = ymin-border * (ymax-ymin), ymax + border * (ymax-ymin)
 
         else:
 
-            # adjust the plot bounding box 
+            # adjust the plot bounding box
 
             xmin, xmax = xmin-border * (xmax-xmin), xmax + border * (xmax-xmin)
             ymin, ymax = ymin-border * (ymax-ymin), ymax + border * (ymax-ymin)
@@ -1238,14 +1252,14 @@ class CDLExtractor:
                 group = self.groups[v]
                 i = self.order.index(group)
                 zs[numpy.where(zs == v)] = i
-                
+
             # plot the grid
 
             im = subplot.imshow(zs,
                                 interpolation = 'nearest',
                                 origin = 'upper left',
-                                extent = [xmin, xmax, ymin, ymax], 
-                                norm = norm, 
+                                extent = [xmin, xmax, ymin, ymax],
+                                norm = norm,
                                 cmap = cmap,
                                 )
 
@@ -1264,7 +1278,7 @@ class CDLExtractor:
             handles.append(subplot.add_patch(p))
             labels.append(group)
 
-        leg = subplot.legend(handles, labels, bbox_to_anchor = (1.0, 0.5), 
+        leg = subplot.legend(handles, labels, bbox_to_anchor = (1.0, 0.5),
                              loc = 'center left', title = 'Land Use Categories')
         legtext = leg.get_texts()
         pyplot.setp(legtext, fontsize = 10)

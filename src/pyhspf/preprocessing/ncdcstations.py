@@ -29,8 +29,8 @@ class ClimateMetadata:
         self.precip3240stations = {}
         self.nsrdbstations      = {}
 
-    def add_ghcndstation(self, 
-                         filename, 
+    def add_ghcndstation(self,
+                         filename,
                          ghcndstation,
                          ):
         """Adds the metadata for the GHCNDStation class instance."""
@@ -99,15 +99,15 @@ class ClimateMetadata:
             }
 
 class GHCNDStation:
-    """A class to store meteorology data from the Daily Global Historical 
+    """A class to store meteorology data from the Daily Global Historical
     Climatology Network."""
 
-    def __init__(self, 
-                 station, 
-                 name, 
-                 lat, 
-                 lon, 
-                 elev, 
+    def __init__(self,
+                 station,
+                 name,
+                 lat,
+                 lon,
+                 elev,
                  dtype = None,
                  ):
 
@@ -117,7 +117,7 @@ class GHCNDStation:
         self.longitude = lon
         self.elevation = elev
         self.dtype     = dtype
-    
+
         # time series -- lists of datetime.datetime/value pairs
 
         # variable       list    pyhspf type/units           GHCND type/units
@@ -126,17 +126,17 @@ class GHCNDStation:
         self.tmax      =  []   # daily max temperature (C)   TMAX (C/10)
         self.tmin      =  []   # daily min temperature (C)   TMIN (C/10)
         self.snowdepth =  []   # daily snowdepth (mm)        SNWD (mm)
-        self.snowfall  =  []   # daily snowfall (mm)         SNOW (mm) 
+        self.snowfall  =  []   # daily snowfall (mm)         SNOW (mm)
         self.wind      =  []   # daily avg wind speed (m/s)  AWND (m/s/10)
         self.evap      =  []   # pan evaporation (mm)        EVAP (mm/10)
 
-    def download_data(self, 
-                      directory, 
-                      types = 'all', 
-                      start = None, 
+    def download_data(self,
+                      directory,
+                      types = 'all',
+                      start = None,
                       end = None,
                       GHCND = 'ftp://ftp.ncdc.noaa.gov/pub/data/ghcn/daily',
-                      plot = True, 
+                      plot = True,
                       verbose = True,
                       ):
         """Downloads the data for the desired time period from the GHCND."""
@@ -158,12 +158,12 @@ class GHCNDStation:
             r = request.Request(f)
 
             try:
-            
+
                 with io.StringIO(request.urlopen(r).read().decode()) as s:
 
                     # parse it
 
-                    data = [(r[:11], r[11:15], r[15:17], r[17:21], 
+                    data = [(r[:11], r[11:15], r[15:17], r[17:21],
                              r[21:]) for r in s.read().split('\n')]
 
                 for s, year, month, element, values in data:
@@ -178,17 +178,17 @@ class GHCNDStation:
             except:
                 print('warning: unable to download data from ' +
                       '{}/all/{}.dly'.format(GHCND, self.station))
-                
+
         if plot and not os.path.isfile(destination + '.png'):
 
-            try: 
+            try:
                 self.plot_ghcnd(start = start, end = end, output = destination)
             except: print('warning: unable to plot GHCND data')
 
-    def add_monthly(self, 
-                    year, 
-                    month, 
-                    element, 
+    def add_monthly(self,
+                    year,
+                    month,
+                    element,
                     data,
                     ):
         """Adds the monthly data of type "element" to a timeseries."""
@@ -206,16 +206,16 @@ class GHCNDStation:
 
         # split the data up by dates
 
-        dates = [datetime.datetime(int(year), int(month), i) 
+        dates = [datetime.datetime(int(year), int(month), i)
                  for i in range(1, monthrange(int(year), int(month))[1] + 1)]
         values = [int(data[i:i+5]) for i in range(0, 248, 8)]
         qflags = [data[i+6]        for i in range(0, 248, 8)]
 
-        for d, v, q in zip(dates, values, qflags): 
+        for d, v, q in zip(dates, values, qflags):
             if   q != 'X': l.append((d, v / m))
             else:          l.append((d, -9999))
 
-    def get_series(self, 
+    def get_series(self,
                    tstype,
                    ):
         """Private method to return the pointer to the right time series."""
@@ -232,12 +232,12 @@ class GHCNDStation:
             print('options are precipitation, tmax, tmin, snowdepth, snowfall')
             print('wind, or evaporation.\n')
             raise
-            
+
         return events
 
-    def get_total(self, 
-                  tstype, 
-                  start = None, 
+    def get_total(self,
+                  tstype,
+                  start = None,
                   end = None,
                   ):
         """
@@ -250,14 +250,14 @@ class GHCNDStation:
 
         if start is None: start = events[0][0]
         if end is None: end = events[-1][0]
-        
+
         # make sure the function inputs are correct
-        
+
         if start >= end:
             print('start must be less than end')
             return
 
-        if (not isinstance(start, datetime.datetime) or 
+        if (not isinstance(start, datetime.datetime) or
             not isinstance(end, datetime.datetime)):
             print('start and end must be datetime.datetime instances')
             return
@@ -269,7 +269,7 @@ class GHCNDStation:
         i = 0
         while events[i][0] < start: i+=1
 
-        # add all the events 
+        # add all the events
 
         while events[i][0] < end:
             if events[i][1] > 0: total += events[i][1]
@@ -277,12 +277,12 @@ class GHCNDStation:
 
         return total
 
-    def make_timeseries(self, 
-                        tstype, 
-                        start = None, 
+    def make_timeseries(self,
+                        tstype,
+                        start = None,
                         end = None,
                         ):
-        """Constructs a daily time series between times start and end 
+        """Constructs a daily time series between times start and end
         (start and end should be instances of datetime.datetime).
         """
 
@@ -294,7 +294,7 @@ class GHCNDStation:
         if end is None: end = events[-1][0]
 
         # make sure the function inputs are correct
-        
+
         if start >= end:
             print('start must be less than end')
             return
@@ -306,7 +306,7 @@ class GHCNDStation:
 
         # go through time period and fill values as available; nones otherwise
 
-        while t < events[0][0] and t < end:  
+        while t < events[0][0] and t < end:
             series.append(None)
             t += datetime.timedelta(days = 1)
 
@@ -317,7 +317,7 @@ class GHCNDStation:
                 # missing values are -999
 
                 i = dates.index(t)
-                if values[i] > -90: 
+                if values[i] > -90:
                     series.append(values[i])
                 else:
                     series.append(None)
@@ -329,9 +329,9 @@ class GHCNDStation:
         return series
 
     def plot_ghcnd(self,
-                   start = None, 
-                   end = None, 
-                   show = False, 
+                   start = None,
+                   end = None,
+                   show = False,
                    output = None,
                    verbose = True,
                    ):
@@ -341,7 +341,7 @@ class GHCNDStation:
 
         # some error handling
 
-        precipdata = [(t, p) for t, p in self.precip 
+        precipdata = [(t, p) for t, p in self.precip
                       if p >= 0 and start <= t and t <= end]
         tmaxdata = [(t, T) for t, T in self.tmax
                     if -50 < T and start <= t and t <= end]
@@ -354,15 +354,15 @@ class GHCNDStation:
         evapdata = [(t, e) for t, e in self.evap
                     if 0 <= e and start <= t and t <= end]
 
-        if (len(precipdata) == 0 and len(tmaxdata) == 0 and 
-            len(tmindata) == 0   and len(winddata) == 0 and 
-            len(snowdata) == 0   and len(evapdata) == 0): 
+        if (len(precipdata) == 0 and len(tmaxdata) == 0 and
+            len(tmindata) == 0   and len(winddata) == 0 and
+            len(snowdata) == 0   and len(evapdata) == 0):
             return
 
-        if len(precipdata) > 0: 
+        if len(precipdata) > 0:
             times, precip = zip(*precipdata)
         else:
-            times = [start, start + datetime.timedelta(days = 1), 
+            times = [start, start + datetime.timedelta(days = 1),
                      end - datetime.timedelta(days = 1), end]
             precip = [0, None, None, 1]
 
@@ -380,7 +380,7 @@ class GHCNDStation:
         fig, subs = pyplot.subplots(5, 1, sharex = True, figsize = (8, 10))
 
         its = self.name, start, end
-        fig.suptitle('{} Climate Data {:%m-%d-%Y} to {:%m-%d-%Y}'.format(*its), 
+        fig.suptitle('{} Climate Data {:%m-%d-%Y} to {:%m-%d-%Y}'.format(*its),
                      size = 14)
 
         i = 0
@@ -391,49 +391,49 @@ class GHCNDStation:
 
         i = 1
 
-        if len(tmaxdata) > 0: 
+        if len(tmaxdata) > 0:
             times, temp = zip(*tmaxdata)
         else:
-            times = [start, start + datetime.timedelta(days = 1), 
+            times = [start, start + datetime.timedelta(days = 1),
                      end - datetime.timedelta(days = 1), end]
             temp = [0, None, None, 1]
 
-        subs[i].plot_date(times, temp, fmt = '-', color = 'red', lw = 0.5, 
+        subs[i].plot_date(times, temp, fmt = '-', color = 'red', lw = 0.5,
                           label = 'max temperature')
 
-        if len(tmindata) > 0: 
+        if len(tmindata) > 0:
             times, temp = zip(*tmindata)
         else:
-            times = [start, start + datetime.timedelta(days = 1), 
+            times = [start, start + datetime.timedelta(days = 1),
                      end - datetime.timedelta(days = 1), end]
             temp = [0, None, None, 1]
 
-        subs[i].plot_date(times, temp, fmt = '-', color = 'blue', lw = 0.5, 
+        subs[i].plot_date(times, temp, fmt = '-', color = 'blue', lw = 0.5,
                           label = 'min temperature')
         subs[i].set_ylabel('Temperature (\u00B0C)', color = 'red')
 
         i = 2
-    
-        if len(winddata) > 0: 
+
+        if len(winddata) > 0:
             times, wind = zip(*winddata)
         else:
-            times = [start, start + datetime.timedelta(days = 1), 
+            times = [start, start + datetime.timedelta(days = 1),
                      end - datetime.timedelta(days = 1), end]
             wind = [0, None, None, 1]
 
-        subs[i].plot_date(times, wind, fmt = '-', color = 'purple', lw = 0.5, 
+        subs[i].plot_date(times, wind, fmt = '-', color = 'purple', lw = 0.5,
                           label = 'wind')
         subs[i].set_ylabel('Wind Speed (m/s)', color = 'purple')
 
         i = 3
-    
-        if len(snowdata) > 0: 
+
+        if len(snowdata) > 0:
             times, snow = zip(*snowdata)
         else:
-            times = [start, start + datetime.timedelta(days = 1), 
+            times = [start, start + datetime.timedelta(days = 1),
                      end - datetime.timedelta(days = 1), end]
             snow = [0, None, None, 1]
-        subs[i].plot_date(times, snow, color = 'gray', lw = 0.5, fmt = '-', 
+        subs[i].plot_date(times, snow, color = 'gray', lw = 0.5, fmt = '-',
                           label = 'snowdepth')
 
         subs[i].set_ylabel('Snow Depth (mm)', color = 'gray')
@@ -443,10 +443,10 @@ class GHCNDStation:
         if len(evapdata) > 0:
             times, evap = zip(*evapdata)
         else:
-            times = [start, start + datetime.timedelta(days = 1), 
+            times = [start, start + datetime.timedelta(days = 1),
                      end - datetime.timedelta(days = 1), end]
             evap = [0, None, None, 1]
-        subs[i].plot_date(times, evap, label = 'evaporation', color = 'green', 
+        subs[i].plot_date(times, evap, label = 'evaporation', color = 'green',
                           fmt = '-')
 
         subs[i].set_ylabel('Pan Evaporation (mm)', color = 'green')
@@ -462,17 +462,17 @@ class GHCNDStation:
         pyplot.close()
 
 class GSODStation:
-    """A class to store meteorology data from the Global Summary of the Day 
+    """A class to store meteorology data from the Global Summary of the Day
     Network."""
 
-    def __init__(self, 
-                 airforce, 
-                 wban, 
-                 name, 
-                 latitude, 
-                 longitude, 
-                 elevation, 
-                 start, 
+    def __init__(self,
+                 airforce,
+                 wban,
+                 name,
+                 latitude,
+                 longitude,
+                 elevation,
+                 start,
                  end,
                  ):
         """info from the NCDC GSOD database."""
@@ -497,13 +497,13 @@ class GSODStation:
 
     def is_integer(self, s):
         """Tests if string "s" is an integer."""
-        try: int(s) 
+        try: int(s)
         except ValueError: return False
         return True
 
     def is_number(self, s):
         """Tests if string "s" is a number."""
-        try: float(s) 
+        try: float(s)
         except ValueError: return False
         return True
 
@@ -512,15 +512,15 @@ class GSODStation:
 
         return 5 / 9 * (T - 32)
 
-    def download_data(self, 
-                      directory, 
-                      start = None, 
-                      end = None, 
+    def download_data(self,
+                      directory,
+                      start = None,
+                      end = None,
                       plot = True,
                       GSOD = 'ftp://ftp.ncdc.noaa.gov/pub/data/gsod',
                       verbose = False,
                       ):
-        """Dowloads the GSOD data and saves this instance to the directory 
+        """Dowloads the GSOD data and saves this instance to the directory
         provided and (optionally) plots it."""
 
         # figure out what files are available and needed
@@ -531,7 +531,7 @@ class GSODStation:
 
         else:
 
-            if self.start is not None: 
+            if self.start is not None:
 
                 # figure out the start date
 
@@ -543,7 +543,7 @@ class GSODStation:
             if self.end is not None:
                 if end is not None:
                     end = min(end, self.end)
-                else:            
+                else:
                     end = self.end
 
             if start < end:
@@ -561,7 +561,7 @@ class GSODStation:
             var = self.name, start.year, end.year
             print('attempting to download data for ' +
                   '{} from {} to {}'.format(*var))
-            
+
             # data are stored by year and then station
 
             for year in years:
@@ -569,7 +569,7 @@ class GSODStation:
                 var = GSOD, year, self.airforce, self.wban
                 url = '{0}/{1:04d}/{2:06d}-{3:05d}-{1:04d}.op.gz'.format(*var)
                 if verbose: print('attempting to download data from', url)
-            
+
                 try:
                     r = request.Request(url)
 
@@ -578,7 +578,7 @@ class GSODStation:
                     with io.BytesIO(request.urlopen(r).read()) as b:
 
                         # create a gGzipFile to work with the binary string
-               
+
                         with gzip.GzipFile(fileobj = b, mode = 'rb') as zf:
 
                             # read and decode the binary
@@ -586,15 +586,15 @@ class GSODStation:
                             lines = zf.read().decode().split('\n')
 
                     if len(lines) > 0:
-                        
-                        # parse the lines in the file and pull out the 
+
+                        # parse the lines in the file and pull out the
                         # relevant data (date, pressure, max temp, min temp,
                         # dewpoint, wind speed)
 
                         for l in lines[1:]:
 
-                            try: 
-                                (s, w, d, T, h, D, h, slp, h, stp, h, v, h, W, 
+                            try:
+                                (s, w, d, T, h, D, h, slp, h, stp, h, v, h, W,
                                  h, m, g, Tmax, Tmin, P, s, f) = l.split()
                                 self.add_daily(d, P, Tmax, Tmin, D, W)
                             except: pass
@@ -603,7 +603,7 @@ class GSODStation:
 
                     print('unable to download data from', url)
                     print('listed record:', self.start, self.end)
-        
+
             self.precip.sort()
             self.tmax.sort()
             self.tmin.sort()
@@ -611,13 +611,13 @@ class GSODStation:
             self.dewpoint.sort()
 
             with open(destination, 'wb') as f: pickle.dump(self, f)
-                    
-    def add_daily(self, 
-                  d, 
-                  prec, 
-                  tmax, 
-                  tmin, 
-                  dewt, 
+
+    def add_daily(self,
+                  d,
+                  prec,
+                  tmax,
+                  tmin,
+                  dewt,
                   wind,
                   ):
         """Adds daily observations of precipitation, max temperature, min
@@ -648,13 +648,13 @@ class GSODStation:
             if float(wind) < 99:
                 self.wind.append((date, float(wind) * 0.5144))
 
-    def make_timeseries(self, 
-                        tstype, 
-                        start = None, 
-                        end = None, 
+    def make_timeseries(self,
+                        tstype,
+                        start = None,
+                        end = None,
                         verbose = True,
                         ):
-        """Constructs time series of type "tstype" between times start and end 
+        """Constructs time series of type "tstype" between times start and end
         (start and end are instances of datetime.datetime)."""
 
         if   tstype == 'dewpoint':      timeseries = self.dewpoint
@@ -668,20 +668,20 @@ class GSODStation:
             print('options are dewpoint, tmax, tmin, wind, or precipitation\n')
             raise
 
-        if len(timeseries) == 0: 
+        if len(timeseries) == 0:
             print('warning: station contains no point data')
             return
-        
+
         if start is None: start = timeseries[0][0]
         if end is None: end = timeseries[-1][0]
 
         # make sure the function inputs are correct
-        
+
         if start >= end:
             print('start must be less than end')
             return None
 
-        if (not isinstance(start, datetime.datetime) or 
+        if (not isinstance(start, datetime.datetime) or
             not isinstance(end, datetime.datetime)):
             print('start and end must be datetime.datetime instances')
             raise
@@ -689,20 +689,20 @@ class GSODStation:
         if start < timeseries[0][0] and timeseries[-1][0] < end:
             if verbose:
                 print('warning: specified range ' +
-                      '({} to {}) is outside of '.format(start, end) + 
+                      '({} to {}) is outside of '.format(start, end) +
                       'available {} data'.format(tstype))
 
         data = []
 
-        dates = [start + i * datetime.timedelta(days = 1) 
+        dates = [start + i * datetime.timedelta(days = 1)
                  for i in range(int((end - start).total_seconds() / 86400))]
 
         ts_dates, values = zip(*timeseries)
-       
+
         for date in dates:
             if date in ts_dates:
                 data.append(values[ts_dates.index(date)])
-            else: 
+            else:
                 data.append(None)
 
         if len(data) == 0:
@@ -711,10 +711,10 @@ class GSODStation:
 
         return data
 
-    def plot(self, 
-             start = None, 
-             end = None, 
-             output = None, 
+    def plot(self,
+             start = None,
+             end = None,
+             output = None,
              show = False,
              verbose = True,
              ):
@@ -733,7 +733,7 @@ class GSODStation:
 
         # some error handling
 
-        precipdata = [(t, p) for t, p in self.precip 
+        precipdata = [(t, p) for t, p in self.precip
                       if p >= 0 and start <= t and t <= end]
         tmaxdata = [(t, T) for t, T in self.tmax
                     if -50 < T and start <= t and t <= end]
@@ -749,69 +749,69 @@ class GSODStation:
         fig, subs = pyplot.subplots(3, 1, sharex = True, figsize = (8, 8))
 
         var = self.name, start, end
-        fig.suptitle('{} Climate Data {:%m-%d-%Y} to {:%m-%d-%Y}'.format(*var), 
+        fig.suptitle('{} Climate Data {:%m-%d-%Y} to {:%m-%d-%Y}'.format(*var),
                      size = 14)
 
         i = 0
 
-        if len(precipdata) > 0: 
+        if len(precipdata) > 0:
             times, precip = zip(*precipdata)
         else:
-            times = [start, start + datetime.timedelta(days = 1), 
+            times = [start, start + datetime.timedelta(days = 1),
                      end - datetime.timedelta(days = 1), end]
             precip = [0, None, None, 1]
 
-        subs[i].plot_date(times, precip, fmt = '-', color = 'cyan', lw = 0.5, 
+        subs[i].plot_date(times, precip, fmt = '-', color = 'cyan', lw = 0.5,
                           label = 'precipitation')
 
         subs[i].set_ylabel('Precipitation (mm)', color = 'cyan')
 
         i = 1
 
-        if len(tmaxdata) > 0: 
+        if len(tmaxdata) > 0:
             times, temp = zip(*tmaxdata)
         else:
-            times = [start, start + datetime.timedelta(days = 1), 
+            times = [start, start + datetime.timedelta(days = 1),
                      end - datetime.timedelta(days = 1), end]
             temp = [0, None, None, 1]
 
-        subs[i].plot_date(times, temp, fmt = '-', color = 'red', lw = 0.5, 
+        subs[i].plot_date(times, temp, fmt = '-', color = 'red', lw = 0.5,
                           label = 'max temperature')
 
-        if len(tmindata) > 0: 
+        if len(tmindata) > 0:
             times, temp = zip(*tmindata)
         else:
-            times = [start, start + datetime.timedelta(days = 1), 
+            times = [start, start + datetime.timedelta(days = 1),
                      end - datetime.timedelta(days = 1), end]
             temp = [0, None, None, 1]
 
-        subs[i].plot_date(times, temp, fmt = '-', color = 'blue', lw = 0.5, 
+        subs[i].plot_date(times, temp, fmt = '-', color = 'blue', lw = 0.5,
                           label = 'min temperature')
         subs[i].set_ylabel('Temperature (\u00B0C)', color = 'red')
 
-        if len(dewtdata) > 0: 
+        if len(dewtdata) > 0:
             times, temp = zip(*dewtdata)
         else:
-            times = [start, start + datetime.timedelta(days = 1), 
+            times = [start, start + datetime.timedelta(days = 1),
                      end - datetime.timedelta(days = 1), end]
             temp = [0, None, None, 1]
 
-        subs[i].plot_date(times, temp, fmt = '-', color = 'green', lw = 0.5, 
+        subs[i].plot_date(times, temp, fmt = '-', color = 'green', lw = 0.5,
                           label = 'dewpoint')
         subs[i].set_ylabel('Temperature (\u00B0C)', color = 'red')
 
         subs[i].legend(fontsize = 10, loc = 'lower left')
 
         i = 2
-    
-        if len(winddata) > 0: 
+
+        if len(winddata) > 0:
             times, wind = zip(*winddata)
         else:
-            times = [start, start + datetime.timedelta(days = 1), 
+            times = [start, start + datetime.timedelta(days = 1),
                      end - datetime.timedelta(days = 1), end]
             wind = [0, None, None, 1]
 
-        subs[i].plot_date(times, wind, fmt = '-', color = 'purple', lw = 0.5, 
+        subs[i].plot_date(times, wind, fmt = '-', color = 'purple', lw = 0.5,
                           label = 'wind')
         subs[i].set_ylabel('Wind Speed (m/s)', color = 'purple')
 
@@ -826,14 +826,14 @@ class Precip3240Station:
     """A class to store meteorology data from the NCDC Hourly Precipitation
     Dataset."""
 
-    def __init__(self, 
-                 coop, 
-                 wban, 
-                 desc, 
-                 lat, 
-                 lon, 
-                 elev, 
-                 st, 
+    def __init__(self,
+                 coop,
+                 wban,
+                 desc,
+                 lat,
+                 lon,
+                 elev,
+                 st,
                  code,
                  NCDC = 'ftp://ftp.ncdc.noaa.gov/pub/data',
                  ):
@@ -846,7 +846,7 @@ class Precip3240Station:
         self.elevation   = elev
         self.state       = st
         self.code        = code
-        
+
         # ftp location for the NCDC data
 
         self.NCDC = NCDC
@@ -858,16 +858,16 @@ class Precip3240Station:
     def is_integer(self, s):
         """Tests if string "s" is an integer."""
 
-        try: int(s) 
+        try: int(s)
         except ValueError: return False
         return True
 
-    def import_tar(self, 
-                   f, 
+    def import_tar(self,
+                   f,
                    verbose = True,
                    ):
         """Imports the hourly precipitation events in the tarfile "f." """
-        
+
         with tarfile.open(f, mode= 'r') as tar:
 
             # find all the files in the archive for the station
@@ -879,7 +879,7 @@ class Precip3240Station:
 
             for member in members:
 
-                if verbose: 
+                if verbose:
                     print('importing precipitation data from ' +
                           '{}'.format(member.name))
 
@@ -888,7 +888,7 @@ class Precip3240Station:
                 b = tar.extractfile(member).read()
                 data = [(l[17:21], l[21:23], l[23:27], l[30:])
                         for l in b.decode().split('\n')
-                        if all([self.is_integer(v) for v in 
+                        if all([self.is_integer(v) for v in
                                 [l[17:21], l[21:23], l[23:27]]])]
 
                 # read all the hourly events into a list
@@ -898,7 +898,7 @@ class Precip3240Station:
                 # iterate through the dates in the file and get the
                 # hourly observations (year, month, day, hourly data)
 
-                for y, m, d, h in data: 
+                for y, m, d, h in data:
 
                     # put the data into more useful form
 
@@ -913,7 +913,7 @@ class Precip3240Station:
                                 events.append([t, v, 'I', h[i+11]])
 
                             elif h[i:i+2] != '25' and self.is_integer(h[i:i+2]):
-                                hour = int(h[i:i+2]) 
+                                hour = int(h[i:i+2])
                                 t = date + datetime.timedelta(hours = hour)
                                 if self.is_integer(h[i+5:i+10]):
                                     v = int(h[i+5:i+10]) / 100
@@ -931,10 +931,10 @@ class Precip3240Station:
 
                 self.events += events
 
-    def import_data(self, 
-                    directory, 
-                    start, 
-                    end, 
+    def import_data(self,
+                    directory,
+                    start,
+                    end,
                     verbose = True,
                     ):
         """Downloads the data for the desired time period from the NCDC."""
@@ -943,12 +943,12 @@ class Precip3240Station:
             print('\nerror: directory "{}" does not exist\n'.format(directory))
             raise
 
-        if verbose: 
+        if verbose:
             print('attempting to import data for {}'.format(self.coop))
 
         # find and sort all the tarfiles in the directory
 
-        tars = ['{}/{}'.format(directory, f) for f in os.listdir(directory) 
+        tars = ['{}/{}'.format(directory, f) for f in os.listdir(directory)
                 if f[-3:] == 'tar' and f[5:7] == '{}'.format(self.code)]
         tars.sort()
 
@@ -962,10 +962,10 @@ class Precip3240Station:
 
                 # import the archive
 
-                try: 
+                try:
                     self.import_tar(f)
 
-                except: 
+                except:
                     print('failed to import data from {}'.format(f))
                     raise
 
@@ -986,8 +986,8 @@ class Precip3240Station:
             raise
 
         if verbose:
- 
-            print('downloading hourly precipitation data for state ' + 
+
+            print('downloading hourly precipitation data for state ' +
                   '{}\n'.format(self.code))
 
         # figure out which files are on the website
@@ -1003,10 +1003,10 @@ class Precip3240Station:
             with io.StringIO(request.urlopen(req).read().decode()) as s:
 
                 archives = [a[-17:] for a in s.read().split('.tar.Z')]
-            
+
             archives = [a for a in archives if self.is_integer(a[-4:])]
 
-        except: 
+        except:
 
             print('unable to connect to the hourly precipitation database')
             print('make sure that you are online')
@@ -1021,14 +1021,14 @@ class Precip3240Station:
 
                 if verbose: print(url)
 
-                try: 
+                try:
 
                     req = request.Request(url)
 
                     # write the compressed archive into the directory
 
-                    with open(compressed, 'wb') as f: 
-                    
+                    with open(compressed, 'wb') as f:
+
                         f.write(request.urlopen(req).read())
 
                 except:
@@ -1036,30 +1036,30 @@ class Precip3240Station:
                     print('error: unable to connect to {}'.format(url))
                     raise
 
-    def decompress7z(self, 
-                     filename, 
+    def decompress7z(self,
+                     filename,
                      directory,
                      path_to_7z = r'C:/Program Files/7-Zip/7z.exe',
                      ):
         """Decompresses a Unix-compressed archive on Windows using 7zip."""
-        
+
         c = '{0} e {1} -y -o{2}'.format(path_to_7z, filename, directory)
 
         subprocess.call(c)
 
-    def decompresszcat(self, 
-                       filename, 
+    def decompresszcat(self,
+                       filename,
                        directory,
                        ):
         """Decompresses a Unix-compressed archive on Windows using 7zip."""
 
-        with subprocess.Popen(['zcat', filename], 
+        with subprocess.Popen(['zcat', filename],
                               stdout = subprocess.PIPE).stdout as s:
 
             with open(filename[:-2], 'wb') as f: f.write(s.read())
 
-    def decompress(self, 
-                   filepath, 
+    def decompress(self,
+                   filepath,
                    directory,
                    ):
         """Calls 7zip to decompress the files."""
@@ -1073,15 +1073,15 @@ class Precip3240Station:
         else:
             self.decompresszcat(filepath, directory)
 
-    def check_filenames(self, 
-                        directory, 
-                        start, 
+    def check_filenames(self,
+                        directory,
+                        start,
                         end,
                         ):
         """returns the names of the downloaded files for the state.
-        files are grouped by state and with all years prior to 1999 in one 
-        file and each year up to 2011 in individual files; after that the 
-        data are grouped by month (so data from 2012 - present cannot be 
+        files are grouped by state and with all years prior to 1999 in one
+        file and each year up to 2011 in individual files; after that the
+        data are grouped by month (so data from 2012 - present cannot be
         downloaded)
         """
 
@@ -1099,7 +1099,7 @@ class Precip3240Station:
 
             if (start <= datetime.datetime(year, 1, 1) and
                 datetime.datetime(year, 1, 1) < end):
-                
+
                 years.append(year)
 
         # make a list of the last 8 characters in the file string to check
@@ -1113,12 +1113,12 @@ class Precip3240Station:
         # check if any of the needed files do not exist
 
         return any([f not in existing for f in needed])
-                        
-    def download_data(self, 
-                      directory, 
-                      start, 
-                      end, 
-                      clean = False, 
+
+    def download_data(self,
+                      directory,
+                      start,
+                      end,
+                      clean = False,
                       plot = True,
                       path_to_7z = r'C:/Program Files/7-Zip/7z.exe',
                       ):
@@ -1152,7 +1152,7 @@ class Precip3240Station:
             # decompress the archives
 
             for a in os.listdir(precip3240):
-                if a[-6:] == '.tar.Z': 
+                if a[-6:] == '.tar.Z':
                     p = '{}/{}'.format(precip3240, a)
 
                     self.decompress(p, precip3240)
@@ -1164,7 +1164,7 @@ class Precip3240Station:
         # save the results to this destination
 
         destination = '{}/{}'.format(directory, self.coop)
-        if (plot and not os.path.isfile(destination + '.png') and 
+        if (plot and not os.path.isfile(destination + '.png') and
             len(self.events) > 0):
 
             try: self.plot(start = start, end = end, output = destination)
@@ -1173,7 +1173,7 @@ class Precip3240Station:
         # save the import
 
         if len(self.events) > 0:
-            
+
             with open(destination, 'wb') as f: pickle.dump(self, f)
 
         else:
@@ -1184,15 +1184,15 @@ class Precip3240Station:
 
         if clean: shutil.rmtree('{}/precip3240'.format(directory))
 
-    def make_timeseries(self, 
+    def make_timeseries(self,
                         tstype = 'precip',
-                        start = None, 
-                        end = None, 
+                        start = None,
+                        end = None,
                         tstep = 'hourly',
                         ):
         """Makes a timeseries from the events."""
 
-        if len(self.events) == 0: 
+        if len(self.events) == 0:
             print('warning: station has no data')
             return
 
@@ -1201,20 +1201,21 @@ class Precip3240Station:
 
         # make sure the function inputs are correct
 
-        if (not isinstance(start, datetime.datetime) or 
+        if (not isinstance(start, datetime.datetime) or
             not isinstance(end, datetime.datetime)):
             print('start and end must be datetime.datetime instances')
             raise
-        
+
         if start >= end:
             print('start date must be less than end date')
             raise
 
         if start < self.events[0][0] or self.events[-1][0] < end:
-            print('warning: specified range ' +
-                  '({} to {}) is outside of '.format(start, end) + 
-                  'available gage data range ' +
-                  '({} to {})\n'.format(self.events[0][0], self.events[-1][0]))
+            if verbose:
+                print('warning: specified range ' +
+                      '({} to {}) is outside of '.format(start, end) +
+                      'available gage data range ' +
+                      '({} to {})\n'.format(self.events[0][0], self.events[-1][0]))
 
         # if there is no overlap don't bother anything
 
@@ -1238,17 +1239,17 @@ class Precip3240Station:
         i = 0
         while self.events[i][0] < start: i+=1
 
-        # fill in Nones until reaching the first event if it is later than 
+        # fill in Nones until reaching the first event if it is later than
         # the start date, otherwise use zeros
 
         t = start
         while t < self.events[i][0] and t < end:
-            if self.events[0][0] > start: 
+            if self.events[0][0] > start:
                 series.append(None)
-            else: 
+            else:
                 series.append(0.)
             t += datetime.timedelta(hours = 1)
-        
+
         # iterate through to the end
 
         while t < end and t < self.events[-1][0]:
@@ -1256,7 +1257,7 @@ class Precip3240Station:
             # append zeros until reaching an event
 
             while t < self.events[i][0] and t < end:
-                series.append(0.)            
+                series.append(0.)
                 t += datetime.timedelta(hours = 1)
 
             # collect as normal
@@ -1275,14 +1276,14 @@ class Precip3240Station:
                 j = i
                 while self.events[j][2] != 'A': j+=1
 
-                hours = ((self.events[j][0] - 
+                hours = ((self.events[j][0] -
                           self.events[i][0]).total_seconds() / 3600)
 
                 # work around--sometimes missing data are listed as accumulation
 
                 if self.events[j][1] < 999:
                     hourly = self.events[j][1] / hours
-                else: 
+                else:
                     hourly = None
 
                 i = j
@@ -1320,9 +1321,9 @@ class Precip3240Station:
                     while t < self.events[i+1][0] and t < end:
                         series.append(None)
                         t += datetime.timedelta(hours = 1)
-                
-            elif self.events[i][1] > 999: 
-                
+
+            elif self.events[i][1] > 999:
+
                 series.append(None)
                 t += datetime.timedelta(hours = 1)
 
@@ -1333,45 +1334,45 @@ class Precip3240Station:
             i += 1
 
         while t < end:
-            series.append(0.)            
+            series.append(0.)
             t += datetime.timedelta(hours = 1)
 
         if   tstep == 'hourly': return series
-        elif tstep == 'daily':  
-            series = [sum([s for s in series[i:i+24] if s is not None]) 
+        elif tstep == 'daily':
+            series = [sum([s for s in series[i:i+24] if s is not None])
                       for i in range(0, len(series), 24)]
             return series
-        else: 
+        else:
             print('warning, unknown time step specified')
             return
 
     def pct_missing(self,
-                    start = None, 
+                    start = None,
                     end = None,
                     ):
         """Determines the percentage of missing data across the specified
         period."""
 
-        precip = self.make_timeseries(start = start, end = end) 
+        precip = self.make_timeseries(start = start, end = end)
 
         return len([p for p in precip if p is None]) / len(precip)
 
-    def total_precipitation(self, 
-                            start = None, 
+    def total_precipitation(self,
+                            start = None,
                             end = None,
                             ):
         """Determines the total precipitation across the time period."""
 
-        precip = self.make_timeseries(start = start, end = end) 
+        precip = self.make_timeseries(start = start, end = end)
 
         return sum([p for p in precip if p is not None])
 
-    def plot(self, 
-             start = None, 
-             end = None, 
-             tstep = 'daily', 
-             show = False, 
-             output = None, 
+    def plot(self,
+             start = None,
+             end = None,
+             tstep = 'daily',
+             show = False,
+             output = None,
              verbose = True,
              ):
         """Generates a series of subplots of the time series of precipitation
@@ -1392,7 +1393,7 @@ class Precip3240Station:
         sub = fig.add_subplot(111)
 
         v = self.coop, self.desc
-        f = sub.set_title('Coop Station {}: {} Precipitation Data'.format(*v), 
+        f = sub.set_title('Coop Station {}: {} Precipitation Data'.format(*v),
                           size = 14)
 
         pct = self.pct_missing(start = start, end = end)
@@ -1400,7 +1401,7 @@ class Precip3240Station:
 
         avg = tot / (end - start).days * 365.25
 
-        precip = self.make_timeseries(start = start, end = end) 
+        precip = self.make_timeseries(start = start, end = end)
 
         times  = [start + i * datetime.timedelta(hours = 1)
                   for i in range((end-start).days * 24)]
@@ -1409,14 +1410,14 @@ class Precip3240Station:
             nones  = [-1 if p[1] is None else 0 for p in ts]
             precip = [p if p is not None else 0 for p in precip]
             l = 'hr'
-                
+
         elif tstep == 'daily':
-            nones  = [-1 if all([p is None for p in precip[i:i+24]]) else 0 
+            nones  = [-1 if all([p is None for p in precip[i:i+24]]) else 0
                        for i in range(0, len(precip), 24)]
             precip = [p if p is not None else 0 for p in precip]
-            precip = [sum([p for p in precip[i:i+24]]) 
+            precip = [sum([p for p in precip[i:i+24]])
                       for i in range(0, len(precip), 24)]
-            times = [start + i * datetime.timedelta(hours = 24) 
+            times = [start + i * datetime.timedelta(hours = 24)
                      for i in range(len(precip))]
             l = 'd'
 
@@ -1434,7 +1435,7 @@ class Precip3240Station:
         sub.set_ylabel('Prec (in)')
         sub.xaxis.set_major_locator(dates.YearLocator(3))
         sub.yaxis.set_major_locator(ticker.MaxNLocator(4))
-        sub.text(0.98, 0.95, t, ha = 'right', va = 'top', size = 10, 
+        sub.text(0.98, 0.95, t, ha = 'right', va = 'top', size = 10,
                  transform = sub.transAxes)
 
         sub.set_xlabel('Date')
@@ -1451,14 +1452,14 @@ class NSRDBStation:
     """A class to store and retrieve data from the National Solar
     Radiation Database."""
 
-    def __init__(self, 
-                 usaf, 
-                 wban, 
-                 cl, 
-                 mflag, 
-                 station, 
-                 lat, 
-                 lon, 
+    def __init__(self,
+                 usaf,
+                 wban,
+                 cl,
+                 mflag,
+                 station,
+                 lat,
+                 lon,
                  elev,
                  ):
 
@@ -1478,18 +1479,19 @@ class NSRDBStation:
         self.observed = []  # Measured (W/m2)
         self.legacy   = []  # Legacy data (may not exist)
 
-    def is_integer(self, 
+    def is_integer(self,
                    s,
                    ):
         """Tests if string "s" is an integer."""
-        try: int(s) 
+        try: int(s)
         except ValueError: return False
         return True
 
-    def download_data(self, 
-                      destination, 
+    def download_data(self,
+                      destination,
                       dates = None,
                       NSRDB = 'http://rredc.nrel.gov/solar/old_data/nsrdb',
+                      headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.81 Safari/537.36'}
                       ):
         """Downloads the data and pickles it to the destination directory."""
 
@@ -1509,26 +1511,23 @@ class NSRDBStation:
             url = '{}/1991-2010/targzs/{}.tar.gz'.format(NSRDB, self.usaf)
 
             # get the data and download it to a file-like bytes object in memory
-
-            req = request.Request(url)
-
+            req = request.Request(url, headers=headers)
             with io.BytesIO(request.urlopen(req).read()) as b:
-
                 # use the tarfile module to read the archive in memory
 
-                with tarfile.open(fileobj = b, mode = 'r:gz') as t:
+                with tarfile.open(fileobj = b,mode='r:gz') as t:
 
                     for m in t.getmembers():
 
-                        if m.isfile(): 
+                        if m.isfile():
                             year = int(m.name[14:18])
-                        else:          
+                        else:
                             year = 0
 
-                        if dates is None: 
+                        if dates is None:
                             collect = True
                         else:
-                            collect = (dates[0].year <= year and 
+                            collect = (dates[0].year <= year and
                                        year <= dates[1].year)
 
                         # if the year is in the desired period, collect it
@@ -1542,18 +1541,18 @@ class NSRDBStation:
                             suny = [int(row[6])  for row in data[1:]]
                             mets = [int(row[15]) for row in data[1:]]
                             meas = [int(row[27]) for row in data[1:]]
-                    
-                            times = [datetime.datetime(year, 1, 1) + 
-                                     datetime.timedelta(hours = 1) * i 
+
+                            times = [datetime.datetime(year, 1, 1) +
+                                     datetime.timedelta(hours = 1) * i
                                      for i in range(len(suny))]
 
-                            if any([s > 0 for s in suny]): 
+                            if any([s > 0 for s in suny]):
                                 self.suny += [s for s in zip(times, suny)]
 
-                            if any([s > 0 for s in mets]): 
+                            if any([s > 0 for s in mets]):
                                 self.metstat += [s for s in zip(times, mets)]
 
-                            if any([s > 0 for s in meas]): 
+                            if any([s > 0 for s in meas]):
                                 self.observed += [s for s in zip(times, meas)]
 
         if old and self.wban is not None:
@@ -1567,24 +1566,24 @@ class NSRDBStation:
 
             # get the data and download it to a file-like object in memory
 
-            req = request.Request(url)
+            req = request.Request(url,headers=headers)
 
             with io.BytesIO(request.urlopen(req).read()) as b:
 
                 # use the tarfile module to read the archive in memory
 
-                with tarfile.open(fileobj = b, mode = 'r:gz') as t:
+                with tarfile.open(fileobj = b,mode='r:gz') as t:
 
                     for m in t.getmembers():
 
-                        if m.isfile(): 
+                        if m.isfile():
                             year = int('19{}'.format(m.name[6:8]))
                         else:          year = 0
 
-                        if dates is None: 
+                        if dates is None:
                             collect = True
                         else:
-                            collect = (dates[0].year <= year and 
+                            collect = (dates[0].year <= year and
                                        year <= dates[1].year)
 
                         # if the year is in the desired period, collect it
@@ -1601,8 +1600,8 @@ class NSRDBStation:
                             legacy = [int(row[0]) for row in d[1:]
                                       if self.is_integer(row[0])]
 
-                            times = [datetime.datetime(year, 1, 1) + 
-                                     datetime.timedelta(hours = 1) * i 
+                            times = [datetime.datetime(year, 1, 1) +
+                                     datetime.timedelta(hours = 1) * i
                                      for i in range(len(legacy))]
 
                             self.legacy += [s for s in zip(times, legacy)]
@@ -1610,19 +1609,19 @@ class NSRDBStation:
                             # work around for last value (for some reason 9999)
 
                             last = datetime.datetime(1990, 12, 31, 23)
-                            if self.legacy[-1][0] == last: 
+                            if self.legacy[-1][0] == last:
                                 print('replacing the last value')
                                 self.legacy[-1] = (last, 0)
 
         # dump the info to the destination
 
-        with open('{}/{}'.format(destination, self.usaf), 'wb') as f: 
+        with open('{}/{}'.format(destination, self.usaf), 'wb') as f:
             pickle.dump(self, f)
 
-    def aggregate_daily_monthly(self, 
-                                daily, 
-                                start, 
-                                end, 
+    def aggregate_daily_monthly(self,
+                                daily,
+                                start,
+                                end,
                                 option = 'average',
                                 ):
         """Aggregates a daily timeseries into a monthly one."""
@@ -1661,8 +1660,8 @@ class NSRDBStation:
 
         # change from total to average if needed
 
-        if option == 'average': 
-        
+        if option == 'average':
+
             for i in range(len(months)):
 
                 # get the number of days in the last month
@@ -1673,7 +1672,7 @@ class NSRDBStation:
 
                 if monthly[i] is not None:
                     monthly[i] = monthly[i] / ndays
-                else: 
+                else:
                     monthly[i] = None
 
         elif option != 'total':
@@ -1685,9 +1684,9 @@ class NSRDBStation:
 
     def make_timeseries(self,
                         dataset = 'metstat',
-                        start = None, 
-                        end = None, 
-                        tstep = 'hourly', 
+                        start = None,
+                        end = None,
+                        tstep = 'hourly',
                         option = 'average',
                         verbose = False,
                         ):
@@ -1703,12 +1702,12 @@ class NSRDBStation:
         if end is None:   end = self.solar[-1][0]
 
         # make sure the function inputs are correct
-        
+
         if start >= end:
             print('error: start must be less than end\n')
             raise
 
-        if (not isinstance(start, datetime.datetime) or 
+        if (not isinstance(start, datetime.datetime) or
             not isinstance(end, datetime.datetime)):
             print('start and end must be datetime.datetime instances')
             raise
@@ -1716,15 +1715,17 @@ class NSRDBStation:
         # check if data are available for the period
 
         if len(self.solar) == 0:
-            print('warning: specified range ({} to {}) '.format(start, end) + 
-                  'is outside of available station data')
+            if verbose:
+                print('warning: specified range ({} to {}) '.format(start, end) +
+                      'is outside of available station data')
             hourly = [None for i in range((end-start).days * 24)]
 
         else:
 
             if start < self.solar[0][0] or self.solar[-1][0] < end:
-                print('warning: specified range ({} to {}) '.format(start, end)
-                      + 'is outside of available station data')
+                if verbose:
+                    print('warning: specified range ({} to {}) '.format(start, end)
+                          + 'is outside of available station data')
 
             hourly = []
 
@@ -1737,7 +1738,7 @@ class NSRDBStation:
 
             t = start
             while t < self.solar[i][0] and t < end:
-                hourly.append(None)            
+                hourly.append(None)
                 t += datetime.timedelta(hours = 1)
 
             # iterate through to the end
@@ -1747,7 +1748,7 @@ class NSRDBStation:
                 # append zeros until reaching an event
 
                 while t < self.solar[i][0] and t < end:
-                    hourly.append(0.)            
+                    hourly.append(0.)
                     t += datetime.timedelta(hours = 1)
 
                 # collect as normal
@@ -1761,12 +1762,12 @@ class NSRDBStation:
             # collect to the end if data aren't present
 
             while t < end:
-                hourly.append(None)   
+                hourly.append(None)
                 t += datetime.timedelta(hours = 1)
 
         if   tstep == 'hourly': return hourly
 
-        elif tstep == 'daily':  
+        elif tstep == 'daily':
 
             # do a simple aggregation of every 24 hours
 
@@ -1782,9 +1783,9 @@ class NSRDBStation:
             series = [sum([v for v in hourly[i:i+24] if v is not None])
                       for i in range(0, len(hourly), 24)]
 
-            # now aggregate the daily values to monthly (returns both dates 
+            # now aggregate the daily values to monthly (returns both dates
             # and values)
-            
+
             times, values = self.aggregate_daily_monthly(series, start, end,
                                                          option = 'average')
 
@@ -1792,7 +1793,7 @@ class NSRDBStation:
 
             return values
 
-        else: 
+        else:
 
             print('error: unknown time step specified')
             raise
@@ -1817,12 +1818,12 @@ class NSRDBStation:
         t = 'NSRDB Solar Radiation Data for {}'.format(self.station)
         sub.set_title(t)
 
-        if tstep == 'hourly': 
+        if tstep == 'hourly':
 
             times = [start + i * datetime.timedelta(hours = 1)
                      for i in range((end-start).days * 24)]
 
-        if tstep == 'daily':  
+        if tstep == 'daily':
 
             times = [start + i * datetime.timedelta(days = 1)
                      for i in range((end-start).days)]
@@ -1844,12 +1845,12 @@ class NSRDBStation:
 
                 t += datetime.timedelta(days = 1)
 
-        metstat = self.make_timeseries(dataset = 'metstat', start = start, 
+        metstat = self.make_timeseries(dataset = 'metstat', start = start,
                                        end = end, tstep = tstep)
 
         # convert units
 
-        if tstep == 'daily' or tstep == 'monthly' and metstat is not None:   
+        if tstep == 'daily' or tstep == 'monthly' and metstat is not None:
 
             metstat = [v / 1000 if v is not None else None for v in metstat]
 
@@ -1858,12 +1859,12 @@ class NSRDBStation:
             sub.plot_date(times, metstat, color = 'yellow', lw = 1, fmt = '-',
                           label = 'metstat')
 
-        suny = self.make_timeseries(dataset = 'suny', start = start, 
+        suny = self.make_timeseries(dataset = 'suny', start = start,
                                     end = end, tstep = tstep)
 
         # convert units
 
-        if tstep == 'daily' or tstep == 'monthly' and suny is not None: 
+        if tstep == 'daily' or tstep == 'monthly' and suny is not None:
 
             suny = [v / 1000 if v is not None else None for v in suny]
 
@@ -1872,14 +1873,14 @@ class NSRDBStation:
 
         # units
 
-        if   tstep == 'hourly':  
+        if   tstep == 'hourly':
             l = 'Solar Radiation\n(W/m\u00B2)'
-        elif tstep == 'daily':   
+        elif tstep == 'daily':
             l = 'Solar Radiation\n(kWhr/m\u00B2/day)'
-        elif tstep == 'monthly': 
+        elif tstep == 'monthly':
             l = 'Average Solar Radiation\n(kWhr/m\u00B2/day)'
 
-        # labels 
+        # labels
 
         sub.set_xlabel('Date', size = 12)
         sub.set_ylabel(l)
@@ -1890,7 +1891,7 @@ class NSRDBStation:
         fig.autofmt_xdate()
         for tick in sub.xaxis.get_major_ticks():
             tick.label.set_fontsize(10)
-            
+
         if output is not None: pyplot.savefig(output)
 
         pyplot.clf()

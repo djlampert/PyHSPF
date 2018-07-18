@@ -5,12 +5,11 @@
 # Last updated: 06/12/2014
 #
 # Purpose: contains a variety of utility functions to download and import
-# climate data files to Python classes 
+# climate data files to Python classes
 
 import os, io, datetime
-
 from urllib import request
-
+from lxml import etree
 from .ncdcstations import NSRDBStation
 from .ncdcstations import GSODStation
 from .ncdcstations import GHCNDStation
@@ -18,19 +17,19 @@ from .ncdcstations import Precip3240Station
 
 def is_number(s):
     """Tests if string "s" is a number."""
-    try: float(s) 
+    try: float(s)
     except ValueError: return False
     return True
 
 def is_integer(s):
     """Tests if string "s" is an integer."""
-    try: int(s) 
+    try: int(s)
     except ValueError: return False
     return True
 
-def inside_box(p1, 
-               p2, 
-               p3, 
+def inside_box(p1,
+               p2,
+               p3,
                space = 0,
                ):
     """Checks if p3 is inside a box formed by p1 and p2."""
@@ -40,29 +39,29 @@ def inside_box(p1,
         # x value is inside
 
         if p1[1] < p3[1] and p3[1] < p2[1] or p1[1] > p3[1] and p3[1] > p2[1]:
-            
+
             # y value is inside
 
             return True
 
         else: return False
 
-def find_ghcnd(bbox, 
-               GHCND = 'http://www1.ncdc.noaa.gov/pub/data/ghcn/daily', 
-               dates = None, 
-               var   = None, 
-               types = 'all', 
+def find_ghcnd(bbox,
+               GHCND = 'http://www1.ncdc.noaa.gov/pub/data/ghcn/daily',
+               dates = None,
+               var   = None,
+               types = 'all',
                verbose = True,
                ):
-    """Finds stations meeting the requirements from the Global Historical 
+    """Finds stations meeting the requirements from the Global Historical
     Climate Network Daily online database."""
 
     xmin, ymin, xmax, ymax = bbox
-    
-    stations = []
-    if var is None: 
 
-        if verbose: 
+    stations = []
+    if var is None:
+
+        if verbose:
 
             print('looking for GHCND stations in ' +
                   '{:.4f}, {:.4f}, {:.4f}, {:.4f}...\n'.format(*bbox))
@@ -72,18 +71,18 @@ def find_ghcnd(bbox,
         req = request.Request('{}/{}'.format(GHCND, filename))
 
         try:
-        
+
             # read the data from the server
 
             with io.StringIO(request.urlopen(req).read().decode('utf-8')) as s:
 
                 # iterate through the rows and split into columns
 
-                data = [[r[:11], r[12:20], r[22:30], r[31:37], r[38:40], 
-                         r[41:71], r[72:75], r[76:79], r[80:85]] 
+                data = [[r[:11], r[12:20], r[22:30], r[31:37], r[38:40],
+                         r[41:71], r[72:75], r[76:79], r[80:85]]
                         for r in s.read().split('\n') if len(r.strip()) > 0]
-                
-        except: 
+
+        except:
 
             print('unable to connect to the GHCND database\n' +
                   'make sure that you are online')
@@ -92,7 +91,7 @@ def find_ghcnd(bbox,
         # parse through the GSN and HCN stations and see if they're in the box
 
         for station, lat, lon, elev, y, name, gsn, hcn, c in data:
-                    
+
             if inside_box([xmin, ymin], [xmax, ymax], [float(lon), float(lat)]):
 
                 if (types == 'all' or
@@ -100,11 +99,11 @@ def find_ghcnd(bbox,
                     (hcn == 'HCN' and (types == 'both' or types == 'GSN'))
                     ):
 
-                    stations.append(GHCNDStation(station, 
-                                                 name.strip(), 
+                    stations.append(GHCNDStation(station,
+                                                 name.strip(),
                                                  float(lat),
-                                                 float(lon), 
-                                                 float(elev), 
+                                                 float(lon),
+                                                 float(elev),
                                                  dtype = types
                                                  )
                                     )
@@ -114,7 +113,7 @@ def find_ghcnd(bbox,
 
     else:
 
-        if verbose: 
+        if verbose:
             print('looking for GHCND stations with {} data'.format(var))
             print('if your internet connection is slow this may take a while\n')
 
@@ -123,18 +122,18 @@ def find_ghcnd(bbox,
         req = request.Request('{}/{}'.format(GHCND, filename))
 
         try:
-        
+
             # read the data from the server
 
             with io.StringIO(request.urlopen(req).read().decode('utf-8')) as s:
 
                 # iterate through the rows and split into columns
 
-                data = [[r[:11], r[12:20], r[22:30], r[31:35], r[36:40], 
-                         r[41:45]] for r in s.read().split('\n') 
+                data = [[r[:11], r[12:20], r[22:30], r[31:35], r[36:40],
+                         r[41:45]] for r in s.read().split('\n')
                          if len(r.strip()) > 0]
 
-        except: 
+        except:
             print('warning: unable to connect to the GHCND database')
             print('make sure that you are online')
             raise
@@ -147,14 +146,14 @@ def find_ghcnd(bbox,
 
         names = []
         for station, lat, lon, parm, yr1, yr2 in data:
-                    
+
             if inside_box([xmin, ymin], [xmax, ymax], [float(lon), float(lat)]):
 
                 if var == parm and is_integer(yr1) and is_integer(yr2):
 
                     if int(yr1) < end.year and start.year < int(yr2):
 
-                        if verbose: 
+                        if verbose:
 
                             print('found {} station {}'.format(var, station))
 
@@ -165,18 +164,18 @@ def find_ghcnd(bbox,
         req = request.Request('{}/{}'.format(GHCND, filename))
 
         try:
-        
+
             # read the data from the server
 
             with io.StringIO(request.urlopen(req).read().decode('utf-8')) as s:
 
                 # iterate through the rows and split into columns
 
-                data = [[r[:11], r[12:20], r[22:30], r[31:37], r[38:40], 
-                         r[41:71], r[72:75], r[76:79], r[80:85]] 
+                data = [[r[:11], r[12:20], r[22:30], r[31:37], r[38:40],
+                         r[41:71], r[72:75], r[76:79], r[80:85]]
                         for r in s.read().split('\n') if len(r.strip()) > 0]
-                
-        except: 
+
+        except:
 
             print('unable to connect to the GHCND database')
             print('make sure that you are online')
@@ -185,14 +184,14 @@ def find_ghcnd(bbox,
         # parse through the stations and find those with the needed variable
 
         for station, lat, lon, elev, y, name, gsn, hcn, c in data:
-                    
+
             if station in names:
 
-                    stations.append(GHCNDStation(station, 
-                                                 name.strip(), 
+                    stations.append(GHCNDStation(station,
+                                                 name.strip(),
                                                  float(lat),
-                                                 float(lon), 
-                                                 float(elev), 
+                                                 float(lon),
+                                                 float(elev),
                                                  dtype = types,
                                                  )
                                     )
@@ -205,19 +204,19 @@ def find_ghcnd(bbox,
 
     return stations
 
-def find_gsod(bbox, 
+def find_gsod(bbox,
               GSOD = 'ftp://ftp.ncdc.noaa.gov/pub/data/noaa',
-              filename = 'isd-history.txt', 
-              dates = None, 
-              verbose = True, 
+              filename = 'isd-history.txt',
+              dates = None,
+              verbose = True,
               vverbose = False,
               ):
-    """finds Global Surface Observation Data Stations inside the given 
+    """finds Global Surface Observation Data Stations inside the given
     bounding box. Optional keyword arguments can be used to find stations
     with data with the desired period of record."""
 
     if verbose:
- 
+
         i = bbox
         print('\nsearching for GSOD stations in ' +
               '{:.4f}, {:.4f}, {:.4f}, {:.4f}...'.format(*i))
@@ -227,7 +226,7 @@ def find_gsod(bbox,
     req = request.Request('{}/{}'.format(GSOD, filename))
 
     try:
-        
+
         # read the data from the server
 
         with io.StringIO(request.urlopen(req).read().decode('utf-8')) as s:
@@ -236,7 +235,7 @@ def find_gsod(bbox,
 
             data = [r for r in s.read().split('\n') if len(r) > 0]
 
-        data = [[d[:6], d[7:12], d[13:43], d[43:48], d[49:51], d[51:55], 
+        data = [[d[:6], d[7:12], d[13:43], d[43:48], d[49:51], d[51:55],
                  d[57:64], d[65:72], d[73:81], d[82:90], d[91:99]]
                  for d in data if is_integer(d[0][:6])]
 
@@ -269,22 +268,22 @@ def find_gsod(bbox,
 
                 if dates is None:
 
-                    stations.append(GSODStation(int(usaf), 
-                                                int(wban), 
-                                                station.strip(), 
-                                                float(lat), 
-                                                float(lon), 
+                    stations.append(GSODStation(int(usaf),
+                                                int(wban),
+                                                station.strip(),
+                                                float(lat),
+                                                float(lon),
                                                 float(elev),
                                                 d1,
                                                 d2,
                                                 )
                                     )
-                    if vverbose: 
+                    if vverbose:
                         print('found GSOD station ' +
-                              '{}, {}, "{}"'.format(usaf,wban,station.strip())) 
+                              '{}, {}, "{}"'.format(usaf,wban,station.strip()))
 
                 elif d1 is not None and d2 is not None:
-                    
+
                     # include only stations with data over period of record
 
                     if d1 <= dates[0] and dates[1] <= d2:
@@ -292,11 +291,11 @@ def find_gsod(bbox,
                         if verbose:
                             print('found GSOD station ' +
                                   '{}, {}, "{}" {} to {}'.format(*v))
-                            stations.append(GSODStation(int(usaf), 
-                                                        int(wban), 
-                                                        station.strip(), 
-                                                        float(lat), 
-                                                        float(lon), 
+                            stations.append(GSODStation(int(usaf),
+                                                        int(wban),
+                                                        station.strip(),
+                                                        float(lat),
+                                                        float(lon),
                                                         float(elev),
                                                         d1,
                                                         d2,
@@ -310,16 +309,16 @@ def find_gsod(bbox,
 
     return stations
 
-def find_precip3240(bbox, 
-                    NCDC = 'http://www.ncdc.noaa.gov/', 
+def find_precip3240(bbox,
+                    NCDC = 'http://www.ncdc.noaa.gov/',
                     metafile = 'homr/file/coop-stations.txt',
-                    dates = None, 
+                    dates = None,
                     verbose = True,
                     ):
     """Finds stations meeting the requirements from the hourly precipitation
     online NCDC database."""
 
-    if verbose: 
+    if verbose:
 
         print('\nsearching for hourly precipitation stations within ' +
               '{:.4f}, {:.4f}, {:.4f}, {:.4f}...\n'.format(*bbox))
@@ -380,9 +379,9 @@ def find_precip3240(bbox,
         'PR': '66',
         'VI': '67'
         }
-        
+
     # open the bounding box for the watershed
-                          
+
     xmin, ymin, xmax, ymax = bbox
 
     # make a list of all coop stations
@@ -402,19 +401,19 @@ def find_precip3240(bbox,
             # split it row by row according the column designations
 
             data = [(l[:8], l[9:15], l[16:21], l[25:36], l[41:71],
-                     l[72:92], l[93:95], l[96:146], l[147:149], 
-                     l[150:190], l[191:200], l[207:216], l[223:229], 
+                     l[72:92], l[93:95], l[96:146], l[147:149],
+                     l[150:190], l[191:200], l[207:216], l[223:229],
                      l[234:240], l[243:247], l[250:253], l[254:264],
                      l[265:268], l[269], l[271])
                     for l in s.read().split('\n')[:-1]]
 
-    except: 
+    except:
 
         print('unable to connect to the hourly precipitation database')
         print('make sure that you are online')
         raise
 
-    for (wban, coop, n, ghcnd, desc, country, st, county, n, region, 
+    for (wban, coop, n, ghcnd, desc, country, st, county, n, region,
          la, lo, units, elev, eunits, tzone, region, le, f1, f2) in data:
 
         # check if the lat/lon are given
@@ -426,7 +425,7 @@ def find_precip3240(bbox,
 
             # parse through the stations and see if they're in the box
 
-            if (inside_box([xmin, ymin], [xmax, ymax], 
+            if (inside_box([xmin, ymin], [xmax, ymax],
                            [float(lon), float(lat)])):
 
                 if is_number(elev): el = float(elev)
@@ -436,8 +435,8 @@ def find_precip3240(bbox,
                                                   wban.strip(),
                                                   desc.strip(),
                                                   lat,
-                                                  lon, 
-                                                  el, 
+                                                  lon,
+                                                  el,
                                                   st,
                                                   statecodes[st],
                                                   )
@@ -450,19 +449,19 @@ def find_precip3240(bbox,
 
     return stations
 
-def find_nsrdb(bbox, 
+def find_nsrdb(bbox,
                NSRDB    = 'http://rredc.nrel.gov/solar',
                metafile = 'old_data/nsrdb/1991-2010/NSRDB_StationsMeta.csv',
                NCDC     = 'ftp://ftp.ncdc.noaa.gov/pub/data/noaa',
                NCDCmeta = 'isd-history.txt',
-               dates = None, 
+               dates = None,
                verbose = True
                ):
-    """finds National Solar Radiation Database Stations inside the given 
+    """finds National Solar Radiation Database Stations inside the given
     bounding box. Optional keyword arguments can be used to find stations
     with data with the desired period of record."""
 
-    if verbose: 
+    if verbose:
 
         i = bbox
         print('searching for NSRDB stations in ' +
@@ -478,35 +477,33 @@ def find_nsrdb(bbox,
         new = dates[1].year >= 1991
 
     if old:
-
-        # use this summary table that's zipped to figure out the station #s 
+        # use this summary table that's zipped to figure out the station #s
         # would it be so much to ask they made a table for this???
-
+        ##need headers to emulate a browser otherwise the nsrdb blocks the request. !NATIONAL SECURITY!
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.81 Safari/537.36'}
         url = '{}/old_data/nsrdb/1961-1990/hourly/compressed'.format(NSRDB)
+        req = request.Request(url,headers= headers)
+        response = request.urlopen(req).read().decode()
 
-        req = request.Request(url)
-  
-        try:
+        # make a list of the old stations available in the database
+        tree = etree.HTML(response)
+        oldstations = []
+        for child in tree.iter('a'):
+            if child.text == 'Download':
+                oldstations.append(child.get('href')[:5])
 
-            # make a list of the old stations available in the database
-
-            with io.StringIO(request.urlopen(req).read().decode()) as s:
-
-                oldstations = [n[-5:] for n in s.read().split('.tar.gz')]
-                            
-        except:
-
+        if len(oldstations)==0:
             print('warning: unable to open the WBAN metadata')
             print('make sure you are online and that the pyhspf url is right')
             raise
 
         # make a dictionary of the station numbers to identify the old data;
-        # for some brilliant reason each station has two identifiers, and 
+        # for some brilliant reason each station has two identifiers, and
         # pre 1991 uses one while post 1991 uses the other)
 
         source = '{}/{}'.format(NCDC, NCDCmeta)
 
-        req = request.Request(source)
+        req = request.Request(source,headers=headers)
 
         try:
 
@@ -518,11 +515,11 @@ def find_nsrdb(bbox,
 
                 metadata = [(l[:6], l[7:12])
                             for l in s.read().split('\n')
-                            if is_integer(l[:6]) and is_integer(l[8:13])]
+                            if is_integer(l[:6]) and is_integer(l[7:12])]
 
-            wbans = {usaf:wban for usaf, wban in metadata 
+            wbans = {usaf:wban for usaf, wban in metadata
                      if wban in oldstations}
-
+                     
         except:
 
             print('warning: unable to open the WBAN metadata')
@@ -533,7 +530,7 @@ def find_nsrdb(bbox,
 
     # find the solar metadata
 
-    req = request.Request('{}/{}'.format(NSRDB, metafile))
+    req = request.Request('{}/{}'.format(NSRDB, metafile),headers=headers)
 
     try:
 
@@ -542,7 +539,6 @@ def find_nsrdb(bbox,
         with io.StringIO(request.urlopen(req).read().decode()) as s:
 
             # parse it
-
             metadata = [l.split(',') for l in s.read().split('\r')
                         if len(l.split(',')) == 12]
 
@@ -562,7 +558,7 @@ def find_nsrdb(bbox,
         if (is_integer(usaf) and is_integer(flag) and is_integer(cl) and
             is_number(lat) and is_number(lon)):
 
-            if inside_box([xmin, ymin], [xmax, ymax], 
+            if inside_box([xmin, ymin], [xmax, ymax],
                           [float(lon), float(lat)]):
 
                 if usaf in wbans: wban = wbans[usaf]
@@ -570,18 +566,18 @@ def find_nsrdb(bbox,
 
                 stations.append(NSRDBStation(usaf,
                                              wban,
-                                             int(cl), 
-                                             int(flag), 
-                                             station, 
-                                             float(lat), 
-                                             float(lon), 
+                                             int(cl),
+                                             int(flag),
+                                             station,
+                                             float(lat),
+                                             float(lon),
                                              float(elev)
                                              )
                                 )
 
-                if verbose: 
+                if verbose:
                     print('found NSRDB station ' +
-                          '{}, {}'.format(usaf, station.strip())) 
+                          '{}, {}'.format(usaf, station.strip()))
 
     if old and all([s.wban is None for s in stations]): stations = []
 

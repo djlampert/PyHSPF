@@ -5,12 +5,13 @@
 # last updated: 09/03/2015
 #
 # illustrates how to download gage data from NWIS, find information about a
-# reach using an NHDPlus flowline shapefile, and finally use the 
+# reach using an NHDPlus flowline shapefile, and finally use the
 # FtableCalculator to create FTABLES for gage stations for HSPF.
 #
 
 import os, datetime
-
+import pickle
+import json
 from shapefile            import Reader
 from pyhspf.preprocessing import NWISExtractor, FtableCalculator
 
@@ -18,27 +19,30 @@ from pyhspf.preprocessing import NWISExtractor, FtableCalculator
 
 NWIS = 'NWIS'
 
-# name of file containing the NWIS data (will be downloaded if it doesn't exist)
 
-gageid = '01594670'
 
 # start and end dates (not really relevant for this example, but needed to use
 # the download tools)
-
+cwd = os.path.dirname(__file__)
 start = datetime.datetime(1980, 1, 1)
 end   = datetime.datetime(2010, 1, 1)
 
 # specify the units (English or Metric)
 
+# name of file containing the NWIS data (will be downloaded if it doesn't exist)
+
+gageid = '01594670'
+gageidpath = os.path.join(cwd,gageid)
 units = 'Metric'
 
 # shapefile containing NHDPlus flowlines and associated attributes
 
-flowfile = 'data/flowlines.shp'
+flowfile = os.path.join(cwd,'data/flowlines.shp')
 
 # name of the plot generated showing the results
 
 plotname = 'ftable'
+plotnamepath = os.path.join(cwd, plotname)
 
 # make sure the flowline file exists
 
@@ -54,13 +58,14 @@ extractor = NWISExtractor(NWIS)
 
 extractor.download_metadata()
 
-# download all the data for the gage, including measured values of stage, 
+# download all the data for the gage, including measured values of stage,
 # discharge, channel width, and channel area and save it to "gageid" file
 # (will be skipped if it already exists)
 
-extractor.download_gagedata(gageid, start, end, output = gageid)
+extractor.download_gagedata(gageid, start, end, output = gageidpath)
 
-# need to know the reach length; so find the location of the gage, then find 
+
+# need to know the reach length; so find the location of the gage, then find
 # the flowline in the shapefile and use the record info to get the length
 
 # first use the NWIS metadata file to get the latitude and longitude of the gage
@@ -81,7 +86,7 @@ x, y = reader.shape(j).points[0]
 
 print('location of gage {}: {:.4f}, {:.4f}\n'.format(gageid, x, y))
 
-# open the flowline shapefile to supply reach length (miles or kilometers 
+# open the flowline shapefile to supply reach length (miles or kilometers
 # depending on the unit system)
 
 reader = Reader(flowfile)
@@ -97,7 +102,7 @@ contains = [i for i, b in enumerate(bboxes)
 
 # find the distances between all the overlapping shapes points and the gage
 
-distances = [min([(x1 - x)**2 + (y1 - y)**2 
+distances = [min([(x1 - x)**2 + (y1 - y)**2
                   for x1, y1 in reader.shape(i).points])
              for i in contains]
 
@@ -124,7 +129,7 @@ print('comid {} is closest to the gage and has a length of {} km\n'.format(*it))
 
 # make an instance of the FtableCalculator to use for the data from the file
 
-calculator = FtableCalculator(gageid)
+calculator = FtableCalculator(gageidpath)
 
 # calculate log-log regressions of flow and width vs depth using the observed
 # values from the NWIS database
@@ -133,7 +138,7 @@ calculator.calculate_regressions()
 
 # calculate the FTABLE using the length of the reach and the regressions for:
 #
-# the width (surface area = width * length), 
+# the width (surface area = width * length),
 # the volume (volume = width * depth * length)
 # the discharge
 #
@@ -142,8 +147,8 @@ calculator.calculate_regressions()
 
 ftable = calculator.create_ftable(length, units = units)
 
-# the FTABLE is a list of up lists with up to 18 values of depths and the 
-# corresponding surface areas, volumes, and discharges that HSPF uses to 
+# the FTABLE is a list of up lists with up to 18 values of depths and the
+# corresponding surface areas, volumes, and discharges that HSPF uses to
 # interpolate for a reach at each time step.
 
 print('FTABLE for the reach:\n')
@@ -170,7 +175,7 @@ for row in ftable:
 
 print('\nplotting the results\n')
 
-calculator.plot_regressions(output = plotname)
+calculator.plot_regressions(output = plotnamepath)
 
 # the steps above can be automated and customized as needed depending on the
 # available information (in this case the reach info was supplied by the data

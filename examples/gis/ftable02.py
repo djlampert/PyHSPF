@@ -1,11 +1,11 @@
 # perim.py
-# 
+#
 # David Lampert
 #
 # ftable02.py
 #
 # shows how to use the FtableCalculator and the NHDPlus Flowline Value Added
-# attributes to extend Ftable estimates from a gage station to other reaches 
+# attributes to extend Ftable estimates from a gage station to other reaches
 # upstream in a watershed. the first part is similar to the previous ftable
 # example, but the remainder shows the extension using the NHDPlus data.
 #
@@ -17,7 +17,7 @@ import os, pickle, datetime
 
 # NWIS gage station containing gage measurements
 
-gageid = '01594670'
+gageid = '01576788'
 
 # start and end dates
 
@@ -81,7 +81,7 @@ contains = [i for i, b in enumerate(bboxes)
 
 # find the distances between all the overlapping shapes points and the gage
 
-distances = [min([(x1 - x)**2 + (y1 - y)**2 
+distances = [min([(x1 - x)**2 + (y1 - y)**2
                   for x1, y1 in reader.shape(i).points])
              for i in contains]
 
@@ -97,20 +97,21 @@ record = reader.record(closest)
 
 i = [f[0] for f in reader.fields].index('COMID') - 1
 
+
 # get the reach common identifier (comid)
 
 comid = record[i]
 
-print('founding comid {} for gageid {}\n'.format(comid, gageid))
+print('found comid {} for gageid {}\n'.format(comid, gageid))
 
 # open up the flowline value added attributes
 
 vaafile = 'data/flowlineVAAs'
 
-# the value added attributes is a dictionary with keys corresponding to 
+# the value added attributes is a dictionary with keys corresponding to
 # hydrological sequentce (hydroseq) and values that are instances of PyHSPF's
 # Flowline class with a number of attributes about the stream reaches
-# including hydrological sequences that describe the reaches that are upstream 
+# including hydrological sequences that describe the reaches that are upstream
 # and downstream of other reaches
 
 with open(vaafile, 'rb') as f: flowlines = pickle.load(f)
@@ -123,7 +124,7 @@ hydroseqs = {flowlines[f].comid: f for f in flowlines}
 
 comids = [comid]
 
-# make a list of all the comids in the subbasin by moving upstream until 
+# make a list of all the comids in the subbasin by moving upstream until
 # reaching the headwaters of the watershed
 
 current = [hydroseqs[comid]]
@@ -141,6 +142,25 @@ for c in comids: print(c)
 print('')
 
 # make an instance of the FtableCalculator to use for the data from the file
+
+
+with open(gageid, 'rb') as f: station = pickle.load(f)
+
+# gage station data from NWIS
+
+flows   = []
+heights = []
+areas   = []
+widths  = []
+
+# get the data from the measurements
+
+for t, data in station.measurements:
+    flows.append(data['flow (cfs)'])
+    heights.append(data['height (ft)'])
+    areas.append(data['area (ft2)'])
+    widths.append(data['width (ft)'])
+
 
 calculator = FtableCalculator(gageid)
 
@@ -162,8 +182,8 @@ for row in ftable: print('{:15.4f} {:15.4f} {:15.4f} {:15.4f}'.format(*row))
 print('')
 
 # the FtableCalculator can extend the FTABLES to other reaches upstream
-# given their length, average flow, average velocity, and slope and the 
-# average flow in the reference reach 
+# given their length, average flow, average velocity, and slope and the
+# average flow in the reference reach
 
 for c in comids:
 
@@ -173,7 +193,7 @@ for c in comids:
 
     length  = flowline.length   # km
     qavg    = flowline.flow     # ft3/s
-    
+
     # convert the units and calculate the slope (set min at 0.0001)
 
     qavg = qavg * 0.3048**3
@@ -186,4 +206,3 @@ for c in comids:
     print('Estimated FTABLE for reach {}:\n'.format(c))
     for row in ftable: print('{:15.4f} {:15.4f} {:15.4f} {:15.4f}'.format(*row))
     print('')
-

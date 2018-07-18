@@ -4,11 +4,11 @@
 #
 # last updated: 08/10/2017
 #
-# The WDMUtil class can be used to ineract with WDM files using Python. 
+# The WDMUtil class can be used to ineract with WDM files using Python.
 # The class was inspired by the Python extensions "wdmtoolbox," although
 # this version interacts with the hspf library compiled for Python rather than
 # the hass_ent.dll library. WDM files are just lists of time series data
-# identified by a unique number (the DSN) plus various "attributes" that 
+# identified by a unique number (the DSN) plus various "attributes" that
 # describe important information about the type of data (time step, type, etc.).
 
 import os, datetime, pickle, hspf
@@ -16,8 +16,8 @@ import os, datetime, pickle, hspf
 class WDMUtil:
     """Class to open and read from WDM files."""
 
-    def __init__(self, 
-                 verbose = False, 
+    def __init__(self,
+                 verbose = True,
                  messagepath = None,
                  ):
         """
@@ -46,7 +46,7 @@ class WDMUtil:
         # start by making a dictionary of values of WDM attributes from the
         # adwdm message files source (this is done during compilation)
 
-        with open('{}/pyhspf/core/attributes'.format(directory), 'rb') as f: 
+        with open('{}/pyhspf/core/attributes'.format(directory), 'rb') as f:
             self.attributes = pickle.load(f)
 
         # FORTRAN subroutines from HSPF library
@@ -71,8 +71,8 @@ class WDMUtil:
         if self.verbose: print('Initializing WDM environment...\n')
 
         self.openfiles = {} # dictionary mapping filenames and FORTRAN numbers
-        self.dsns      = {} # dictionary mapping openfiles to DSN lists 
-        
+        self.dsns      = {} # dictionary mapping openfiles to DSN lists
+
         # open the message file, which contains SEQ data of all the different
         # types of information that can be stored in a WDM file
 
@@ -83,12 +83,12 @@ class WDMUtil:
         elif self.verbose: print('unable to open message file')
         self.message = 9
 
-    def open(self, 
-             wdmpath, 
+    def open(self,
+             wdmpath,
              mode,
              ):
         """
-        Opens a WDM file for read/write, read-only, or overwrite. Returns 
+        Opens a WDM file for read/write, read-only, or overwrite. Returns
         the FORTRAN file number.
         """
 
@@ -96,12 +96,12 @@ class WDMUtil:
 
         ronwfg  = options[mode]
 
-        choice  = {0: 'for modification', 
-                   1: 'as read-only', 
+        choice  = {0: 'for modification',
+                   1: 'as read-only',
                    2: 'as a new file'}
 
         if os.path.exists(wdmpath) and mode == 'w':
-            if self.verbose: 
+            if self.verbose:
                 print('warning: file %s exists, overwriting\n' % wdmpath)
             os.remove(wdmpath)
 
@@ -115,21 +115,21 @@ class WDMUtil:
 
             # this is a hack fix i've run into with some simulations
             #
-            #if retcode == -5004: 
+            #if retcode == -5004:
             #
-            #    if self.verbose: 
+            #    if self.verbose:
             #
             #        print('warning, file is already open')
             #        print('trying to close open files\n')
             #
             #    for i in range(100): hspf.seqclose(i)
             #
-            #    retcode = hspf.wdbopnpy(len(self.openfiles) + 11, wdmpath, 
+            #    retcode = hspf.wdbopnpy(len(self.openfiles) + 11, wdmpath,
             #                            ronwfg)
 
-            if retcode == 0 and self.verbose: 
+            if retcode == 0 and self.verbose:
                 print('opened {} {}'.format(wdmpath, choice[ronwfg]))
-            if retcode == 1 and self.verbose: 
+            if retcode == 1 and self.verbose:
                 print('opened file {} but invalid filename'.format(wdmpath))
             if retcode  < 0:
                 print('error: unable to open file {}\n'.format(wdmpath))
@@ -138,7 +138,7 @@ class WDMUtil:
 
             # make a list of the dsns in file
 
-            if ronwfg == 0 or ronwfg == 1: 
+            if ronwfg == 0 or ronwfg == 1:
                 n = hspf.wddsnxpy(self.openfiles[wdmpath], 1)
                 dsns = []
                 while n != -1:
@@ -159,9 +159,9 @@ class WDMUtil:
             self.retcode_check(retcode, function='wdflcl')
             self.dsns.pop(self.openfiles[wdmpath])
             self.openfiles.pop(wdmpath)
-            if retcode == 0 and self.verbose: 
+            if retcode == 0 and self.verbose:
                 print('successfully closed file {}\n'.format(wdmpath))
-            if retcode != 0: 
+            if retcode != 0:
                 print('error closing {}, retcode {}\n'.format(wdmpath, retcode))
 
     def close_message(self):
@@ -171,10 +171,10 @@ class WDMUtil:
 
         hspf.wdflclpy(self.message)
 
-    def create_dataset(self, 
-                       wdmpath, 
-                       dsn, 
-                       attributes, 
+    def create_dataset(self,
+                       wdmpath,
+                       dsn,
+                       attributes,
                        pointers = None,
                        ):
         """
@@ -185,8 +185,8 @@ class WDMUtil:
         pointers:    a class containing the pointer attributes
         attributes:  a dictionary of the attributes for the DSN, using the six
                      character designation from the message file. These are:
-        
-                     tstype:      the type of time series                      
+
+                     tstype:      the type of time series
                      step:        the time step size (some restrictions)
                      station:     station ID
                      scenario:    scenario (e.g., OBSERVED)
@@ -200,7 +200,7 @@ class WDMUtil:
 
         if self.verbose: print('creating DSN {} in {}'.format(dsn, wdmpath))
 
-        if hspf.wdckdtpy(wdm_number, dsn) == 1 and self.verbose: 
+        if hspf.wdckdtpy(wdm_number, dsn) == 1 and self.verbose:
             print('DSN {} already exists'.format(dsn))
 
         dataset = DSN(wdm_number, dsn, self.message)
@@ -208,7 +208,7 @@ class WDMUtil:
         if pointers is None: pointers = Pointers()
         dataset.create(pointers)
 
-        if self.verbose: 
+        if self.verbose:
             print('created new DSN {}'.format(dsn))
             print('writing attributes to DSN {}'.format(dsn))
 
@@ -223,10 +223,10 @@ class WDMUtil:
 
         self.dsns[wdm_number] = dsn
 
-    def add_data(self, 
-                 wdmpath, 
-                 dsn, 
-                 data, 
+    def add_data(self,
+                 wdmpath,
+                 dsn,
+                 data,
                  start_date,
                  ):
         """
@@ -246,14 +246,14 @@ class WDMUtil:
         retcode = dataset.add_data(data, start_date)
 
         self.retcode_check(retcode, function = 'wdtput')
-        if retcode == 0 and self.verbose: 
+        if retcode == 0 and self.verbose:
             print('added data to {} DSN {}'.format(wdmpath, dsn))
         elif retcode != 0:
             print('failed to add data to DSN {}'.format(dsn))
             raise
 
-    def import_exp(self, 
-                   source, 
+    def import_exp(self,
+                   source,
                    destination,
                    ):
         """
@@ -273,79 +273,79 @@ class WDMUtil:
 
             # get the dataset number and pointer info
 
-            if line[0:3] == 'DSN':    
+            if line[0:3] == 'DSN':
                 dsn      = int(line[12:16].strip())
-                pointers = Pointers(ndn = int(line[38:40]), 
+                pointers = Pointers(ndn = int(line[38:40]),
                                     nup = int(line[48:50]),
-                                    nsa = int(line[58:60]), 
+                                    nsa = int(line[58:60]),
                                     nsp = int(line[68:70]),
                                     ndp = int(line[77:80]))
-    
+
             # get the attributes
-    
+
             if line[2:7] == 'LABEL':  values = {}
 
             if line[4:10] in self.attributes:
                 a = self.attributes[line[4:10]]
 
-                if a['type'] == 'INTEGER': 
+                if a['type'] == 'INTEGER':
                     values[line[4:10]] = int(line[11:].strip())
-                if a['type'] == 'CHARACTER': 
+                if a['type'] == 'CHARACTER':
                     values[line[4:10]] = line[11:].strip()
-                if a['type'] == 'REAL': 
+                if a['type'] == 'REAL':
                     values[line[4:10]] = float(line[11:].strip())
-    
+
             # at the end of the attributes line create the dataset
-    
+
             if line[2:11] == 'END LABEL':
-                self.create_dataset(destination, dsn, values, 
+                self.create_dataset(destination, dsn, values,
                                     pointers = pointers)
 
             # get the data
-    
+
             if line[2:10] == 'END DATA': datarow = False
-    
+
             if datarow:
-                if line[4] == ' ': 
+                if line[4] == ' ':
                     numbers = [float(s) for s in line[4:].split()]
                 else:
                     numbers = [float(s) for s in line[53:].split()]
-    
+
                     # check if value is a repeat
-    
-                    if line[43] == '1': 
-    
+
+                    if line[43] == '1':
+
                         numbers = numbers * int(line[38:41].strip())
-    
+
                 data = data + numbers
-    
+
             if line[2:6] == 'DATA':
-    
+
                 datarow = True
                 data    = []
-    
+
                 # read the start date
-    
-                yr, mo, da, hr, mi, sec = (int(line[21:25]),         
+
+                yr, mo, da, hr, mi, sec = (int(line[21:25]),
                                            int(line[26:28].strip()),
-                                           int(line[29:31].strip()), 
+                                           int(line[29:31].strip()),
                                            int(line[32:34].strip()),
-                                           int(line[35:37].strip()), 
+                                           int(line[35:37].strip()),
                                            int(line[38:40].strip()))
-    
+
                 date = datetime.datetime(yr, mo, da)
-    
-                start = date + datetime.timedelta(hours = hr, minutes = mi, 
+
+                start = date + datetime.timedelta(hours = hr, minutes = mi,
                                                   seconds = sec)
-    
-            if line[:7] == 'END DSN': 
+
+            if line[:7] == 'END DSN':
                 self.add_data(destination, dsn, data, start)
 
         self.close(destination)
 
-    def renumber(self, 
-                 wdmpath, 
-                 odsn, 
+    def renumber(self,
+                 wdmpath,
+                 odsn,
                  ndsn,
                  ):
         """
@@ -358,8 +358,8 @@ class WDMUtil:
         retcode = hspf.wddsrnpy(wdmfp, odsn, ndsn)
         self.retcode_check(retcode, function = 'wddsrn')
 
-    def delete_dataset(self, 
-                       wdmpath, 
+    def delete_dataset(self,
+                       wdmpath,
                        dsn,
                        ):
         """
@@ -371,22 +371,22 @@ class WDMUtil:
         retcode = hspf.wddsdlpy(wdmfp, int(dsn))
         self.retcode_check(retcode, function = 'wddsdl')
 
-    def get_attribute(self, 
-                      wdmpath, 
-                      dsn, 
+    def get_attribute(self,
+                      wdmpath,
+                      dsn,
                       attribute,
                       ):
         """
-        Gets an attribute's value from a dataset. "attribute" is from the 
+        Gets an attribute's value from a dataset. "attribute" is from the
         list in the USGS database in the lib3.0/msg/adwdm folder.
         """
 
-        if self.verbose: 
+        if self.verbose:
             print('getting attribute {} from DSN {}'.format(attribute, dsn))
 
         wdm_number = self.openfiles[wdmpath]
         dataset = DSN(wdm_number, dsn, self.message)
-                      
+
         i = self.attributes['{:<6s}'.format(attribute)]['index']
         a = self.attributes['{:<6s}'.format(attribute)]
 
@@ -396,16 +396,16 @@ class WDMUtil:
 
         if var == '%s': value = v.tostring().strip().decode('utf-8')
         else:           value = v[0]
-        if retcode == 0 and self.verbose: 
+        if retcode == 0 and self.verbose:
             print('read %s' % attribute + ' = ' + var % value)
-        elif retcode != 0: 
+        elif retcode != 0:
             value = None
             self.retcode_check(retcode, function = 'wdbsac')
 
         return value
 
-    def get_dates(self, 
-                  wdmpath, 
+    def get_dates(self,
+                  wdmpath,
                   dsn,
                   ):
         """
@@ -416,18 +416,18 @@ class WDMUtil:
         dsn        -- the dataset number
         """
 
-        if self.verbose: 
+        if self.verbose:
             print('getting start and end dates for dataset {}'.format(dsn))
 
         wdm_number = self.openfiles[wdmpath]
         tdsfrc, llsdat, lledat, retcode = hspf.wtfndtpy(wdm_number, dsn, 1)
 
-        if retcode == -6: 
+        if retcode == -6:
             print('error: no data present')
             return None, None
 
         # Determine the number of values in the dataset
-            
+
         dataset = DSN(wdm_number, dsn, self.message)
 
         tcode  = dataset.get_attribute(17, self.attributes['TCODE '])[0]
@@ -443,17 +443,17 @@ class WDMUtil:
 
         yr, mo, da, hr, mi, se = llsdat
 
-        start = (datetime.datetime(yr, mo, da) + 
-                 datetime.timedelta(hours = float(hr), minutes = float(mi), 
+        start = (datetime.datetime(yr, mo, da) +
+                 datetime.timedelta(hours = float(hr), minutes = float(mi),
                                     seconds = float(se)))
         end   = start + unit * n
 
         return start, end
 
-    def get_data(self, 
-                 wdmpath, 
-                 dsn, 
-                 start = None, 
+    def get_data(self,
+                 wdmpath,
+                 dsn,
+                 start = None,
                  end = None,
                  ):
         """
@@ -470,28 +470,28 @@ class WDMUtil:
         if self.verbose: print('getting data from dataset number %d' % dsn)
 
         if hspf.wdckdtpy(wdm_number, dsn) == 0:
-            if self.verbose: 
+            if self.verbose:
                 print('DSN {} in file {} does not exist'.format(dsn, wdmpath))
             return None
 
         dataset = DSN(wdm_number, dsn, self.message)
 
         tdsfrc, llsdat, lledat, retcode = hspf.wtfndtpy(wdm_number, dsn, 1)
-        if retcode == -6: 
+        if retcode == -6:
             print('no data present')
             return None
 
         if self.verbose: print('reading data from DSN {}'.format(dsn))
 
         if start != None:
-            llsdat = [start.year, start.month, start.day, start.hour, 
+            llsdat = [start.year, start.month, start.day, start.hour,
                       start.minute, start.second]
         if end != None:
-            lledat = [end.year, end.month, end.day, end.hour, end.minute, 
+            lledat = [end.year, end.month, end.day, end.hour, end.minute,
                       end.second]
 
         # Determine the number of values in the dataset
-            
+
         tcode  = dataset.get_attribute(17, self.attributes['TCODE '])[0]
         tsstep = dataset.get_attribute(33, self.attributes['TSSTEP'])[0]
 
@@ -515,15 +515,15 @@ class WDMUtil:
             print('Error, file not found')
             return None
 
-    def retcode_check(self, 
-                      retcode, 
+    def retcode_check(self,
+                      retcode,
                       function = ' ',
                       ):
         """
         Checks to see if function worked (retcode >= 0).
         """
 
-        if retcode < 0 and self.verbose: 
+        if retcode < 0 and self.verbose:
             print('WDM library function error {} {}'.format(retcode, function))
 
 class Pointers:
@@ -531,12 +531,12 @@ class Pointers:
     A class to store the pointer attributes of a DSN. See LIB3.0 for more.
     """
 
-    def __init__(self, 
-                 dstype = 1, 
-                 ndn = 10, 
-                 nup = 10, 
-                 nsa = 16, 
-                 nsp = 60, 
+    def __init__(self,
+                 dstype = 1,
+                 ndn = 10,
+                 nup = 10,
+                 nsa = 16,
+                 nsp = 60,
                  ndp = 380,
                  ):
 
@@ -546,18 +546,18 @@ class Pointers:
         self.nsa    = nsa
         self.nsp    = nsp
         self.ndp    = ndp
-        
+
 class DSN:
     """
     A class to read and write data to a dataset in a WDM file.
     """
 
-    def __init__(self, 
-                 wdm, 
-                 number, 
+    def __init__(self,
+                 wdm,
+                 number,
                  message,
                  ):
-        
+
         self.wdm     = wdm     # WDM file number
         self.number  = number  # DSN number
         self.message = message # Message file number
@@ -565,11 +565,11 @@ class DSN:
         self.times = None
         self.data  = None
 
-        self.timecodes = {1: 'seconds', 
-                          2: 'minutes', 
-                          3: 'hours', 
+        self.timecodes = {1: 'seconds',
+                          2: 'minutes',
+                          3: 'hours',
                           4: 'days',
-                          5: 'months',  
+                          5: 'months',
                           6: 'years',
                           }
 
@@ -581,13 +581,13 @@ class DSN:
         # psa - pointer to search attribute space; this has something to do
         # with FORTRAN definitions/pointers (see source code)
 
-        psa = hspf.wdlbaxpy(self.wdm, self.number, pointers.dstype, 
-                            pointers.ndn, pointers.nup, pointers.nsa, 
+        psa = hspf.wdlbaxpy(self.wdm, self.number, pointers.dstype,
+                            pointers.ndn, pointers.nup, pointers.nsa,
                             pointers.nsp, pointers.ndp)
 
     def add_attribute(self, v, a):
         """
-        Adds value "v" for attribute "a" with index "i" to the DSN; 
+        Adds value "v" for attribute "a" with index "i" to the DSN;
         see the self.attributes dictionary for more info.
         """
 
@@ -600,7 +600,7 @@ class DSN:
             retcode = hspf.wdbsarpy(self.wdm, self.number, self.message, i, v)
             var = '%.6e'
         if a['type'] == 'CHARACTER':
-            
+
             # this is a bit tricky since FORTRAN pre-allocates the character
             # size, so add blanks to the end
 
@@ -608,7 +608,7 @@ class DSN:
 
             retcode = hspf.wdbsacpy(self.wdm, self.number, self.message, i, v)
             var = '%s'
-            
+
             if retcode < 0: print('problem adding attribute to %d, retcode = %d'
                                   % (i, retcode))
 
@@ -616,7 +616,7 @@ class DSN:
 
     def get_attribute(self, i, a):
         """
-        Reads the value of the attribute "a" with index "i" from the dataset; 
+        Reads the value of the attribute "a" with index "i" from the dataset;
         see the self.attributes dictionary for more info.
         """
 
@@ -647,8 +647,8 @@ class DSN:
 
         self.data = data
 
-        return hspf.wdtputpy(self.wdm, self.number, tstep, llsdat, 1, 
-                                0, tcode, data) 
+        return hspf.wdtputpy(self.wdm, self.number, tstep, llsdat, 1,
+                                0, tcode, data)
 
 if __name__ == '__main__':
 
@@ -657,7 +657,7 @@ if __name__ == '__main__':
     filename    = 'test.wdm'
     number      = 1003
     start       = datetime.datetime(2000,1,1)
-    
+
     attributes = {
         'TSTYPE': 'EXAM',
         'TCODE ': 4,
@@ -669,9 +669,9 @@ if __name__ == '__main__':
         'IDCONS': '',
         'TSFILL': 0
         }
-    
+
     data = [34.2, 35.0, 36.9, 38.2, 40.2 , 20.1, 18.4, 23.6]
-    
+
     print('\noriginal list to input to file %s = ' % filename, data, '\n')
 
     # make the wdm file
@@ -702,7 +702,7 @@ if __name__ == '__main__':
     # get the attributes
 
     values = {}
-    for attribute in attributes: 
+    for attribute in attributes:
         values[attribute] = wdm.get_attribute(filename, number, attribute)
 
     # print it out
@@ -710,10 +710,10 @@ if __name__ == '__main__':
     print('')
     print('Datasets in file {}: {}\n'.format(
             filename, wdm.get_datasets(filename)))
-    print('Attributes of dataset number {}\n'.format(number))              
+    print('Attributes of dataset number {}\n'.format(number))
     for value in values.items(): print(*value)
     print('')
-    print('Time series returned from dataset {} in file {}:\n'.format( 
+    print('Time series returned from dataset {} in file {}:\n'.format(
             number, filename))
     for t, d in zip(times, data):
         print(t, d)
@@ -724,28 +724,28 @@ if __name__ == '__main__':
     # remove the file
 
     os.remove(filename)
- 
+
     directory = os.path.abspath(os.path.dirname(__file__))
 
     # tests the exp import function (file from hspexp2.4/data/huntday)
-        
+
     source = '{}/../examples/data/huntday/huntobs.exp'.format(directory)
     destination = 'testexp.wdm'
-    
+
     # initialize the WDM environment
-    
+
     if not os.path.isfile(source):
         print('warning, unable to import file')
         exit()
 
     wdm = WDMUtil(verbose = True)
     wdm.import_exp(source, destination)
-    
+
     # test it out
-    
+
     wdm.open(destination, 'r')
     data = wdm.get_data(destination, 106)
-    
+
     print('')
     print('total precipitation (in):', data.sum())
     print('number of values in time series', len(data))
