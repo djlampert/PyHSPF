@@ -141,7 +141,7 @@ class NIDExtractor:
 
         # write the data from the bbox to a new shapefile
 
-        w = Writer(shapeType = 1)
+        w = Writer(output, shapeType = 1)
 
         for field in sf.fields:  w.field(*field)
 
@@ -160,7 +160,7 @@ class NIDExtractor:
 
             w.record(*rs)
 
-        w.save(output)
+        w.close()
 
         if verbose: 
 

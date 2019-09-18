@@ -778,7 +778,7 @@ class NHDPlusExtractor(object):
 
         # write the data from the HUC8 to a new shapefile
 
-        w = Writer(shapeType = 3)
+        w = Writer(destination, shapeType = 3)
 
         for field in shapefile.fields:  w.field(*field)
 
@@ -797,7 +797,7 @@ class NHDPlusExtractor(object):
 
             w.record(*record)
 
-        w.save(destination)
+        w.close()
 
         if verbose:
             l = len(indices)
@@ -849,7 +849,7 @@ class NHDPlusExtractor(object):
 
         if verbose: print('writing the new catchment shapefile\n')
 
-        w = Writer()
+        w = Writer(destination)
 
         for field in shapefile.fields:  w.field(*field)
 
@@ -858,7 +858,7 @@ class NHDPlusExtractor(object):
             w.poly(shapeType = 5, parts = [shape.points])
             w.record(*records[i])
 
-        w.save(destination)
+        w.close()
 
     def combine_NED(self, nedfiles, VPU):
         '''

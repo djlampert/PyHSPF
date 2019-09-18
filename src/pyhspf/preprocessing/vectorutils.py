@@ -618,7 +618,7 @@ def merge_shapes(inputfile,
 
     # create the new file with the merged shapes
 
-    w = Writer(shapeType = 5)
+    w = Writer(outputfile, shapeType = 5)
 
     w.poly(shapeType = 5, parts = [combined])
 
@@ -628,7 +628,7 @@ def merge_shapes(inputfile,
     for field in r.fields: w.field(*field)
     w.record(*r.record(0))
 
-    w.save(outputfile)
+    w.close()
 
     if verbose: 
 

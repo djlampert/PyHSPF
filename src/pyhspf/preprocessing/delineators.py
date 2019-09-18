@@ -527,7 +527,7 @@ class NHDPlusDelineator:
     
             # write the data for the comids to a new shapefile
     
-            w = Writer(shapeType = 3)
+            w = Writer(self.subbasinflowlines, shapeType = 3)
     
             for field in shapefile.fields: w.field(*field)
     
@@ -546,7 +546,7 @@ class NHDPlusDelineator:
     
                 w.record(*record)
     
-            w.save(self.subbasinflowlines)
+            w.close()
     
             if verbose: 
                 l = len(indices)
@@ -589,7 +589,7 @@ class NHDPlusDelineator:
     
             # write the data for the comids to a new shapefile
     
-            w = Writer(shapeType = 5)
+            w = Writer(self.subbasincatchments, shapeType = 5)
     
             for field in shapefile.fields: w.field(*field)
     
@@ -599,7 +599,7 @@ class NHDPlusDelineator:
                 record = records[i]
                 w.record(*record)
     
-            w.save(self.subbasincatchments)
+            w.close()
 
         # merge the catchments together to form the watershed boundary
 
@@ -692,7 +692,7 @@ class NHDPlusDelineator:
     
             # write the data for the comids to a new shapefile
     
-            w = Writer(shapeType = 3)
+            w = Writer(self.subbasinflowlines, shapeType = 3)
     
             for field in shapefile.fields: w.field(*field)
     
@@ -711,7 +711,7 @@ class NHDPlusDelineator:
     
                 w.record(*record)
     
-            w.save(self.subbasinflowlines)
+            w.close()
     
             if verbose: 
                 l = len(indices)
@@ -754,7 +754,7 @@ class NHDPlusDelineator:
     
             # write the data for the comids to a new shapefile
     
-            w = Writer(shapeType = 5)
+            w = Writer(self.subbasincatchments, shapeType = 5)
     
             for field in shapefile.fields: w.field(*field)
     
@@ -764,7 +764,7 @@ class NHDPlusDelineator:
                 record = records[i]
                 w.record(*record)
     
-            w.save(self.subbasincatchments)
+            w.close()
 
         # merge the catchments together to form the watershed boundary
 
@@ -1509,7 +1509,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
         # write the data from the HUC8 to a new shapefile
 
-        w = Writer(shapeType = 3)
+        w = Writer(outputfile, shapeType = 3)
 
         # the fields will be effluent comid, GNIS name, the length (km), 
         # the 8-digit reach code, the slope, the flow at the inlet and outlet,
@@ -1537,7 +1537,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
         w.poly(shapeType = 3, parts = [points])
 
-        w.save(outputfile)
+        w.close()
 
         if verbose: 
             print('successfully combined subbasin ' +
@@ -1673,7 +1673,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
         # write the data to the shapefile
 
-        w = Writer(shapeType = 5)
+        w = Writer(output, shapeType = 5)
 
         fields = [['ComID',      'N',  9, 0],
                   ['PlaneLenM',  'N',  8, 2],
@@ -1691,7 +1691,7 @@ class HUC8Delineator(NHDPlusDelineator):
     
         w.poly(shapeType = 5, parts = [combined])
 
-        w.save(output)
+        w.close()
 
         if vverbose: print('\ncompleted catchment combination in ' +
                            '{:.1f} seconds\n'.format(time.time() - t0))
@@ -2144,7 +2144,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
         if len(inlets) > 0:
 
-            w = Writer(shapeType = 1)
+            w = Writer(self.inletfile, shapeType = 1)
 
             w.field(*['COMID',      'N',  9, 0])
             w.field(*['REACHCODE',  'C', 14, 0])
@@ -2214,7 +2214,7 @@ class HUC8Delineator(NHDPlusDelineator):
                 w.point(point[0], point[1])
                 w.record(comid, reachcode, site_no, area, flow, gnis, nwis)
     
-            w.save(self.inletfile)
+            w.close()
 
             # copy the projection files
 
@@ -2222,7 +2222,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
         # create the outlet point file that will store the comid and reachcode
 
-        w = Writer(shapeType = 1)
+        w = Writer(self.outletfile, shapeType = 1)
 
         w.field(*['COMID',      'N',  9, 0])
         w.field(*['REACHCODE',  'C', 14, 0])
@@ -2329,7 +2329,7 @@ class HUC8Delineator(NHDPlusDelineator):
             w.point(point[0], point[1])
             w.record(comid, reachcode, dam_no, site_no, area, flow, gnis, nwis)
     
-        w.save(self.outletfile)
+        w.close()
 
         # copy the projection files
 
@@ -2375,7 +2375,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
         # write the data to a new shapefile
 
-        w = Writer(shapeType = 3)
+        w = Writer(output, shapeType = 3)
 
         for field in shapefile.fields:  w.field(*field)
 
@@ -2395,7 +2395,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
             w.record(*record)
 
-        w.save(output)
+        w.close()
 
         if verbose: print('successfully extracted flowlines')
 
@@ -2435,7 +2435,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
         # write the data from the HUC8 to a new shapefile
 
-        w = Writer(shapeType = 5)
+        w = Writer(output, shapeType = 5)
 
         for field in shapefile.fields:  w.field(*field)
 
@@ -2444,7 +2444,7 @@ class HUC8Delineator(NHDPlusDelineator):
             w.poly(shapeType = 5, parts = [shape.points])
             w.record(*records[i])
 
-        w.save(output)
+        w.close()
 
         if verbose: print('successfully extracted catchments\n')
 
@@ -2463,7 +2463,7 @@ class HUC8Delineator(NHDPlusDelineator):
         from  the NHDPlus dataset.
         """
 
-        l = Writer(shapeType = 3)
+        l = Writer(self.subbasinflowlines, shapeType = 3)
 
         # copy the fields
 
@@ -2501,7 +2501,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
         # save the merged file
 
-        l.save(self.subbasinflowlines)
+        l.close()
 
         # copy the projection files
 
@@ -2674,7 +2674,7 @@ class HUC8Delineator(NHDPlusDelineator):
         if verbose: 
             print('trying to combine subbasin shapefiles into a single file\n')
 
-        w = Writer(shapeType = 5)
+        w = Writer(self.subbasincatchments, shapeType = 5)
 
         projection = None
         fields     = None
@@ -2709,8 +2709,8 @@ class HUC8Delineator(NHDPlusDelineator):
 
             elif verbose: print('unable to locate {}'.format(filename))
 
+        w.close()
         if fields is not None: 
-            w.save(self.subbasincatchments)
             if verbose: print('successfully combined subbasin shapefiles\n')
         elif verbose: print('unable to combine subbasins\n')
 

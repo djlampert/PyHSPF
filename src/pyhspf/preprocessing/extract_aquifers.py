@@ -110,7 +110,7 @@ def extract_aquifers(directory, HUC8, aquifers, pad = 0.2, verbose = True):
     
     # write the data from the HUC8 to a new shapefile
     
-    w = Writer(shapeType = 5)
+    w = Writer(directory + '/%s/%saquifers' % (HUC8, HUC8), shapeType = 5)
     
     for field in shapefile.fields:  w.field(*field)
     
@@ -141,7 +141,7 @@ def extract_aquifers(directory, HUC8, aquifers, pad = 0.2, verbose = True):
     w.poly(shapeType = 5, parts = [part])
     w.record(*nonrecord)
     
-    w.save(directory + '/%s/%saquifers' % (HUC8, HUC8))
+    w.close()
     
     end = time.time()
     

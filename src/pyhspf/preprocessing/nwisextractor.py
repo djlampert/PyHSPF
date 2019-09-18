@@ -152,7 +152,7 @@ class NWISExtractor:
 
             # write the data from the HUC8 to a new shapefile
 
-            w = Writer(shapeType = 1)
+            w = Writer(sfile, shapeType = 1)
 
             for field in gagereader.fields:  w.field(*field)
 
@@ -161,7 +161,7 @@ class NWISExtractor:
                 w.point(*point)
                 w.record(*gagerecords[i])
 
-            w.save(sfile)
+            w.close()
 
             if verbose:
 
