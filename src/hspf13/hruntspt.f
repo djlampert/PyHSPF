@@ -244,8 +244,8 @@ C     + + + COMMON BLOCKS- PUTCOM + + +
       INCLUDE     'cmpad.inc'
 C
 C     + + + LOCAL VARIABLES + + +
-      INTEGER     N,OFF(1),WORDI
-      REAL        WORDR(1)
+      INTEGER     N,OFF(20),WORDI
+      REAL        WORDR(20)
 C
 C     + + + EQUIVALENCES + + +
       EQUIVALENCE (WORDI,WORDR(1))
@@ -477,8 +477,8 @@ C     + + + COMMON BLOCKS- PUTCOM + + +
       INCLUDE     'cmpad.inc'
 C
 C     + + + LOCAL VARIABLES + + +
-      INTEGER     N,OFF(1),SPLIT(1),WORDI,VONXYR
-      REAL        WORDR(1)
+      INTEGER     N,OFF(20),SPLIT(1),WORDI,VONXYR
+      REAL        WORDR(20)
 C
 C     + + + EQUIVALENCES + + +
       EQUIVALENCE (WORDI,WORDR(1)), (WORDI,SPLIT(1))
@@ -695,7 +695,7 @@ C     + + + COMMON BLOCKS- SCRTCH, VERSION PUTCOM + + +
       INCLUDE   'cmpad.inc'
 C
 C     + + + LOCAL VARIABLES + + +
-      INTEGER   OFF(1)
+      INTEGER   OFF(20)
 C
 C     + + + EXTERNALS + + +
       EXTERNAL    PTVAL
@@ -1635,8 +1635,8 @@ C     + + + COMMON BLOCKS- PUTCOM + + +
       INCLUDE     'cmpad.inc'
 C
 C     + + + LOCAL VARIABLES + + +
-      INTEGER     N,OFF(1),TIME,VO,WORDI
-      REAL        WORDR(1)
+      INTEGER     N,OFF(20),TIME,VO,WORDI
+      REAL        WORDR(20)
 C
 C     + + + EQUIVALENCES + + +
       EQUIVALENCE (WORDI,WORDR(1))
@@ -1852,7 +1852,7 @@ C     + + + COMMON BLOCKS- PUTCOM + + +
       INCLUDE   'cmpad.inc'
 C
 C     + + + LOCAL VARIABLES + + +
-      INTEGER   OFF(1)
+      INTEGER   OFF(20)
 C
 C     + + + EXTERNALS + + +
       EXTERNAL    PTVAL
