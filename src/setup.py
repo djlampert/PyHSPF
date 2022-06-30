@@ -43,6 +43,7 @@ except:
 
 import os, sys
 
+import setuptools
 from numpy.distutils.core import Extension, setup
 from distutils            import sysconfig
 
@@ -158,6 +159,7 @@ setup(
     url = 'https://github.com/djlampert/PyHSPF',
     license = _l,
     long_description = _d,
+    setup_requires=['wheel'],
     keywords = ['hydrology',
                 'watershed modeling',
                 'GIS',
