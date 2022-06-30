@@ -43,7 +43,7 @@ class WDMUtil:
             print('Place the file in a directory with a shorter path.')
             print('You can pass messagepath to the wdmutil constructor.')
             print('Try copying the message file locally:' +
-                  '{}/pyhspf/core/hspfmsg.wdm'.format(directory)
+                  '{}/pyhspf/core/hspfmsg.wdm'.format(directory))
             raise
 
         self.verbose = verbose
