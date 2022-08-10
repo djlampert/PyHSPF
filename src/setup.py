@@ -41,7 +41,7 @@ try:
 except:
     print('warning: preprocessing dependency "Pillow" is not installed')
 
-import os, sys
+import os, sys, setuptools
 
 from numpy.distutils.core import Extension, setup
 from distutils            import sysconfig
