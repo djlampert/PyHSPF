@@ -143,7 +143,7 @@ C     + + + COMMON BLOCKS- INTERP4 + + +
       INCLUDE     'crin4.inc'
 C
 C     + + + LOCAL VARIABLES + + +
-      INTEGER     I,N,OFF(1),REM,WORDI,VO,SCLU,SGRP
+      INTEGER     I,N,OFF(20),REM,WORDI,VO,SCLU,SGRP
       REAL        DUMMY,WORDR
 C
 C     + + + EQUIVALENCES + + +
@@ -283,7 +283,7 @@ C     + + + COMMON BLOCKS- INTERP4 + + +
       INCLUDE     'crin4.inc'
 C
 C     + + + LOCAL VARIABLES + + +
-      INTEGER     ADR,ADRBCW,I,N,OFF(1),REM,WORDI,SCLU,SGRP
+      INTEGER     ADR,ADRBCW,I,N,OFF(20),REM,WORDI,SCLU,SGRP
       REAL        WORDR
 C
 C     + + + EQUIVALENCES + + +
@@ -890,9 +890,9 @@ C     + + + COMMON BLOCKS- VERSION INTERP4 + + +
       INCLUDE     'crin4.inc'
 C
 C     + + + LOCAL VARIABLES + + +
-      INTEGER     N,OFF(1),SPLIT(2),SCLU,SGRP,
+      INTEGER     N,OFF(20),SPLIT(2),SCLU,SGRP,
      $            ADR,VO,VOFREE,WORDI
-      REAL        VAL(2),WORDR
+      REAL        VAL(20),WORDR
 C
 C     + + + EQUIVALENCES + + +
       EQUIVALENCE (WORDR,WORDI),(VAL(1),SPLIT(1))
