@@ -5,7 +5,7 @@
 # Purpose: Contains the HSPFModel class that can be used to store data and
 # generate UCI and WDM files for an HSPF simulation.
 #
-# last updated: 09/16/2015
+# last updated: 08/09/2022
 #
 
 from .wdmutil        import WDMUtil
@@ -25,6 +25,7 @@ class HSPFModel:
 
     def __init__(self, 
                  units = 'Metric',
+                 messagepath = None,
                  ):
         """
         Initialize the model and point to the lib3.0 library.
@@ -34,6 +35,27 @@ class HSPFModel:
 
         self.units = units
 
+        # path to hspfmsg.wdm
+
+        directory = os.path.dirname(hspf.__file__)
+        if messagepath is None:
+            self.messagepath = '{}/pyhspf/core/hspfmsg.wdm'.format(directory)
+        elif os.path.isfile(messagepath):
+            self.messagepath = messagepath
+        else:
+            errstr = ('supplied path {} to message file does'
+                      ' not exist').format(messagepath)
+            raise FileNotFoundError(errstr)
+
+        if len(self.messagepath) > 64:
+            errstr = ('unable to open message file:\n{}\nThe path to'
+                     ' the message file must not exceed 64 characters.'
+                     ' Place the file in a directory with a shorter path.\n'
+                     'You can pass messagepath to the HSPFModel constructor.'
+                     ' Try copying the message file to the local directory.'
+                     ).format(self.messagepath)
+            raise ValueError(errstr)
+                  
         # set up dictionaries of external timeseries for the model 
         # (append as needed)
 
@@ -99,11 +121,6 @@ class HSPFModel:
         # paths to working directory for the simulation
 
         self.filename = filename
-
-        # path to the messagefile
-
-        directory = os.path.dirname(hspf.__file__)
-        self.messagepath = '{}/pyhspf/core/hspfmsg.wdm'.format(directory)
 
         # add the output levels and units
 
@@ -181,11 +198,6 @@ class HSPFModel:
         # paths to working directory for the simulation
 
         self.filename = filename
-
-        # path to the messagefile
-
-        directory = os.path.dirname(hspf.__file__)
-        self.messagepath = '{}/pyhspf/core/hspfmsg.wdm'.format(directory)
 
         # add the output levels and units
         
@@ -3627,4 +3639,3 @@ class HSPFModel:
         lines = lines[:-1] + ['END FTABLES', '']
 
         return lines
-

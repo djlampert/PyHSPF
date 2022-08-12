@@ -603,7 +603,7 @@ C     prints a string to the terminal with no cr/lf
 C
 C     + + + DUMMY ARGUMENTS + + +
       INTEGER     LEN
-      CHARACTER*1 STR(256)
+      CHARACTER*1 STR(*)
 C
 C     + + + ARGUMENT DEFINITIONS + + +
 C     LEN    - length of string to write (characters)
