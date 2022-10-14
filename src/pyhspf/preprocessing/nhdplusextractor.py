@@ -2,7 +2,7 @@
 #
 # Mitchell Sawtelle (mitchell.sawtelle@okstate.edu)
 #
-# last updated: 06/25/2018
+# last updated: 10/13/2022
 #
 # contains the NHDPlus Extractor class, which can be used to retrieve source
 # data from the NHDPlus V2 dataset online, and then extract the data from
@@ -10,11 +10,10 @@
 
 
 import subprocess, time, os, numpy, struct, datetime, shutil
-from osgeo import gdal
-from osgeo import osr
+from osgeo import gdal, osr
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError, URLError
-from gdalconst import GA_ReadOnly
+from osgeo.gdalconst import GA_ReadOnly
 from matplotlib import pyplot, path, ticker
 from matplotlib import patches, colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable

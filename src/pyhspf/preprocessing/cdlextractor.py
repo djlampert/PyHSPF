@@ -2,13 +2,14 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# last updated: 08/01/2015
+# last updated: 10/13/2022
 #
 # Calculates the land use data from a raster file within each of the shapes
 # in a shapefile.
 
-import os, csv, zipfile, time, gdal, numpy
+import os, csv, zipfile, time, numpy
 
+from osgeo       import gdal
 from urllib      import request
 from html.parser import HTMLParser
 from shapefile   import Reader

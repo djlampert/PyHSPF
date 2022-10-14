@@ -1,13 +1,13 @@
 # This file contains a series of functions were reading and working with raster
 # data.
 #
-# last modified: 11/01/2012
+# last modified: 10/13/2022
 #
 # David Lampert
 
-import gdal, osr, ogr, gdalnumeric, time
-
-from gdalconst       import GA_ReadOnly
+import time
+from osgeo           import gdal, osr, ogr, gdal_array
+from osgeo.gdalconst import GA_ReadOnly
 from itertools       import chain
 from numpy           import empty, array, where
 from PIL             import Image, ImageDraw

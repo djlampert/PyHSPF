@@ -2,7 +2,7 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# Last updated: 02/15/2015
+# Last updated: 10/13/2022
 #
 # Purpose: classes to import climate data files to Python
 
@@ -1189,6 +1189,7 @@ class Precip3240Station:
                         start = None,
                         end = None,
                         tstep = 'hourly',
+                        verbose = True,
                         ):
         """Makes a timeseries from the events."""
 
