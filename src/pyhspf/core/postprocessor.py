@@ -11,7 +11,7 @@ import os, pickle, numpy, datetime, calendar, csv
 
 from scipy import stats
 
-from .wdmutil import WDMUtil
+from wdmutil import WDMUtil
 
 class Postprocessor:
     """
@@ -155,6 +155,12 @@ class Postprocessor:
                              for n in self.dsns]
 
         self.wdm_parms = wdm
+    
+    def get_max(self, oflows):
+        return max(list(filter(lambda x: numpy.isnan(x) == False, oflows)))
+    
+    def get_sum(self, oflows):
+        return sum(list(x for x in oflows if numpy.isnan(x) == False))
 
     def aggregate_hourly_daily(self, hourly):
         """Aggregates an hourly timeseries to a daily one."""
@@ -254,7 +260,7 @@ class Postprocessor:
 
         for comid in comids:
 
-            areas.append(sum([o.area 
+            areas.append(self.get_sum([o.area 
                               for o in operations if o.subbasin == comid]))
 
         return areas
@@ -749,6 +755,8 @@ class Postprocessor:
 
         ts, vols = self.get_reach_timeseries('ROVOL', comid, tstep = 'hourly',
                                              dates = dates)
+        
+        #print(vols)
 
         return vols.sum()
 
@@ -1476,11 +1484,13 @@ class Postprocessor:
         """Returns the total flow at the gage in either acre-ft or Mm3."""
         
         times, flows = self.get_obs_flow(dates = dates, verbose = True)
-
+        
+        #filter_flows = list(filter(lambda x: numpy.isnan(x) == False, flows))
+        
         if   self.hspfmodel.units == 'Metric':  conv = 10**6
         elif self.hspfmodel.units == 'English': conv = 43560
 
-        return (sum(flows) * 86400 / conv)
+        return (self.get_sum(flows) * 86400 / conv)
 
     def get_obs_recession(self, comid, dates = None):
         """Returns a timeseries of the daily recession rates for the comid
@@ -1511,10 +1521,10 @@ class Postprocessor:
 
         sflows = [sflows[stimes.index(t)] 
                   for t, f in zip(otimes, oflows) 
-                  if t in stimes and f is not None]
+                  if t in stimes and not numpy.isnan(f)]
         oflows = [oflows[otimes.index(t)] 
                   for t, f in zip(otimes, oflows) 
-                  if f is not None]
+                  if not numpy.isnan(f)]
 
         slope, intercept, daily_r, p, std_err = stats.linregress(oflows, sflows)
 
@@ -1528,13 +1538,13 @@ class Postprocessor:
 
         # Daily Nash Sutcliffe Efficiency
 
-        dailyNS = (1 - sum((numpy.array(sflows) - numpy.array(oflows))**2) /
-                   sum((numpy.array(oflows) - numpy.mean(oflows))**2))
+        dailyNS = (1 - self.get_sum((numpy.array(sflows) - numpy.array(oflows))**2) /
+                   self.get_sum((numpy.array(oflows) - numpy.mean(oflows))**2))
 
         # Daily log Nash Sutcliffe Efficiency
 
-        daily_logNS = (1 - sum((numpy.array(log_s) - numpy.array(log_o))**2) /
-                       sum((numpy.array(log_o) - numpy.mean(log_o))**2))
+        daily_logNS = (1 - self.get_sum((numpy.array(log_s) - numpy.array(log_o))**2) /
+                       self.get_sum((numpy.array(log_o) - numpy.mean(log_o))**2))
 
         # monthly r2
 
@@ -1547,8 +1557,8 @@ class Postprocessor:
         # deal with missing data
 
         sflows = [sflows[stimes.index(t)] for t, f in zip(otimes, oflows) 
-                  if t in stimes and f is not None]
-        oflows = [f for t, f in zip(otimes, oflows) if f is not None]
+                  if t in stimes and not numpy.isnan(f)]
+        oflows = [f for t, f in zip(otimes, oflows) if not numpy.isnan(f)]
 
         slope, intercept, monthly_r, p, std_err = stats.linregress(oflows, 
                                                                    sflows)
@@ -1563,13 +1573,13 @@ class Postprocessor:
 
         # Monthly Nash Sutcliffe Efficiency
 
-        monthlyNS = (1 - sum((numpy.array(sflows) - numpy.array(oflows))**2) /
-               sum((numpy.array(oflows) - numpy.mean(oflows))**2))
+        monthlyNS = (1 - self.get_sum((numpy.array(sflows) - numpy.array(oflows))**2) /
+               self.get_sum((numpy.array(oflows) - numpy.mean(oflows))**2))
 
         # Monthly log Nash Sutcliffe Efficiency
 
-        monthly_logNS = (1 - sum((numpy.array(log_s) - numpy.array(log_o))**2) /
-               sum((numpy.array(log_o) - numpy.mean(log_o))**2))
+        monthly_logNS = (1 - self.get_sum((numpy.array(log_s) - numpy.array(log_o))**2) /
+               self.get_sum((numpy.array(log_o) - numpy.mean(log_o))**2))
 
         return (daily_r**2, daily_logr**2, dailyNS, daily_logNS,
                 monthly_r**2, monthly_logr**2, monthlyNS, monthly_logNS)
@@ -1586,8 +1596,10 @@ class Postprocessor:
         obs_flows = [f for t, f in zip(*self.get_obs_flow(dates = dates,
                                                                 verbose = True))
                           if self.within_season(t, start, end, season)]
+                          
+        #filter_flows = list(filter(lambda x: numpy.isnan(x) == False, obs_flows))
 
-        return (sum(obs_flows) * 86400 / conv)
+        return (self.get_sum(obs_flows) * 86400 / conv)
 
     def get_volume(self, comids, states):
         """Returns the total volume in the list of subbasins given the state
@@ -1758,19 +1770,24 @@ class Postprocessor:
         simulated = self.get_recession_rates(comid, dates = dates,
                                              season = season)
 
-        return sum(observed) / len(observed), sum(simulated) / len(simulated)
+        return self.get_sum(observed) / len(observed), sum(simulated) / len(simulated)
 
     def mean_flow(self, comid, low_percent, high_percent, dates = None):
         """Returns the mean daily flows across a given percentile."""
 
         # get the flows
-
+        if dates is None: start, end = self.start, self.end
+        else:             start, end = dates
+        
         oflows, sflows = self.get_flow_percents(comid, low_percent, 
                                                 high_percent, dates = dates)
-
+                                                
+        #oflows = [f for f in oflows if f is not None]
+        #print(oflows)#, sflows)
+        #print(sum(oflows),len(oflows))
         # get the mean
 
-        obs_mean  = sum(oflows) / len(oflows)        
+        obs_mean  = self.get_sum(oflows) / len(oflows)        
         sim_mean = sum(sflows) / len(sflows)
 
         return obs_mean, sim_mean
@@ -1779,16 +1796,19 @@ class Postprocessor:
         """Returns the mean daily flows across a given percentile."""
 
         ts, flows = self.get_obs_flow(dates, verbose = True)
-
+        
+        #print(ts, flows)
         # compute the cutoffs
+        filter_flows = list(filter(lambda x: numpy.isnan(x) == False, flows))
 
-        low  = stats.scoreatpercentile(flows, low_percent)
-        high = stats.scoreatpercentile(flows, high_percent)
+        low  = stats.scoreatpercentile(filter_flows, low_percent)
+        high = stats.scoreatpercentile(filter_flows, high_percent)
+        #print(low,high)
 
         # find the flows in the cutoff range
 
         obs_flows = [f for f in flows if low < f and f < high]
-
+        
         # get the simulated data
 
         ts, flows = self.get_sim_flow(comid, tstep = 'daily', dates = dates)
@@ -1939,10 +1959,12 @@ class Postprocessor:
         elif season == 'other':  months = [1, 2, 3, 4, 5, 9, 10, 11, 12]
 
         fs = [f for t, f in zip(times, flows) if t.month in months]
-
+        #print(fs)
         if len(fs) == 0: return None
-
-        max_flow = max(fs)
+        #fil_fs = list(filter(lambda x: numpy.isnan(x) == False, fs))
+        #print(fil_fs)
+        max_flow = self.get_max(fs)
+        #print(max_flow)
         max_date = times[flows.index(max_flow)]
 
         # convert to the flow to a daily drainage depth (mm or in)
@@ -2044,12 +2066,13 @@ class Postprocessor:
             
                 storm_dates = self.get_storm_dates(times, oflows, prec, rec, 
                                                    area, season = season)
+                #print(storm_dates)
 
                 if storm_dates is not None:
 
                     storms.append(self.get_stormflows(storm_dates, tstep, 
                                                       comid))
-
+        #print(storms)
         return storms
 
     def get_stormflows(self, storm_dates, tstep, comid):
@@ -2059,6 +2082,14 @@ class Postprocessor:
         # get the observed flows for the storm dates
 
         obs = self.get_obs_flow(dates = storm_dates, tstep = tstep)
+        #obs_nan = False
+        # for i in obs[1]:
+            # if numpy.isnan(i):
+                # obs_nan = True
+                # break
+                
+        #if obs_nan:
+            #print(obs)
         
         # get the time series for the storm period
 
@@ -2109,11 +2140,12 @@ class Postprocessor:
 
             flows = [f / area * 3600 / conv  for f in s]
             obs   = [f / area * self.gagestep * 60 / conv for f in o[1]]
-
+            
             # add to the total
 
             simulated += sum(flows)
-            observed  += sum(obs)
+            observed  += self.get_sum(obs)
+            #print(observed)
 
         return observed, simulated
 
@@ -2130,13 +2162,13 @@ class Postprocessor:
 
             oflows = storm[7][1]
 
-            if self.gagestep == 1440: opeak = max(oflows)
+            if self.gagestep == 1440: opeak = self.get_max(oflows)
             elif self.gagestep == 60: 
-                opeak = max([f / 24 for f in 
+                opeak = self.get_max([f / 24 for f in 
                              self.aggregate_hourly_daily(oflows)])
             obs_peaks.append(opeak)
 
-        observed  = sum(obs_peaks) / len(obs_peaks)
+        observed  = self.get_sum(obs_peaks) / len(obs_peaks)
         simulated = sum(sim_peaks) / len(sim_peaks)
 
         return observed, simulated
@@ -2268,10 +2300,12 @@ class Postprocessor:
         self.regression = self.get_regression(comid, dates = dates)
 
         # get the storm events
-
+        print("before if", summer_storms)
+        
         if summer_storms is None:
             summer_storms = self.get_storms(comid, dates = dates, 
                                             season = 'summer')
+        #print("after if", summer_storms)                                   
         if other_storms is None:
             other_storms  = self.get_storms(comid, dates = dates, 
                                             season = 'other')
@@ -2318,6 +2352,7 @@ class Postprocessor:
         self.summer_storm_error = ((self.sim_summer_storms - 
                                     self.obs_summer_storms) / 
                                    self.obs_summer_storms)
+        print("In calculate errors", self.obs_summer_storms)
         self.season_error = abs((self.sim_summer - self.obs_summer) / 
                                 self.obs_summer - 
                                 (self.sim_winter - self.obs_winter) / 
@@ -3049,7 +3084,7 @@ class Postprocessor:
                     show = True):
         """Makes a plot of the runoff components."""
 
-        from pyhspf.core.hspfplots import plot_runoff
+        from hspfplots import plot_runoff
 
         if comid is None: comid = self.comid
 
@@ -3161,10 +3196,10 @@ class Postprocessor:
 
         d_sflow = [d_sflow[stimes.index(t)] 
                    for t, f in zip(otimes, d_oflow) 
-                   if t in stimes and f is not None]
+                   if t in stimes and not numpy.isnan(f)]
         d_oflow = [d_oflow[otimes.index(t)] 
                    for t, f in zip(otimes, d_oflow) 
-                   if f is not None]
+                   if not numpy.isnan(f)]
 
         # monthly
 
@@ -3176,8 +3211,8 @@ class Postprocessor:
         # deal with missing data
 
         m_sflow = [m_sflow[stimes.index(t)] for t, f in zip(otimes, m_oflow) 
-                   if t in stimes and f is not None]
-        m_oflow = [f for t, f in zip(otimes, m_oflow) if f is not None]
+                   if t in stimes and not numpy.isnan(f)]
+        m_oflow = [f for t, f in zip(otimes, m_oflow) if not numpy.isnan(f)]
 
         plot_calibration(self.hspfmodel.description, d_sflow, d_oflow, 
                          m_sflow, m_oflow, output = output, show = show)
