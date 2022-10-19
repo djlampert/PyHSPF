@@ -297,6 +297,7 @@ def plot_runoff(HUC8, precipitation, simulated_flow, baseflow, interflow,
         ax1.fill_between(times, 0, inflow[1], facecolor = in_color, 
                          alpha = 0.5, label = 'upstream inflow')
         fflow = inflow[1]
+        
         bflow = [f + b for f, b in zip(fflow, baseflow)]
         iflow = [f + b + i for f, b, i in zip(fflow, baseflow, interflow)]
         rflow = [f + b + i + r for f, b, i, r in 
@@ -304,6 +305,7 @@ def plot_runoff(HUC8, precipitation, simulated_flow, baseflow, interflow,
 
     else:
         fflow = [0 for i in range(len(baseflow))]
+        print(fflow)
         bflow = baseflow
         iflow = [i + b for i, b in zip(interflow, baseflow)]
         rflow = [i + b + r for i, b, r in zip(interflow, baseflow, runoff)]
@@ -395,8 +397,8 @@ def plot_runoff(HUC8, precipitation, simulated_flow, baseflow, interflow,
                       label = 'observed flow', marker = 's', 
                       markeredgewidth = 0.5, markeredgecolor = flow_color, 
                       markerfacecolor = 'None', markersize = 4)
-        min_inflow = 0.5 * min(observed_flow[1])
-        max_flow   = 1.2 * max(observed_flow[1])
+        min_inflow = 0.5 * min(list(filter(lambda x: np.isnan(x) == False, observed_flow[1])))
+        max_flow   = 1.2 * max(list(filter(lambda x: np.isnan(x) == False, observed_flow[1])))
 
     else:
         min_inflow = 0.01
@@ -420,6 +422,7 @@ def plot_runoff(HUC8, precipitation, simulated_flow, baseflow, interflow,
 
     ax3.plot_date(x = times, y = bflow, fmt = '-',
                   lw = 0., color = base_color)
+    #print(min_baseflow, bflow)    
     ax3.fill_between(times, min_baseflow, bflow, facecolor = base_color, 
                      alpha = 0.5, hatch = '//')
 
