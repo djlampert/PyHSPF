@@ -19,7 +19,7 @@
 
 # The class should be adaptable to other optimization parameters.
 
-import os, pickle, datetime, time, numpy
+import os, pickle, datetime, time, numpy, heapq
 
 from multiprocessing  import Pool, cpu_count
 from pyhspf.core      import HSPFModel, WDMUtil
@@ -67,6 +67,7 @@ class AutoCalibrator:
         self.hydrology        = hydrology
         self.warmup           = warmup
         self.parameter_ranges = parameter_ranges
+        self.mod_percent      = 0.1
 
     def create_submodel(self, 
                         filepath, 
@@ -233,6 +234,7 @@ class AutoCalibrator:
             dNS  = (1 - sum((numpy.array(sflows) - numpy.array(oflows))**2) /
                     sum((numpy.array(oflows) - numpy.mean(oflows))**2))
 
+            print('Normal NS: {} logNS: {}'.format(dNS,logdNS*dNS))
             return dNS * logdNS
 
         elif self.optimization == 'Nash-Sutcliffe Efficiency': 
@@ -243,6 +245,30 @@ class AutoCalibrator:
                     sum((numpy.array(oflows) - numpy.mean(oflows))**2))
 
             return dNS
+
+        # this is a modification of the Nash-Sutcliffe method that only looks
+        # at the top x percent of values. x defaults to 0.1 and is defined in
+        # the autocalibrate function mod_percent argument or the
+        # AutoCalibrate.mod_percent parameter
+        elif self.optimization == 'Modified Nash-Sutcliffe Efficiency':
+            length = int(len(sflows)*self.mod_percent)
+            # find the highest values
+            top = heapq.nlargest(length, sflows)
+            # get the indices of the highest values
+            index = [sflows.index(x) for x in top]
+            index.sort()
+            sflows_top = [sflows[i] for i in index]
+            oflows_top = [oflows[i] for i in index]
+
+            dNS  = (1 - sum((numpy.array(sflows) - numpy.array(oflows))**2) /
+                    sum((numpy.array(oflows) - numpy.mean(oflows))**2))
+                    
+            # calculate Nash-Sutcliffe parameter
+            mdNS  = (1 - sum((numpy.array(sflows_top) - numpy.array(oflows_top))**2) /
+                    sum((numpy.array(oflows_top) - numpy.mean(oflows_top))**2))
+
+            print('Normal NS: {} Modified NS: {}'.format(dNS,mdNS))
+            return mdNS
 
         else:
 
@@ -482,6 +508,7 @@ class AutoCalibrator:
                                    'AGWRC':  1.,
                                    },
                       optimization = 'Nash-Sutcliffe Efficiency',
+                      mod_percent = 0.1,
                       perturbations = [2, 1, 0.5],
                       submodel = True,
                       parallel = True,
@@ -491,6 +518,8 @@ class AutoCalibrator:
         Autocalibrates the hydrology for the hspfmodel by modifying the 
         values of the HSPF PERLND parameters contained in the vars list.
         """
+
+        self.mod_percent = mod_percent
 
         # open up the base model
 
