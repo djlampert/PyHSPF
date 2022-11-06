@@ -15,9 +15,10 @@ class CalibratorModel(HSPFModel):
 
     def __init__(self,
                  units = 'Metric',
+                 messagepath = None,
                  ):
 
-        HSPFModel.__init__(self, units = units)
+        HSPFModel.__init__(self, units = units, messagepath = messagepath)
 
     def build_uci(self,
                   reach,

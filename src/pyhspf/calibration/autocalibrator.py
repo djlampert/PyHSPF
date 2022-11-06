@@ -55,7 +55,6 @@ class AutoCalibrator:
                                      'MGMELT': (0,     25),
                                      },
                  ):
-
         self.hspfmodel        = hspfmodel
         self.submodel         = submodel
         self.start            = start
@@ -84,8 +83,9 @@ class AutoCalibrator:
             if verbose: print('creating a submodel\n')
 
             with open(self.hspfmodel, 'rb') as f: hspfmodel = pickle.load(f)
-
-            submodel = CalibratorModel()
+            messagepath = hspfmodel.messagepath
+            units = hspfmodel.units
+            submodel = CalibratorModel(units,messagepath)
             submodel.build_submodel(hspfmodel, self.comid, name = name)
 
             with open(filepath, 'wb') as f: pickle.dump(submodel, f)
@@ -174,7 +174,7 @@ class AutoCalibrator:
 
         # use WDMUtil to get the simulated values
 
-        wdm = WDMUtil()
+        wdm = WDMUtil(messagepath=model.messagepath)
 
         f = '{}_out.wdm'.format(model.filename)
 
@@ -211,10 +211,10 @@ class AutoCalibrator:
 
         sflows = [sflows[stimes.index(t)] 
                   for t, f in zip(otimes, oflows) 
-                  if t in stimes and f is not None]
+                  if t in stimes and not numpy.isnan(f)]
         oflows = [oflows[otimes.index(t)] 
                   for t, f in zip(otimes, oflows) 
-                  if f is not None]
+                  if not numpy.isnan(f)]
 
         # return the appropriate performance metric
 
