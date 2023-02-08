@@ -22,7 +22,7 @@
 import os, pickle, datetime, time, numpy, heapq
 
 from multiprocessing  import Pool, cpu_count
-from pyhspf.core      import HSPFModel, WDMUtil
+from pyhspf.core      import HSPFModel, WDMUtil, Postprocessor
 from .calibratormodel import CalibratorModel
 
 class AutoCalibrator:
@@ -260,14 +260,10 @@ class AutoCalibrator:
             sflows_top = [sflows[i] for i in index]
             oflows_top = [oflows[i] for i in index]
 
-            dNS  = (1 - sum((numpy.array(sflows) - numpy.array(oflows))**2) /
-                    sum((numpy.array(oflows) - numpy.mean(oflows))**2))
-                    
             # calculate Nash-Sutcliffe parameter
             mdNS  = (1 - sum((numpy.array(sflows_top) - numpy.array(oflows_top))**2) /
                     sum((numpy.array(oflows_top) - numpy.mean(oflows_top))**2))
 
-            print('Normal NS: {} Modified NS: {}'.format(dNS,mdNS))
             return mdNS
 
         else:
@@ -556,8 +552,14 @@ class AutoCalibrator:
         if hspfmodel.units == 'Metric': conv = 0.3048**3
         else:                           conv = 1
 
-        self.oflows = [d * conv for d in data[i:j]]
-        self.otimes = [self.start + (i + self.warmup) * delta for i in range(n)]
+        # use the postprocessor to get observed flows from the model
+        cal_start = self.start + datetime.timedelta(days=self.warmup)
+        cal_end   = self.end
+        postproc = Postprocessor(hspfmodel, (self.start,self.end), comid = self.comid)
+        oflows = postproc.get_obs_flow(dates=(cal_start,cal_end), tstep = 'daily')
+        self.oflows = oflows[1]
+        self.otimes = oflows[0]
+        postproc.close()
 
         # create a submodel to improve performance
 
