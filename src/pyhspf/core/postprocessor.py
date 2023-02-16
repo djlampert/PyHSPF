@@ -5,13 +5,13 @@
 # Purpose: This file contains many functions to extract data for postprocessing
 # from an HSPF simulation.
 #
-# Last updated: 06/30/2016
+# Last updated: 2/16/2023
 
 import os, pickle, numpy, datetime, calendar, csv
 
 from scipy import stats
 
-from wdmutil import WDMUtil
+from .wdmutil import WDMUtil
 
 class Postprocessor:
     """
@@ -755,8 +755,6 @@ class Postprocessor:
 
         ts, vols = self.get_reach_timeseries('ROVOL', comid, tstep = 'hourly',
                                              dates = dates)
-        
-        #print(vols)
 
         return vols.sum()
 
@@ -1484,9 +1482,7 @@ class Postprocessor:
         """Returns the total flow at the gage in either acre-ft or Mm3."""
         
         times, flows = self.get_obs_flow(dates = dates, verbose = True)
-        
-        #filter_flows = list(filter(lambda x: numpy.isnan(x) == False, flows))
-        
+
         if   self.hspfmodel.units == 'Metric':  conv = 10**6
         elif self.hspfmodel.units == 'English': conv = 43560
 
@@ -1596,8 +1592,6 @@ class Postprocessor:
         obs_flows = [f for t, f in zip(*self.get_obs_flow(dates = dates,
                                                                 verbose = True))
                           if self.within_season(t, start, end, season)]
-                          
-        #filter_flows = list(filter(lambda x: numpy.isnan(x) == False, obs_flows))
 
         return (self.get_sum(obs_flows) * 86400 / conv)
 
@@ -1781,11 +1775,6 @@ class Postprocessor:
         
         oflows, sflows = self.get_flow_percents(comid, low_percent, 
                                                 high_percent, dates = dates)
-                                                
-        #oflows = [f for f in oflows if f is not None]
-        #print(oflows)#, sflows)
-        #print(sum(oflows),len(oflows))
-        # get the mean
 
         obs_mean  = self.get_sum(oflows) / len(oflows)        
         sim_mean = sum(sflows) / len(sflows)
@@ -1796,14 +1785,12 @@ class Postprocessor:
         """Returns the mean daily flows across a given percentile."""
 
         ts, flows = self.get_obs_flow(dates, verbose = True)
-        
-        #print(ts, flows)
+
         # compute the cutoffs
         filter_flows = list(filter(lambda x: numpy.isnan(x) == False, flows))
 
         low  = stats.scoreatpercentile(filter_flows, low_percent)
         high = stats.scoreatpercentile(filter_flows, high_percent)
-        #print(low,high)
 
         # find the flows in the cutoff range
 
@@ -1959,12 +1946,8 @@ class Postprocessor:
         elif season == 'other':  months = [1, 2, 3, 4, 5, 9, 10, 11, 12]
 
         fs = [f for t, f in zip(times, flows) if t.month in months]
-        #print(fs)
         if len(fs) == 0: return None
-        #fil_fs = list(filter(lambda x: numpy.isnan(x) == False, fs))
-        #print(fil_fs)
         max_flow = self.get_max(fs)
-        #print(max_flow)
         max_date = times[flows.index(max_flow)]
 
         # convert to the flow to a daily drainage depth (mm or in)
@@ -2066,13 +2049,11 @@ class Postprocessor:
             
                 storm_dates = self.get_storm_dates(times, oflows, prec, rec, 
                                                    area, season = season)
-                #print(storm_dates)
 
                 if storm_dates is not None:
 
                     storms.append(self.get_stormflows(storm_dates, tstep, 
                                                       comid))
-        #print(storms)
         return storms
 
     def get_stormflows(self, storm_dates, tstep, comid):
@@ -2082,15 +2063,7 @@ class Postprocessor:
         # get the observed flows for the storm dates
 
         obs = self.get_obs_flow(dates = storm_dates, tstep = tstep)
-        #obs_nan = False
-        # for i in obs[1]:
-            # if numpy.isnan(i):
-                # obs_nan = True
-                # break
-                
-        #if obs_nan:
-            #print(obs)
-        
+
         # get the time series for the storm period
 
         storm_times = self.get_timeseries(dates = storm_dates, tstep = 'hourly')
@@ -2145,7 +2118,6 @@ class Postprocessor:
 
             simulated += sum(flows)
             observed  += self.get_sum(obs)
-            #print(observed)
 
         return observed, simulated
 
@@ -2300,12 +2272,10 @@ class Postprocessor:
         self.regression = self.get_regression(comid, dates = dates)
 
         # get the storm events
-        print("before if", summer_storms)
         
         if summer_storms is None:
             summer_storms = self.get_storms(comid, dates = dates, 
                                             season = 'summer')
-        #print("after if", summer_storms)                                   
         if other_storms is None:
             other_storms  = self.get_storms(comid, dates = dates, 
                                             season = 'other')
@@ -2352,7 +2322,6 @@ class Postprocessor:
         self.summer_storm_error = ((self.sim_summer_storms - 
                                     self.obs_summer_storms) / 
                                    self.obs_summer_storms)
-        print("In calculate errors", self.obs_summer_storms)
         self.season_error = abs((self.sim_summer - self.obs_summer) / 
                                 self.obs_summer - 
                                 (self.sim_winter - self.obs_winter) / 
@@ -3084,7 +3053,7 @@ class Postprocessor:
                     show = True):
         """Makes a plot of the runoff components."""
 
-        from hspfplots import plot_runoff
+        from pyhspf.core.hspfplots import plot_runoff
 
         if comid is None: comid = self.comid
 
