@@ -42,18 +42,6 @@ class AutoCalibrator:
                  hydrology = False,
                  submodel = None,
                  warmup = 30,
-                 parameter_ranges = {'IRC':    (0.5,    2),
-                                     'LZETP':  (0.2,  1.5),
-                                     'DEEPFR': (0,      1),
-                                     'LZSN':   (0.2,    2),
-                                     'UZSN':   (0.2,   10),
-                                     'INFILT': (0.01,  20),
-                                     'INTFW':  (0.01,  2.),
-                                     'AGWRC':  (0.5,    2),
-                                     'KVARY':  (0,    0.1),
-                                     'CCFACT': (1,     10),
-                                     'MGMELT': (0,     25),
-                                     },
                  ):
         self.hspfmodel        = hspfmodel
         self.submodel         = submodel
@@ -66,8 +54,8 @@ class AutoCalibrator:
         self.snow             = snow
         self.hydrology        = hydrology
         self.warmup           = warmup
-        self.parameter_ranges = parameter_ranges
         self.mod_percent      = 0.1
+        self.precision        = None
 
     def create_submodel(self, 
                         filepath, 
@@ -116,31 +104,42 @@ class AutoCalibrator:
         watershed by the "adjustment." The adjustments can be defined as 
         values relative to the default (products) or absolute values (sums).
         """ 
-
+        limits = self.get_limits(model.units)
         if variable == 'LZSN':
-            for p in model.perlnds: p.LZSN   *= adjustment
+            mi,ma = limits['LZSN']
+            for p in model.perlnds: p.LZSN   = min(ma, max(mi, p.LZSN * adjustment))
         if variable == 'UZSN':
-            for p in model.perlnds: p.UZSN   *= adjustment
+            mi,ma = limits['UZSN']
+            for p in model.perlnds: p.UZSN   = min(ma, max(mi, p.UZSN * adjustment))
         if variable == 'LZETP':
-            for p in model.perlnds: p.LZETP  *= adjustment
+            mi,ma = limits['LZETP']
+            for p in model.perlnds: p.LZETP  = min(ma, max(mi, p.LZETP * adjustment))
         if variable == 'INFILT':
-            for p in model.perlnds: p.INFILT *= adjustment
+            mi,ma = limits['INFILT']
+            for p in model.perlnds: p.INFILT = min(ma, max(mi, p.INFILT * adjustment))
         if variable == 'INTFW':
-            for p in model.perlnds: p.INTFW  *= adjustment
+            mi,ma = limits['INTFW']
+            for p in model.perlnds: p.INTFW  = min(ma, max(mi, p.INTFW * adjustment))
         if variable == 'IRC':
-            for p in model.perlnds: p.IRC    *= adjustment
+            mi,ma = limits['IRC']
+            for p in model.perlnds: p.IRC    = min(ma, max(mi, p.IRC * adjustment))
         if variable == 'AGWRC':
-            for p in model.perlnds: p.AGWRC  *= adjustment
+            mi,ma = limits['AGWRC']
+            for p in model.perlnds: p.AGWRC  = min(ma, max(mi, p.AGWRC * adjustment))
         if variable == 'KVARY':
-            for p in model.perlnds: p.KVARY  = max(0, p.KVARY + adjustment)
+            mi,ma = limits['KVARY']
+            for p in model.perlnds: p.KVARY  = min(ma, max(mi, p.KVARY + adjustment))
         if variable == 'DEEPFR':
-            for p in model.perlnds: p.DEEPFR += adjustment
+            mi,ma = limits['DEEPFR']
+            for p in model.perlnds: p.DEEPFR = min(ma, max(mi, p.DEEPFR + adjustment))
         if variable == 'CCFACT':
+            mi,ma = limits['CCFACT']
             for o in model.perlnds + model.implnds: 
-                o.CCFACT = min(10, max(1, o.CCFACT + adjustment))
+                o.CCFACT = min(ma, max(mi, p.CCFACT + adjustment))
         if variable == 'MGMELT':
+            mi,ma = limits['MGMELT']
             for o in model.perlnds + model.implnds: 
-                o.MGMELT = min(25, max(0, o.MGMELT + adjustment))           
+                o.MGMELT = min(ma, max(mi, p.MGMELT + adjustment))
     
     def run(self, 
             model,
@@ -234,7 +233,6 @@ class AutoCalibrator:
             dNS  = (1 - sum((numpy.array(sflows) - numpy.array(oflows))**2) /
                     sum((numpy.array(oflows) - numpy.mean(oflows))**2))
 
-            print('Normal NS: {} logNS: {}'.format(dNS,logdNS*dNS))
             return dNS * logdNS
 
         elif self.optimization == 'Nash-Sutcliffe Efficiency': 
@@ -388,28 +386,33 @@ class AutoCalibrator:
             print('error: unknown variable specified\n')
             raise
 
-    def check_variables(self):
+    def get_limits(self,units):
         """
-        User-defined check on the values of the variables to ensure 
-        the calibrated values stay within the limits.
+        Returns the limits for each variable as stated in the HSPF
+        documentation. Limits for some variables depend on the
+        unit system.
         """
-
-        for i in range(len(self.variables)):
-
-            variable = self.variables[i]
-            value    = self.values[i]
-            mi, ma   = self.parameter_ranges[variable]
-            
-            if value < mi:
-                its = variable, value, mi
-                print('warning: current value of ' +
-                      '{} ({}) is below minimum ({})'.format(*its))
-                self.values[i] = mi
-            if value > ma:
-                its = variable, value, ma
-                print('warning: current value of ' +
-                      '{} ({}) is above maximum ({})'.format(*its))
-                self.values[i] = ma
+        limits = {}
+        limits['LZETP']  = (0.0,2.0)
+        limits['INTFW']  = (0.0, numpy.inf)
+        limits['IRC']    = (1*10**-30, 0.999)
+        limits['AGWRC']  = (0.001, 0.999)
+        # note: KVARY has different units in English and Metric but
+        #   the limits are the same for both
+        limits['KVARY']  = (0.0, numpy.inf)
+        limits['DEEPFR'] = (0.0, 1.0)
+        limits['CCFACT'] = (0.0,10.0)
+        if units == 'Metric':
+            limits['LZSN']   = (0.25, 2500)
+            limits['UZSN']   = (0.25, 250)
+            limits['INFILT'] = (0.0025, 2500)
+            limits['MGMELT'] = (0.0, 25.)
+        else:
+            limits['LZSN']   = (0.01, 100)
+            limits['UZSN']   = (0.01, 10)
+            limits['INFILT'] = (0.0001, 100)
+            limits['MGMELT'] = (0.0, 1.0)
+        return limits
 
     def optimize(self, 
                  parallel, 
@@ -433,7 +436,10 @@ class AutoCalibrator:
 
             # update the current value of the optimization parameter
 
-            current = self.value
+            if self.precision is None:
+                current = self.value
+            else:
+                current = round(self.value, self.precision)
 
             # set the current values of the calibration parameters
             
@@ -478,10 +484,6 @@ class AutoCalibrator:
                     print(t2.format(*its))
                     self.values[i] = round(self.values[i] - d, 3)
 
-            # make sure variables are within bounds
-
-            self.check_variables()
-
             # show progress
 
             print('\ncalibration values relative to default:\n')
@@ -504,19 +506,18 @@ class AutoCalibrator:
                                    'AGWRC':  1.,
                                    },
                       optimization = 'Nash-Sutcliffe Efficiency',
-                      mod_percent = 0.1,
                       perturbations = [2, 1, 0.5],
                       submodel = True,
                       parallel = True,
                       nprocessors = None,
+                      mod_percent = 0.1,
+                      precision = None,
                       ):
         """
         Autocalibrates the hydrology for the hspfmodel by modifying the 
         values of the HSPF PERLND parameters contained in the vars list.
         """
-
-        self.mod_percent = mod_percent
-
+        
         # open up the base model
 
         with open(self.hspfmodel, 'rb') as f: hspfmodel = pickle.load(f)
@@ -574,6 +575,17 @@ class AutoCalibrator:
         self.variables    = [v for v in variables]
         self.values       = [variables[v] for v in variables]
         self.optimization = optimization
+        self.mod_percent = mod_percent
+        
+        # the precision to be used when comparing optimization metrics if precision
+        # is given, the metric will be rounded to that many decimal places
+
+        if precision is None or isinstance(precision,int):
+            self.precision = precision
+        else:
+            print('Precision must be None or an integer. It will be set to None '
+                  'and no rounding will be done.')
+            self.precision = None
 
         # current value of the optimization parameter
 
