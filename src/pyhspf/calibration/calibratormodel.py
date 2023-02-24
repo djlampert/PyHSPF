@@ -19,15 +19,16 @@ class CalibratorModel(HSPFModel):
                  ):
 
         HSPFModel.__init__(self, units = units, messagepath = messagepath)
+        self.func = 'SUM '
 
     def build_uci(self,
                   reach,
-                  start, 
-                  end, 
-                  states = None, 
-                  atemp = False, 
-                  snow = False, 
-                  hydrology = False, 
+                  start,
+                  end,
+                  states = None,
+                  atemp = False,
+                  snow = False,
+                  hydrology = False,
                   verbose = False,
                   ):
         """
@@ -108,7 +109,7 @@ class CalibratorModel(HSPFModel):
             lines = lines + self.masslink_block(hydrology = hydrology)
 
         # add the EXT TARGETS block
-
+        
         lines += self.ext_targets_block(reach, start.year, verbose = verbose)
 
         # add the FTABLES block for the RCHRESES if needed
@@ -128,8 +129,6 @@ class CalibratorModel(HSPFModel):
     def ext_targets_block(self, 
                           comid, 
                           year,
-                          tcode = 4,
-                          tsstep = 1,
                           verbose = False,
                           ):
         """
@@ -168,7 +167,9 @@ class CalibratorModel(HSPFModel):
         tstype = 'VOL'
         tsform = 1
         idcons = 'ROVOL'
-        func   = 'SUM '
+        func   = self.func
+        tcode  = self.tcode  # 2-mins, 3-hours, 4-days 
+        tsstep = self.tsstep # number of units per step
 
         # this overwrites all the rchreses with just the comid for the gage
 
@@ -197,6 +198,7 @@ class CalibratorModel(HSPFModel):
                        upcomids = [],
                        name = None,
                        verbose = True,
+                       tstep = 60,
                        ):
         """
         Builds a submodel from an existing HSPFModel "model" by removing
@@ -205,9 +207,22 @@ class CalibratorModel(HSPFModel):
         external time series representing mass inflows.
         """
 
+        # transform function for the external targets differs depending on the
+        # source vs. target time step
+        if hspfmodel.tstep == tstep:
+            self.func = 'SAME'
+        elif hspfmodel.tstep < tstep:
+            self.func = 'SUM '
+        else:
+        # NOTE: HSPF has a several transforms for source > target tstep but they are
+        # not valid for the WDM datasets we work with
+            print('ERROR: The timestep of the submodel must be greater than or equal'
+                  'to the timestep of the existing model.')
+            return None
+
         if name is None: name = comid
 
-        self.build_from_existing(hspfmodel, name)
+        self.build_from_existing(hspfmodel, name, tstep = tstep)
 
         # find the subbasins between the outlet and the upstream comids and
         # store in an updown dictionary

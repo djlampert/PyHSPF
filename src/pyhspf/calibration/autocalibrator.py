@@ -56,6 +56,7 @@ class AutoCalibrator:
         self.warmup           = warmup
         self.mod_percent      = 0.1
         self.precision        = None
+        self.tstep            = 1440
 
     def create_submodel(self, 
                         filepath, 
@@ -75,7 +76,8 @@ class AutoCalibrator:
             messagepath = hspfmodel.messagepath
             units = hspfmodel.units
             submodel = CalibratorModel(units,messagepath)
-            submodel.build_submodel(hspfmodel, self.comid, name = name)
+            submodel.build_submodel(hspfmodel, self.comid, name = name,
+                                    tstep = self.tstep)
 
             with open(filepath, 'wb') as f: pickle.dump(submodel, f)
 
@@ -190,19 +192,11 @@ class AutoCalibrator:
         if model.units == 'Metric': conv = 10**6
         else:                       conv = 43560
 
-        # the submodel is daily, full model is hourly
+        sflows = [d * conv / (self.tstep*60) for d in data]
 
-        if self.submodel is None: 
-
-            sflows = [sum(data[i:i+24]) * conv / 86400
-                      for i in range(0, len(data) - 23, 24)]
-            
-        else:
-
-            sflows = [d * conv / 86400 for d in data]
-
-        stimes = [self.start + i * datetime.timedelta(days = 1)
-                  for i in range(self.warmup, (self.end - self.start).days)]
+        stimes = [self.start + i * datetime.timedelta(minutes = self.tstep)
+                  for i in range(int(self.warmup*1440/self.tstep),
+                                 int((self.end - self.start).days*1440/self.tstep))]
 
         otimes = self.otimes
         oflows = self.oflows
@@ -395,7 +389,9 @@ class AutoCalibrator:
         limits = {}
         limits['LZETP']  = (0.0,2.0)
         limits['INTFW']  = (0.0, numpy.inf)
-        limits['IRC']    = (1*10**-30, 0.999)
+        # note: IRC has a minimum of 1*10**-30 but this requires it to be
+        # expressed in scientific notation. need to update hspfmodel core
+        limits['IRC']    = (0.000001, 0.999)
         limits['AGWRC']  = (0.001, 0.999)
         # note: KVARY has different units in English and Metric but
         #   the limits are the same for both
@@ -512,11 +508,23 @@ class AutoCalibrator:
                       nprocessors = None,
                       mod_percent = 0.1,
                       precision = None,
+                      tstep = 'daily',
                       ):
         """
         Autocalibrates the hydrology for the hspfmodel by modifying the 
         values of the HSPF PERLND parameters contained in the vars list.
         """
+
+        # set the time step in minutes
+
+        if tstep == 'daily':
+            self.tstep = 1440
+        elif tstep == 'hourly':
+            self.tstep = 60
+        else:
+            print('Warning: unknown time step specified. Valid options are '
+                  'hourly and daily.')
+            return None
         
         # open up the base model
 
@@ -539,17 +547,6 @@ class AutoCalibrator:
             print('error, no calibration gage specified')
             raise
 
-        # get the calibration data
-
-        s, tstep, data = hspfmodel.flowgages[self.gageid]
-
-        # find the indices for the calibration
-
-        i     = (self.start - s).days + self.warmup
-        j     = (self.end   - s).days
-        n     = (self.end - self.start).days - self.warmup
-        delta = datetime.timedelta(days = 1)
-
         if hspfmodel.units == 'Metric': conv = 0.3048**3
         else:                           conv = 1
 
@@ -557,10 +554,12 @@ class AutoCalibrator:
         cal_start = self.start + datetime.timedelta(days=self.warmup)
         cal_end   = self.end
         postproc = Postprocessor(hspfmodel, (self.start,self.end), comid = self.comid)
-        oflows = postproc.get_obs_flow(dates=(cal_start,cal_end), tstep = 'daily')
-        self.oflows = oflows[1]
-        self.otimes = oflows[0]
-        postproc.close()
+        try:
+            oflows = postproc.get_obs_flow(dates=(cal_start,cal_end), tstep = tstep)
+            self.oflows = oflows[1]
+            self.otimes = oflows[0]
+        finally:
+            postproc.close()
 
         # create a submodel to improve performance
 
@@ -575,7 +574,7 @@ class AutoCalibrator:
         self.variables    = [v for v in variables]
         self.values       = [variables[v] for v in variables]
         self.optimization = optimization
-        self.mod_percent = mod_percent
+        self.mod_percent  = mod_percent
         
         # the precision to be used when comparing optimization metrics if precision
         # is given, the metric will be rounded to that many decimal places
