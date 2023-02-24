@@ -605,7 +605,7 @@ def merge_shapes(inputfile,
 
     # load the catchment and flowline shapefiles
 
-    r = Reader(inputfile, shapeType = 5)
+    r = Reader(inputfile)
 
     try: 
 
@@ -620,7 +620,7 @@ def merge_shapes(inputfile,
 
     w = Writer(outputfile, shapeType = 5)
 
-    w.poly(shapeType = 5, parts = [combined])
+    w.poly([combined])
 
     # copy the fields from the original and then the first record; note this
     # can be adapted as needed

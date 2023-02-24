@@ -1,9 +1,19 @@
+# nhdplusextractor.py
+#
+# Mitchell Sawtelle (mitchell.sawtelle@okstate.edu)
+#
+# last updated: 2/24/2022
+#
+# contains the NHDPlus Extractor class, which can be used to retrieve source
+# data from the NHDPlus V2 dataset online, and then extract the data from
+# the larger source files for a given 8-digit Hydrologic Unit Code (HUC8).
+
+
 import subprocess, time, os, numpy, struct, datetime, shutil
-import gdal
-from osgeo import osr
+from osgeo import osr, gdal
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError, URLError
-from gdalconst import GA_ReadOnly
+from osgeo.gdalconst import GA_ReadOnly
 from matplotlib import pyplot, path, ticker
 from matplotlib import patches, colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -14,7 +24,7 @@ import pickle
 import socket
 
 
-class NHDPlusExtractor(object):
+class NHDPlusExtractor():
     """class which holds various methods to manipulate, gather, and unpack the NHDPlus Dataset
        updated email list
        destination argument of the init method denotes the working directory for all ndhplus work
@@ -28,12 +38,15 @@ class NHDPlusExtractor(object):
             destination is the path to where the user would like the nhdplus data to be stored
             if no argument is given the location of this file is used
         '''
-        super(NHDPlusExtractor, self).__init__()
         self.destination = destination
         if self.destination is None: #if no destination given in init method set destination to current directory
             self.destination = os.path.dirname(__file__)
+        else:
+            # make the directory if it doesn't exist
+            if not os.path.isdir(destination): os.mkdir(destination)
+            
         #base_url to EPA's hosting of the NHDPlusV21 Dataset
-        self.base_url = 'https://s3.amazonaws.com/nhdplus/NHDPlusV21/Data/NHDPlus'
+        self.base_url = 'https://edap-ow-data-commons.s3.amazonaws.com/NHDPlusV21/Data/NHDPlus'
         self.currentpath = os.path.dirname(__file__) #currentpath variable
         self.path_to_7zip = r'C:\Program Files\7-Zip\7z.exe' #path to 7zip will vary per User
 
@@ -266,7 +279,9 @@ class NHDPlusExtractor(object):
         #headers to use when pinging the amazon servers
         self.headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.81 Safari/537.36'}
 
-
+        #list of encodings to try when reading shapefiles
+        #utf-8 by default but some use latin-1
+        self.encodings = ['utf8','latin1']
 
     def gather_rpu_links(self,max_version=25, rpu_input=None, filename_input=None):
         '''
@@ -649,7 +664,6 @@ class NHDPlusExtractor(object):
                 print('no link found for {} {}'.format(vpu, filename))
                 return working_link
 
-
     def downloadrpufile(self, rpu, filename):
         '''
         function to download rpu files
@@ -659,9 +673,9 @@ class NHDPlusExtractor(object):
         '''
 
         assert rpu in self.RPU_to_VPU.keys(), 'RPU must be one of the following ' + str(sorted(self.RPU_to_VPU.keys()))
-        assert os.path.isfile(self.link_file), 'no link file run verify_links fucntion'
+        assert os.path.isfile(self.link_file), 'no link file run verify_links function'
         assert filename in self.RPU_Files, 'filename must be one of the following ' + str(sorted(self.RPU_Files))
-        link = self.getvpufile(vpu, filename)
+        link = self.getrpufile(rpu, filename)
         filename = link.split('/')[-1]
         filepath = os.path.join(self.destination, filename)
 
@@ -679,7 +693,8 @@ class NHDPlusExtractor(object):
 
         else:
             print('{} already exists, moving on'.format(filepath))
-
+        # return the filename so that the download_decompress method knows what to decompress
+        return filename
 
     def downloadvpufile(self, vpu, filename):
         '''
@@ -710,6 +725,8 @@ class NHDPlusExtractor(object):
             print('finished downloading file for vpu:{}, filename:{}'.format(vpu,filename))
         else:
             print('{} already exists, moving on'.format(filepath))
+        # return the filename so the download_decompress method knows what to decompress
+        return filename
 
     def decompress(self,filename):
 
@@ -828,6 +845,7 @@ class NHDPlusExtractor(object):
 
                 for items in rpu_links:
                     destination.write('%s\n' % items)
+
     def download_decompress(self,vpu=None,rpu=None,filename=None,decompress=True):
         '''
         function to download all the data for the NHDPlus DataSet
@@ -835,7 +853,7 @@ class NHDPlusExtractor(object):
         vpu vector processing unit desired, inputted as string
         rpu raster processing unit desired, inputted as string
         filename filename corresponding to rpu or vpu
-        decomrpess if True decompress files with 7zip
+        decompress if True decompress files with 7zip
 
         kwarg combinations and function behavior
         None : All files in the NHDPlus dataset will be downloaded
@@ -845,9 +863,11 @@ class NHDPlusExtractor(object):
         rpu + filename : downloda specified file
         vpu + filename + decompress: download specified file and decompress
         rpu + filename + decompress: download specified file and decompress
-        decompress only : walks self.destination path and decompresses all files in path
+        decompress only : decompresses all '.7z' files in self.destination
 
         '''
+        # list of files that will need to be decompressed
+        filenames = []
         if not os.path.isfile(self.link_file):
             print('the file {} was not found, running verify_links()'.format(self.link_file))
             self.verify_links()
@@ -856,66 +876,60 @@ class NHDPlusExtractor(object):
             assert vpu in self.VPU_to_RPU.keys(), 'VPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
             assert filename in self.VPU_Files, 'filename must be one of ' + str(self.VPU_Files)
             assert rpu is None, 'kwargs rpu and vpu can not be called at the same time, if you wish to download the entire NHDPlus DataSet do not specify either'
-            self.downloadvpufile(vpu,filename)
+            dl_file = self.downloadvpufile(vpu,filename)
+            filenames.append(dl_file)
 
         elif rpu is not None and filename is not None:
             assert rpu in self.RPU_to_VPU.keys(), 'RPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
             assert filename in self.RPU_Files, 'filename must be one of ' + str(self.VPU_Files)
             assert vpu is None, 'kwargs rpu and vpu can not be called at the same time if you wish to download the entire NHDPlus DataSet do not specify either'
-            self.downloadrpufile(rpu,filename)
+            dl_file = self.downloadrpufile(rpu,filename)
+            filenames.append(dl_file)
 
         elif vpu is not None and rpu is None and filename is None:
             assert vpu in self.VPU_to_RPU.keys(), 'VPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
             for files in self.VPU_Files:
-                self.downloadvpufile(vpu,files)
+                dl_file = self.downloadvpufile(vpu,files)
+                filenames.append(dl_file)
 
         elif rpu is not None and vpu is None and filename is None:
             assert rpu in self.RPU_to_VPU.keys(), 'RPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
             for files in self.VPU_Files:
-                self.downloadrpufile(rpu,files)
+                dl_file = self.downloadrpufile(rpu,files)
+                filenames.append(dl_file)
 
         elif rpu is None and vpu is None and filename is None:
             for vpus in sorted(self.VPU_to_RPU.keys()):
                 for files in self.VPU_Files:
-                    print(vpu + ' ' + files)
-                    y = self.getvpufile(vpus, files)
-                    if y is not None:
-                        y = y.split('/')[-1]
-                    else:
-                        continue
-                    if os.path.exists(os.path.join(self.destination, y)):
-                        print(y + ' already exists, moving on')
-                        pass
-                    else:
-                        self.downloadvpufile(vpu,files)
+                    dl_file = self.downloadvpufile(vpu,files)
+                    filenames.append(dl_file)
 
             for rpu in sorted(self.RPU_to_VPU.keys()):
 
                 for files in self.RPU_Files:
-                    print(rpu + ' ' + files)
-                    y = self.getrpufile(rpu, files)
-                    if y is not None:
-                        y = y.split('/')[-1]
-                        print(y)
-                    else:
-                        continue
+                    dl_file = self.downloadrpufile(rpu, files)
+                    filenames.append(dl_file)
 
-                    if os.path.exists(os.path.join(self.destination, y)):
-                        print(y + ' already exists, moving on')
-                        pass
-
-                    else:
-                        self.downloadrpufile(rpu, files)
         else:
             print('the acceptable kwarg combinations are vpu and filename, rpu and filename, vpu only, rpu only, or no kwargs')
             raise
 
         if decompress is True:
 
-            for dirpath, subdir, files in os.walk(self.destination):
-
-                for data in files:
-                    self.decompress(os.path.join(dirpath, data))
+            # if the filenames list is empty then only the decompress argument was true
+            # in that case decompress all files in the destination directory
+            if not filenames:
+                lst_files = os.listdir(self.destination)
+                for lst_name in lst_files:
+                    if lst_name.lower().endswith('.7z') and os.isfile(lst_name):
+                        self.decompress(os.path.join(self.destination, lst_name))
+            # in the case that the filenames list is not empty we only want to
+            # decompress the files we just downloaded
+            else:
+                print('Extracting files in {}'.format(self.destination))
+                for lst_name in filenames:
+                    print('Extracting {}'.format(lst_name))
+                    self.decompress(os.path.join(self.destination, lst_name))
 
     def get_degree_transform(self, dataset):
         """
@@ -1176,7 +1190,29 @@ class NHDPlusExtractor(object):
         temp = {} #dictionary mapping values to fields example temp['COMID'] = [7621376,24557283]
         index=[] #index of the requested attributes in the dbf
         mydbf = open(source,'rb')#open dbf file
-        sf = Reader(dbf=mydbf)#use PyShp to read dbf
+
+        # occasionally shapefile records are not encoded in utf-8 so we initialize the variables
+        # then attempt to read the shapefile in a try block in order to catch codec errors
+        sf = None
+        sfrecords = None
+        for encoding in self.encodings:
+            try:
+            # attempt to read the shapefile using the given encoding
+                sf = Reader(dbf=mydbf,encoding = encoding)#use PyShp to read dbf
+                sfrecords = sf.records()
+                if verbose:
+                    print('Successfully read {} with {} encoding.'.format(source,encoding))
+                break
+            except UnicodeDecodeError:
+            # could not read the records using the given encoding so we log and move to the next one
+                if verbose:
+                    print('Failed to read {} with {} encoding.'.format(source,encoding))
+        # if sfrecords is still none that means we were unable to read with any of the encodings
+        if sfrecords is None:
+            print('ERROR: Unable to read {} with any of the specified encodings. Try appending'
+                  ' additional options to the NHDPlusExtractor object\'s encoding property.'.format(source))
+            return None
+
         fields = sf.fields[1:]#list of the fields from the dbf excluding the DeletionFlag
         fields = [item[0].upper() for item in fields]#capitalize the names of the fields and remove the other qualitites of the fields
 
@@ -1197,7 +1233,7 @@ class NHDPlusExtractor(object):
         if verbose is True:
             print('iterating over records finding matching comids from list given')
         #iterate over records finding matching comids
-        for pos,rec in enumerate(sf.records()):
+        for pos,rec in enumerate(sfrecords):
 
             if rec[comid_index[0]] in comids:
                 for indice in index:
@@ -1216,15 +1252,32 @@ class NHDPlusExtractor(object):
 
         return temp
 
-
-    def get_comids(self, flowlinefile):
+    def get_comids(self, flowlinefile, verbose = True):
         """
         Finds the comids from the flowline file.
         """
 
-        # open the file
-
-        shapefile = Reader(flowlinefile)
+        # occasionally shapefile records are not encoded in utf-8 so we initialize the variables
+        # then attempt to read the shapefile in a try block in order to catch codec errors
+        shapefile = None
+        sfrecords = None
+        for encoding in self.encodings:
+            try:
+            # attempt to read the shapefile using the given encoding
+                shapefile = Reader(flowlinefile,encoding = encoding)
+                sfrecords = shapefile.records()
+                if verbose:
+                    print('Successfully read {} with {} encoding.'.format(flowlinefile,encoding))
+                break
+            except UnicodeDecodeError:
+            # could not read the records using the given encoding so we log and move to the next one
+                if verbose:
+                    print('Failed to read {} with {} encoding.'.format(flowlinefile,encoding))
+        # if sfrecords is still none that means we were unable to read with any of the encodings
+        if sfrecords is None:
+            print('ERROR: Unable to read {} with any of the specified encodings. Try appending'
+                  ' additional options to the NHDPlusExtractor object\'s encoding property.'.format(flowlinefile))
+            return None
 
         # find the index of the comids
         try:
@@ -1234,7 +1287,7 @@ class NHDPlusExtractor(object):
 
         # make a list of the comids
 
-        comids = [r[comid_index] for r in shapefile.records()]
+        comids = [r[comid_index] for r in sfrecords]
 
         return comids
 
@@ -1253,8 +1306,27 @@ class NHDPlusExtractor(object):
 
         if verbose: print('reading the flowline file\n')
 
-        shapefile = Reader(source, shapeType = 3)
-        records   = shapefile.records()
+        # occasionally shapefile records are not encoded in utf-8 so we initialize the variables
+        # then attempt to read the shapefile in a try block in order to catch codec errors
+        shapefile = None
+        records = None
+        for encoding in self.encodings:
+            try:
+            # attempt to read the shapefile using the given encoding
+                shapefile = Reader(source,encoding = encoding)
+                records = shapefile.records()
+                if verbose:
+                    print('Successfully read {} with {} encoding.'.format(source,encoding))
+                break
+            except UnicodeDecodeError:
+            # could not read the records using the given encoding so we log and move to the next one
+                if verbose:
+                    print('Failed to read {} with {} encoding.'.format(source,encoding))
+        # if records is still none that means we were unable to read with any of the encodings
+        if records is None:
+            print('ERROR: Unable to read {} with any of the specified encodings. Try appending'
+                  ' additional options to the NHDPlusExtractor object\'s encoding property.'.format(source))
+            return None
 
         # figure out which field codes are the Reach code and comid
 
@@ -1276,7 +1348,7 @@ class NHDPlusExtractor(object):
         i = 0
         for record in records:
             huc8record = int(record[reach_index][:8])
-            if huc8record == HUC8:
+            if huc8record == int(HUC8):
                 indices.append(i)
             i+=1
         if len(indices) == 0:
@@ -1285,14 +1357,14 @@ class NHDPlusExtractor(object):
 
         # write the data from the HUC8 to a new shapefile
 
-        w = Writer(shapeType = 3)
+        w = Writer(destination, shapeType = shapefile.shapeType)
 
         for field in shapefile.fields:  w.field(*field)
 
         for i in indices:
             shape = shapefile.shape(i)
 
-            w.poly(shapeType = 3, parts = [shape.points])
+            w.shape(shape)
             record = records[i]
 
             #little work around for blank GNIS_ID and GNIS_NAME values
@@ -1303,7 +1375,7 @@ class NHDPlusExtractor(object):
                 record[4] = record[4].decode('cp1252')
             w.record(*record)
 
-        w.save(destination)
+        w.close()
 
         if verbose:
             l = len(indices)
@@ -1328,7 +1400,27 @@ class NHDPlusExtractor(object):
 
         if verbose: print('reading the catchment shapefile\n')
 
-        shapefile = Reader(source)
+        # occasionally shapefile records are not encoded in utf-8 so we initialize the variables
+        # then attempt to read the shapefile in a try block in order to catch codec errors
+        shapefile = None
+        records = None
+        for encoding in self.encodings:
+            try:
+            # attempt to read the shapefile using the given encoding
+                shapefile = Reader(source,encoding = encoding)
+                records = shapefile.records()
+                if verbose:
+                    print('Successfully read {} with {} encoding.'.format(source,encoding))
+                break
+            except UnicodeDecodeError:
+            # could not read the records using the given encoding so we log and move to the next one
+                if verbose:
+                    print('Failed to read {} with {} encoding.'.format(source,encoding))
+        # if records is still none that means we were unable to read with any of the encodings
+        if records is None:
+            print('ERROR: Unable to read {} with any of the specified encodings. Try appending'
+                  ' additional options to the NHDPlusExtractor object\'s encoding property.'.format(source))
+            return None
 
         # get the index of the feature id, which links to the flowline comid
         print(shapefile.fields)
@@ -1339,7 +1431,6 @@ class NHDPlusExtractor(object):
 
         if verbose: print('searching the catchments in the watershed\n')
 
-        records = shapefile.records()
         indices = []
 
         i = 0
@@ -1355,16 +1446,17 @@ class NHDPlusExtractor(object):
 
         if verbose: print('writing the new catchment shapefile\n')
 
-        w = Writer()
+        w = Writer(destination,shapeType = shapefile.shapeType)
 
         for field in shapefile.fields:  w.field(*field)
 
         for i in indices:
             shape = shapefile.shape(i)
-            w.poly(shapeType = 5, parts = [shape.points])
+            w.shape(shape)
             w.record(*records[i])
 
-        w.save(destination)
+        w.close()
+
     def combine_NED(self, nedfiles, VPU):
         '''
         combines all NED files in the RPU regions for specified VPU into one big file for simplicity
@@ -1525,6 +1617,13 @@ class NHDPlusExtractor(object):
         #getting proper files for vpu and huc8 selected
         start = time.time()
         DA = self.VPU_to_DA[VPU]
+        
+        # download the required files
+        self.download_decompress(vpu = VPU)
+        # also need the NEDSnapshot files for each rpu
+        RPUs = self.VPU_to_RPU[VPU]
+        for RPU in RPUs:
+            self.download_decompress(rpu = RPU, filename = 'NEDSnapshot')
 
         destination = '{}/NHDPlus{}'.format(self.destination, DA)
         NHDPlus = '{}/NHDPlus{}'.format(destination, VPU)
@@ -1548,7 +1647,7 @@ class NHDPlusExtractor(object):
 
         # NED rasters -- there is more than one per VPU
         nedfiles = ['{}/NEDSnapshot/Ned{}/elev_cm'.format(NHDPlus,RPU)
-                         for RPU in self.VPU_to_RPU[VPU]]
+                         for RPU in RPUs]
 
         newnedfile = '{}/NEDSnapshot/Combined_NED/mosaic_{}.tif'.format(NHDPlus,DA)
         if not os.path.isfile(newnedfile):
@@ -1867,7 +1966,7 @@ class NHDPlusExtractor(object):
 
         # open up and show the boundary
 
-        b = Reader(bfile, shapeType = 5)
+        b = Reader(bfile)
 
         boundary = b.shape(0)
         points = numpy.array(boundary.points)
@@ -1875,9 +1974,10 @@ class NHDPlusExtractor(object):
 
         # open up and show the catchments
 
-        c = Reader(cfile, shapeType = 5)
-
-        extent = self.get_boundaries(c.shapes(), space = 0.02)
+        c = Reader(cfile)
+        cshapes = c.shapes()
+        
+        extent = self.get_boundaries(cshapes, space = 0.02)
 
         xmin, ymin, xmax, ymax = extent
 
@@ -1891,9 +1991,8 @@ class NHDPlusExtractor(object):
 
         # make patches of the catchment area
 
-        for i in range(len(c.records())):
-            catchment = c.shape(i)
-            points = numpy.array(catchment.points)
+        for shape in cshapes:
+            points = numpy.array(shape.points)
             subplot.add_patch(self.make_patch(points, facecolor, width = 0.1))
 
         # get the flowline attributes, make an "updown" dictionary to follow
@@ -1912,10 +2011,30 @@ class NHDPlusExtractor(object):
 
         # open up and show the flowfiles
 
-        f = Reader(flowfile, shapeType = 3)
+        # occasionally shapefile records are not encoded in utf-8 so we initialize the variables
+        # then attempt to read the shapefile in a try block in order to catch codec errors
+        f = None
+        frecords = None
+        for encoding in self.encodings:
+            try:
+            # attempt to read the shapefile using the given encoding
+                f = Reader(flowfile,encoding = encoding)
+                frecords = f.records()
+                if verbose:
+                    print('Successfully read {} with {} encoding.'.format(flowfile,encoding))
+                break
+            except UnicodeDecodeError:
+            # could not read the records using the given encoding so we log and move to the next one
+                if verbose:
+                    print('Failed to read {} with {} encoding.'.format(flowfile,encoding))
+        # if frecords is still none that means we were unable to read with any of the encodings
+        if frecords is None:
+            print('ERROR: Unable to read {} with any of the specified encodings. Try appending'
+                  ' additional options to the NHDPlusExtractor object\'s encoding property.'.format(flowfile))
+            return None
         comid_index = f.fields.index(['COMID', 'N',  9, 0]) - 1
 
-        all_comids = [r[comid_index] for r in f.records()]
+        all_comids = [r[comid_index] for r in frecords]
 
         # get the flows and velocities from the dictionary
 
