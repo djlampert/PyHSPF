@@ -20,6 +20,8 @@ class CalibratorModel(HSPFModel):
 
         HSPFModel.__init__(self, units = units, messagepath = messagepath)
         self.func = 'SUM '
+        self.ext_tcode = None
+        self.ext_tsstep = None
 
     def build_uci(self,
                   reach,
@@ -168,8 +170,8 @@ class CalibratorModel(HSPFModel):
         tsform = 1
         idcons = 'ROVOL'
         func   = self.func
-        tcode  = self.tcode  # 2-mins, 3-hours, 4-days 
-        tsstep = self.tsstep # number of units per step
+        tcode = self.ext_tcode
+        tsstep = self.ext_tsstep
 
         # this overwrites all the rchreses with just the comid for the gage
 
@@ -220,9 +222,13 @@ class CalibratorModel(HSPFModel):
                   'to the timestep of the existing model.')
             return None
 
+        # this allows for aggregating external targets to a different time step
+        # than that of the model
+        self.ext_tcode, self.ext_tsstep = self.get_timestep(tstep)
+
         if name is None: name = comid
 
-        self.build_from_existing(hspfmodel, name, tstep = tstep)
+        self.build_from_existing(hspfmodel, name)
 
         # find the subbasins between the outlet and the upstream comids and
         # store in an updown dictionary
@@ -276,9 +282,9 @@ class CalibratorModel(HSPFModel):
 
         for identifier in hspfmodel.flowgages:
             if identifier == comid:
-                start_date, tstep, data = hspfmodel.flowgages[identifier]
+                start_date, t, data = hspfmodel.flowgages[identifier]
                 self.add_timeseries('flowgage', identifier, start_date, 
-                                        data, tstep = tstep)
+                                        data, tstep = t)
 
         # add the watershed time series dictionaries for the model
 

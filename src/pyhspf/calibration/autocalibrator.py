@@ -201,7 +201,7 @@ class AutoCalibrator:
         otimes = self.otimes
         oflows = self.oflows
 
-        # remove points with missing data from both simulated and oberved flows
+        # remove points with missing data from both simulated and observed flows
 
         sflows = [sflows[stimes.index(t)] 
                   for t, f in zip(otimes, oflows) 
