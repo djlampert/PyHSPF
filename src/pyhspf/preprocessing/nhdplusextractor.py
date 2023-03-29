@@ -1472,7 +1472,6 @@ class NHDPlusExtractor():
         NHDPlus = '{}/NHDPlus{}'.format(destination, VPU)
 
         inmosaic = 'mosaic_{}.vrt'.format(DA)
-        vrtcommand = 'gdalbuildvrt {}'.format(inmosaic)
         outmosaic = 'mosaic_{}.tif'.format(DA)
 
         #path to combined NED file
@@ -1480,13 +1479,14 @@ class NHDPlusExtractor():
         if not os.path.exists(nedfilepath):
             os.makedirs(nedfilepath)
         newfile = '{}/{}'.format(nedfilepath, outmosaic)
-        for f in nedfiles:
-            vrtcommand = vrtcommand + ' ' + f
 
         print('making combined file this might take awhile')
-        os.system(vrtcommand)
-        warpcommand = 'gdalwarp {} -co BIGTIFF=YES --config GDAL_CACHEMAX 6000 -wm 1500 {}'.format(inmosaic, newfile)
-        os.system(warpcommand)
+
+        gdal.BuildVRT(inmosaic,nedfiles)
+        warpoptions = gdal.WarpOptions(creationOptions='BIGTIFF=YES', warpMemoryLimit=1500)
+        gdal.SetConfigOption('GDAL_CACHEMAX','6000')
+        gdal.Warp(inmosiac,newfile,options=warpoptions)
+        gdal.SetConfigOption('GDAL_CACHEMAX',None)
         raster = gdal.Open(newfile, GA_ReadOnly)
         band = raster.GetRasterBand(1)
         band.ComputeStatistics(False)
