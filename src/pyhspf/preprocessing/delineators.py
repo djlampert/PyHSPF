@@ -533,7 +533,7 @@ class NHDPlusDelineator:
     
             for i in indices:
                 shape = shapefile.shape(i)
-                w.poly(shapeType = 3, parts = [shape.points])
+                w.line([shape.points])
     
                 record = records[i]
     
@@ -595,7 +595,7 @@ class NHDPlusDelineator:
     
             for i in indices:
                 shape = shapefile.shape(i)
-                w.poly(shapeType = 5, parts = [shape.points])    
+                w.poly([shape.points])    
                 record = records[i]
                 w.record(*record)
     
@@ -698,7 +698,7 @@ class NHDPlusDelineator:
     
             for i in indices:
                 shape = shapefile.shape(i)
-                w.poly(shapeType = 3, parts = [shape.points])
+                w.line([shape.points])
     
                 record = records[i]
     
@@ -760,7 +760,7 @@ class NHDPlusDelineator:
     
             for i in indices:
                 shape = shapefile.shape(i)
-                w.poly(shapeType = 5, parts = [shape.points])    
+                w.poly([shape.points])    
                 record = records[i]
                 w.record(*record)
     
@@ -1535,7 +1535,7 @@ class HUC8Delineator(NHDPlusDelineator):
             for p in shape.points:
                 if p not in points: points.append(p)
 
-        w.poly(shapeType = 3, parts = [points])
+        w.line([points])
 
         w.close()
 
@@ -1689,7 +1689,7 @@ class HUC8Delineator(NHDPlusDelineator):
     
         w.record(*record)
     
-        w.poly(shapeType = 5, parts = [combined])
+        w.poly([combined])
 
         w.close()
 
@@ -2382,7 +2382,7 @@ class HUC8Delineator(NHDPlusDelineator):
         for i in indices:
             shape  = shapefile.shape(i)
 
-            w.poly(shapeType = 3, parts = [shape.points])
+            w.line([shape.points])
 
             record = records[i]
 
@@ -2441,7 +2441,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
         for i in indices:
             shape  = shapefile.shape(i)
-            w.poly(shapeType = 5, parts = [shape.points])
+            w.poly([shape.points])
             w.record(*records[i])
 
         w.close()
@@ -2491,7 +2491,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
                 # write the shape and record to the new file
 
-                l.poly(shapeType = 3, parts = [shape.points])
+                l.line([shape.points])
                 record = r.record(0)
                 if isinstance(record[1], bytes): record[1] = ''
                 if record[1] == 65 * ' ': record[1] = ''
@@ -2703,7 +2703,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
                 # write the shape and record to the new file
 
-                w.poly(shapeType = 5, parts = [shape.points])
+                w.poly([shape.points])
                 record = r.record(0)
                 w.record(*record)
 

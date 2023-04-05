@@ -2,7 +2,7 @@
 #
 # Mitchell Sawtelle (mitchell.sawtelle@okstate.edu)
 #
-# last updated: 2/24/2022
+# last updated: 03/28/2023
 #
 # contains the NHDPlus Extractor class, which can be used to retrieve source
 # data from the NHDPlus V2 dataset online, and then extract the data from
@@ -1423,7 +1423,7 @@ class NHDPlusExtractor():
             return None
 
         # get the index of the feature id, which links to the flowline comid
-        print(shapefile.fields)
+
         featureid_index = shapefile.fields.index(['FEATUREID', 'N', 9, 0]) - 1
 
         # go through the comids from the flowlines and add the corresponding
@@ -1472,6 +1472,7 @@ class NHDPlusExtractor():
         NHDPlus = '{}/NHDPlus{}'.format(destination, VPU)
 
         inmosaic = 'mosaic_{}.vrt'.format(DA)
+        vrtcommand = 'gdalbuildvrt {}'.format(inmosaic)
         outmosaic = 'mosaic_{}.tif'.format(DA)
 
         #path to combined NED file
@@ -1479,14 +1480,13 @@ class NHDPlusExtractor():
         if not os.path.exists(nedfilepath):
             os.makedirs(nedfilepath)
         newfile = '{}/{}'.format(nedfilepath, outmosaic)
+        for f in nedfiles:
+            vrtcommand = vrtcommand + ' ' + f
 
         print('making combined file this might take awhile')
-
-        gdal.BuildVRT(inmosaic,nedfiles)
-        warpoptions = gdal.WarpOptions(creationOptions='BIGTIFF=YES', warpMemoryLimit=1500)
-        gdal.SetConfigOption('GDAL_CACHEMAX','6000')
-        gdal.Warp(inmosiac,newfile,options=warpoptions)
-        gdal.SetConfigOption('GDAL_CACHEMAX',None)
+        os.system(vrtcommand)
+        warpcommand = 'gdalwarp {} -co BIGTIFF=YES --config GDAL_CACHEMAX 6000 -wm 1500 {}'.format(inmosaic, newfile)
+        os.system(warpcommand)
         raster = gdal.Open(newfile, GA_ReadOnly)
         band = raster.GetRasterBand(1)
         band.ComputeStatistics(False)
