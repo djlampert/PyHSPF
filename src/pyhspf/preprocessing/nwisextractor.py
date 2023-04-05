@@ -11,6 +11,8 @@
 
 import shutil, os, pickle, zipfile, datetime
 import dataretrieval.nwis as nwis
+import numpy as np
+import pandas as pd
 from shapefile import Reader, Writer
 from urllib    import request
 
@@ -85,13 +87,30 @@ class NWISExtractor:
         sites['state_cd'] = info[0]['state_cd']
 
         # get mean flow
-        stats = nwis.get_stats(sites=siteids,statReportType='annual',statTypeCd='mean',parameterCd='00060')
+        stats = []
+        if len(sites) <= 10:
+            stats = nwis.get_stats(sites=siteids,statReportType='annual',statTypeCd='mean',parameterCd='00060')
+        else:
+            # if there are more than 10 sites we have to split up the queries
+            # first split the sites array
+            indices = []
+            for i in range(1,int(len(sites)/10)+1):
+                indices.append(i*10)
+            split = np.array_split(np.array(siteids),indices)
+            dfs = []
+            # download a dataframe for each chuck of sites
+            for query in split:
+                df = nwis.get_stats(sites=query.tolist(),statReportType='annual',statTypeCd='mean',parameterCd='00060')
+                dfs.append(df[0])
+            stats.append(pd.concat(dfs))
+
         for sid in siteids:
             # get_stats gives us the annual mean for every year reported
             # take the mean of the annual values to get the overall mean
             mean = stats[0].loc[stats[0]['site_no']==sid,'mean_va'].mean()
             sites.loc[sites['site_no']==sid,'mean_flow'] = mean
 
+        # 
         # create a shapefile of the sites
         w = Writer(sfile, shapeType = 1)
 
@@ -116,7 +135,12 @@ class NWISExtractor:
             dayn = sites.loc[sites['site_no']==sid,'end_date'].item()
             dayndt = datetime.datetime.strptime(dayn,'%Y-%m-%d')
             dayn = int(dayndt.strftime('%Y%m%d'))
-            da = int(sites.loc[sites['site_no']==sid,'drain_area_va'].item())
+            # hack to deal with empty drainage area fields
+            da = None
+            try:
+                da = int(sites.loc[sites['site_no']==sid,'drain_area_va'].item())
+            except:
+                pass
             huc = str(sites.loc[sites['site_no']==sid,'huc_cd'].item())
             ave = sites.loc[sites['site_no']==sid,'mean_flow'].item()
             name = sites.loc[sites['site_no']==sid,'station_nm'].item()
