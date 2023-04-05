@@ -273,7 +273,7 @@ class CDLParser(HTMLParser):
                 self.stateyears[data.strip()] = []
 
     def read(self,
-             USDA = 'http://www.nass.usda.gov',
+             USDA = 'https://www.nass.usda.gov',
              meta = 'Research_and_Science/Cropland/metadata/meta.php',
              ):
 
@@ -291,7 +291,7 @@ class CDLExtractor:
 
     def __init__(self,
                  destination,
-                 website = 'http://nassgeodata.gmu.edu:8080/axis2/services'
+                 website = 'https://nassgeodata.gmu.edu/axis2/services'
                  ):
 
         self.destination = destination  # location of the raw CDL files
