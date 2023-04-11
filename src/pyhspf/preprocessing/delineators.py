@@ -1650,7 +1650,7 @@ class HUC8Delineator(NHDPlusDelineator):
 
         # take the area weighted average of the slopes and flow lengths
 
-        tot_area   = round(areas.sum(), 2)
+        tot_area   = areas.sum()
         avg_length = round(numpy.sum(areas * lengths) / tot_area, 1)
         avg_slope  = round(numpy.sum(areas * slopes) / tot_area, 4)
 
@@ -1661,15 +1661,19 @@ class HUC8Delineator(NHDPlusDelineator):
 
         Cx, Cy = round(centroid[0], 4), round(centroid[1], 4)
 
+        avg_elev = None
         elev_matrix, origin = get_raster_in_poly(self.elevations, 
-                                                 combined, 
-                                                 verbose = vverbose
-                                                 )
-
+                                                combined, 
+                                                verbose = vverbose
+                                                )
         elev_matrix = elev_matrix.flatten()
         elev_matrix = elev_matrix[elev_matrix.nonzero()]
-    
-        avg_elev = round(elev_matrix.mean() / 100., 2)
+        # this if statement catches very small subbasins
+        if len(elev_matrix) > 0:
+            avg_elev = round(elev_matrix.mean() / 100., 2)
+        else:
+            elev = get_raster(self.elevations,[[Cx,Cy]])
+            avg_elev = round(elev[0] / 100., 2)
 
         # write the data to the shapefile
 
@@ -1683,7 +1687,7 @@ class HUC8Delineator(NHDPlusDelineator):
                   ['CenY',       'N', 12, 6],
                   ['AvgElevM',   'N',  8, 2]]
 
-        record = [comid, avg_length, avg_slope, tot_area, Cx, Cy, avg_elev]
+        record = [comid, avg_length, avg_slope, round(tot_area, 2), Cx, Cy, avg_elev]
 
         for field in fields:  w.field(*field)
     
@@ -1821,6 +1825,10 @@ class HUC8Delineator(NHDPlusDelineator):
 
         # find the gages if a gage shapefile is provided
 
+        # keep track of the indices of gages that don't meet criteria
+        
+        remove_gages = []
+
         if self.gagefile is not None:
 
             # check the gages and see if they meet the criteria for outlets
@@ -1845,6 +1853,7 @@ class HUC8Delineator(NHDPlusDelineator):
             # list of the comids of the gage outlets
 
             gage_outlets = []
+            gage_index = 0
 
             # iterate through the gages and see that they meet the criteria
 
@@ -1882,6 +1891,12 @@ class HUC8Delineator(NHDPlusDelineator):
  
                         i = comid, record[site_index]
                         print('adding outlet {} for gage station {}'.format(*i))
+
+                else:
+                    # we need to remove this gage later
+                    remove_gages.append(gage_index)
+
+                gage_index += 1
 
         else: gage_outlets = []
 
@@ -2129,6 +2144,10 @@ class HUC8Delineator(NHDPlusDelineator):
 
         gagereader  = Reader(self.gagefile, shapeType = 1)
         gagepoints  = [s.points[0] for s in gagereader.shapes()]
+        # remove gages that didn't meet our criteria
+        for idx in reversed(remove_gages):
+            gagepoints.remove(gagepoints[idx])
+            gagerecords.remove(gagerecords[idx])
 
         # find the Reach code and comid fields in the flow file
 
@@ -2625,10 +2644,10 @@ class HUC8Delineator(NHDPlusDelineator):
                             print('successfully combined catchments in ' +
                                   'subbasin {}\n'.format(subbasin))
 
-                    except:
+                    except Exception as e:
 
                         if verbose: 
-
+                            print(e)
                             print('warning: unable to combine catchments ' + 
                                   'in {}\n'.format(subbasin))
 
