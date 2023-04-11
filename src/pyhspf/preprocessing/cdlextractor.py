@@ -1136,7 +1136,7 @@ class CDLExtractor:
 
                 # convert the shape to pixel coordinates
 
-                pixel_polygon = [(get_pixel(x, xmin, w), get_pixel(y, ymin, h))
+                pixel_polygon = [(get_pixel(x, xmin, w),get_pixel(y, ymin, h))
                                  for x, y in points]
 
                 # make a PIL image to use as a mask
@@ -1206,8 +1206,8 @@ class CDLExtractor:
             # show the bands
 
             bbox = s.bbox[0], s.bbox[2], s.bbox[1], s.bbox[3]
-            im = subplot.imshow(image_array, extent = bbox,
-                                origin = 'upper left',
+            im = subplot.imshow(numpy.flipud(image_array),
+                                extent = bbox, origin = 'upper',
                                 interpolation = 'nearest',
                                 cmap = cmap, norm = norm)
 
@@ -1243,7 +1243,7 @@ class CDLExtractor:
 
             for i in range(len(ys)):
                 ps = [(x, ys[i]) for x in xs]
-                zs[i, :] = numpy.array(get_raster(landuse, ps, quiet = True))
+                zs[len(ys)-i-1, :] = numpy.array(get_raster(landuse, ps, quiet = True))
 
             zs = zs.astype(int)
 
@@ -1258,7 +1258,7 @@ class CDLExtractor:
 
             im = subplot.imshow(zs,
                                 interpolation = 'nearest',
-                                origin = 'upper left',
+                                origin = 'upper',
                                 extent = [xmin, xmax, ymin, ymax],
                                 norm = norm,
                                 cmap = cmap,
