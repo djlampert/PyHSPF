@@ -201,7 +201,7 @@ class HSPFModel:
 
         # add the output levels and units
         
-        self.tstep       = tstep
+        self.tstep       = hspfmodel.tstep
         self.outlev      = outlev
         self.spout       = spout
         self.print_level = print_level
@@ -2134,7 +2134,6 @@ class HSPFModel:
 
         if   self.units == 'English': u = 1
         elif self.units == 'Metric':  u = 2
-        
         return  ['GLOBAL',
                  '  UCI created by PyHSPF for %s at %s' % 
                  (self.description, str(datetime.datetime.now())[:-10]),

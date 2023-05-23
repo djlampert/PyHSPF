@@ -22,9 +22,10 @@ PyHSPF can be used to assimilate data into an HSPF model, build the HSPF input f
 
 **Preprocessing Dependencies:**
 
-- Geospatial Data Abstract Library (GDAL)		
-- Python Shapefile Library (PyShp)		
-- Python Imaging Library (Pillow)		
+- Geospatial Data Abstract Library (GDAL)
+- Python Shapefile Library (PyShp)
+- Python Imaging Library (Pillow)
+- USGS Data Retrieval Python Package (dataretrieval)
 - 7-zip
 
 **Installation:** Pre-built distributions are provided for Windows at the Python Package Index (PyPI), although these cannot be guaranteed to port to different machines. The HSPF library and associated PyHSPF code can be rebuilt using the open source GNU compiler collection (other compilers may work but are untested). The misc directory contains the HSPF source code including some minor modifications needed to simplify the compilation. Assuming gfortran and gcc are available as environment variables, the HSPF library can be built by navigating to the PyHSPF src folder, running "python setup.py config --compiler=mingw32 build --compiler=mingw32," and then (as adminstrator) "python setup.py install." Please report any issues encountered with the compilation, installation or running the example files.
