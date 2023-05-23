@@ -15,18 +15,22 @@ class CalibratorModel(HSPFModel):
 
     def __init__(self,
                  units = 'Metric',
+                 messagepath = None,
                  ):
 
-        HSPFModel.__init__(self, units = units)
+        HSPFModel.__init__(self, units = units, messagepath = messagepath)
+        self.func = 'SUM '
+        self.ext_tcode = None
+        self.ext_tsstep = None
 
     def build_uci(self,
                   reach,
-                  start, 
-                  end, 
-                  states = None, 
-                  atemp = False, 
-                  snow = False, 
-                  hydrology = False, 
+                  start,
+                  end,
+                  states = None,
+                  atemp = False,
+                  snow = False,
+                  hydrology = False,
                   verbose = False,
                   ):
         """
@@ -107,7 +111,7 @@ class CalibratorModel(HSPFModel):
             lines = lines + self.masslink_block(hydrology = hydrology)
 
         # add the EXT TARGETS block
-
+        
         lines += self.ext_targets_block(reach, start.year, verbose = verbose)
 
         # add the FTABLES block for the RCHRESES if needed
@@ -127,8 +131,6 @@ class CalibratorModel(HSPFModel):
     def ext_targets_block(self, 
                           comid, 
                           year,
-                          tcode = 4,
-                          tsstep = 1,
                           verbose = False,
                           ):
         """
@@ -167,7 +169,9 @@ class CalibratorModel(HSPFModel):
         tstype = 'VOL'
         tsform = 1
         idcons = 'ROVOL'
-        func   = 'SUM '
+        func   = self.func
+        tcode = self.ext_tcode
+        tsstep = self.ext_tsstep
 
         # this overwrites all the rchreses with just the comid for the gage
 
@@ -196,6 +200,7 @@ class CalibratorModel(HSPFModel):
                        upcomids = [],
                        name = None,
                        verbose = True,
+                       tstep = 60,
                        ):
         """
         Builds a submodel from an existing HSPFModel "model" by removing
@@ -203,6 +208,23 @@ class CalibratorModel(HSPFModel):
         upstream from "upcomids." Removing upstream subbasins necessitates
         external time series representing mass inflows.
         """
+
+        # transform function for the external targets differs depending on the
+        # source vs. target time step
+        if hspfmodel.tstep == tstep:
+            self.func = 'SAME'
+        elif hspfmodel.tstep < tstep:
+            self.func = 'SUM '
+        else:
+        # NOTE: HSPF has a several transforms for source > target tstep but they are
+        # not valid for the WDM datasets we work with
+            print('ERROR: The timestep of the submodel must be greater than or equal'
+                  'to the timestep of the existing model.')
+            return None
+
+        # this allows for aggregating external targets to a different time step
+        # than that of the model
+        self.ext_tcode, self.ext_tsstep = self.get_timestep(tstep)
 
         if name is None: name = comid
 
@@ -260,9 +282,9 @@ class CalibratorModel(HSPFModel):
 
         for identifier in hspfmodel.flowgages:
             if identifier == comid:
-                start_date, tstep, data = hspfmodel.flowgages[identifier]
+                start_date, t, data = hspfmodel.flowgages[identifier]
                 self.add_timeseries('flowgage', identifier, start_date, 
-                                        data, tstep = tstep)
+                                        data, tstep = t)
 
         # add the watershed time series dictionaries for the model
 

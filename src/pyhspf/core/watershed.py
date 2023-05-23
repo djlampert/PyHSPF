@@ -300,6 +300,12 @@ class Watershed:
                                 n = updowns.index(rows[i][j-1]) + 1
                                 rows[i-1].insert(n, 'inlet')
 
+                        # if there is an inlet subbasin in the first row, add
+                        # the inlet and increment the counter
+                        elif i == 0:
+                            rows.insert(0,['inlet'])
+                            i += 1
+
                 i += 1
 
         # write the subbasin boxes to the chart
@@ -310,7 +316,7 @@ class Watershed:
         # keep track of the bounding box of the plot
 
         xmin, ymin, xmax, ymax = middle, 0, middle, 0
-
+        inlet_count = 0
         for i in range(len(rows)):
 
             row = rows[i]
@@ -367,12 +373,12 @@ class Watershed:
                               + rwidth / 2)
 
                     elif subbasin == 'inlet':
-                        nxt = self.inlets[0]
+                        nxt = self.inlets[inlet_count]
                         if main in self.updown: dwn = self.updown[main]
                         else: dwn = [c for c in next_row if c in self.inlets][0]
                         next_start = (middle - 
                                       next_row.index(dwn))
-
+                        inlet_count += 1
                         x2 = ((rwidth + xgap) * 
                               (next_start + next_row.index(nxt))
                               + rwidth / 2)

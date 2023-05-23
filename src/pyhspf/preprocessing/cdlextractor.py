@@ -2,13 +2,14 @@
 #
 # David J. Lampert (djlampert@gmail.com)
 #
-# last updated: 08/01/2015
+# last updated: 10/13/2022
 #
 # Calculates the land use data from a raster file within each of the shapes
 # in a shapefile.
 
-import os, csv, zipfile, time, gdal, numpy
+import os, csv, zipfile, time, numpy
 
+from osgeo       import gdal
 from urllib      import request
 from html.parser import HTMLParser
 from shapefile   import Reader
@@ -272,7 +273,7 @@ class CDLParser(HTMLParser):
                 self.stateyears[data.strip()] = []
 
     def read(self,
-             USDA = 'http://www.nass.usda.gov',
+             USDA = 'https://www.nass.usda.gov',
              meta = 'Research_and_Science/Cropland/metadata/meta.php',
              ):
 
@@ -290,7 +291,7 @@ class CDLExtractor:
 
     def __init__(self,
                  destination,
-                 website = 'http://nassgeodata.gmu.edu:8080/axis2/services'
+                 website = 'https://nassgeodata.gmu.edu/axis2/services'
                  ):
 
         self.destination = destination  # location of the raw CDL files
@@ -1135,7 +1136,7 @@ class CDLExtractor:
 
                 # convert the shape to pixel coordinates
 
-                pixel_polygon = [(get_pixel(x, xmin, w), get_pixel(y, ymin, h))
+                pixel_polygon = [(get_pixel(x, xmin, w),get_pixel(y, ymin, h))
                                  for x, y in points]
 
                 # make a PIL image to use as a mask
@@ -1205,8 +1206,8 @@ class CDLExtractor:
             # show the bands
 
             bbox = s.bbox[0], s.bbox[2], s.bbox[1], s.bbox[3]
-            im = subplot.imshow(image_array, extent = bbox,
-                                origin = 'upper left',
+            im = subplot.imshow(numpy.flipud(image_array),
+                                extent = bbox, origin = 'upper',
                                 interpolation = 'nearest',
                                 cmap = cmap, norm = norm)
 
@@ -1242,7 +1243,7 @@ class CDLExtractor:
 
             for i in range(len(ys)):
                 ps = [(x, ys[i]) for x in xs]
-                zs[i, :] = numpy.array(get_raster(landuse, ps, quiet = True))
+                zs[len(ys)-i-1, :] = numpy.array(get_raster(landuse, ps, quiet = True))
 
             zs = zs.astype(int)
 
@@ -1257,7 +1258,7 @@ class CDLExtractor:
 
             im = subplot.imshow(zs,
                                 interpolation = 'nearest',
-                                origin = 'upper left',
+                                origin = 'upper',
                                 extent = [xmin, xmax, ymin, ymax],
                                 norm = norm,
                                 cmap = cmap,

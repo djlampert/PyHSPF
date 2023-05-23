@@ -624,11 +624,11 @@ class ETCalculator:
 
         # overwrite the values if the sun is down
 
-        w1[numpy.where(w1 < -ws)] = -ws
-        w2[numpy.where(w2 < -ws)] = -ws
-        w1[numpy.where(w1 >  ws)] =  ws
-        w2[numpy.where(w2 >  ws)] =  ws
-        w1[numpy.where(w1 >  w2)] =  w2
+        w1[w1 < -ws] = -ws[w1 < -ws]
+        w2[w2 < -ws] = -ws[w2 < -ws]
+        w1[w2 < -ws] =  ws[w2 < -ws]
+        w2[w2 >  ws] =  ws[w2 >  ws]
+        w1[w1 >  w2] =  w2[w1 >  w2]
 
         # calculate the extraterrestrial radiation for the hour
 

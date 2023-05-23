@@ -10,7 +10,9 @@
 # (NWIS).
 
 import shutil, os, pickle, zipfile, datetime
-
+import dataretrieval.nwis as nwis
+import numpy as np
+import pandas as pd
 from shapefile import Reader, Writer
 from urllib    import request
 
@@ -24,23 +26,8 @@ class NWISExtractor:
     """
 
     def __init__(self,
-                 destination,
-                 url = 'http://water.usgs.gov/GIS/dsdl',
                  gages = None,
                  ):
-
-        self.url         = url
-        self.destination = destination
-
-        if not os.path.isdir(destination):
-
-            print('destination directory does not exist\n')
-
-            try: os.mkdir(destination)
-            except:
-                print('warning, unable to create directory ' +
-                      '{}'.format(destination))
-                raise
 
         self.gages = gages
 
@@ -54,123 +41,119 @@ class NWISExtractor:
             it = block * n / 10**6, size / 10**6
             print('{:.1f} MB of {:.1f} MB transferred'.format(*it))
 
-    def download_metadata(self,
-                          webfile = 'USGS_Streamgages-NHD_Locations_Shape.zip',
-                          sfile   = 'USGS_Streamgages-NHD_Locations',
-                          verbose = True,
-                          ):
-        """
-        Downloads the source data files.
-        """
-
-        # directory for output
-
-        if not os.path.isdir(self.destination):
-
-            if verbose:
-
-                print(self.destination)
-                print('The NWIS metadata are not present in the destination\n')
-                os.mkdir(self.destination)
-
-        else: print('NWIS directory {} exists\n'.format(self.destination))
-
-        # source zip file download
-
-        zfile = '{}/{}'.format(self.destination, webfile)
-        if not os.path.isfile(zfile):
-
-            url = '{}/{}'.format(self.url, webfile)
-            print('the source zip file for the NWIS metadata is not present\n')
-            request.urlretrieve(url, zfile, self.report)
-            print('')
-
-        elif verbose:
-
-            print('NWIS source metadata file {} is present\n'.format(zfile))
-
-        # unzip
-
-        self.NWIS = '{}/{}'.format(self.destination, sfile)
-        if not os.path.isfile(self.NWIS + '.shp'):
-
-            print('extracting the gage shapefile from the archive')
-
-            zf = zipfile.ZipFile(zfile)
-            zf.extractall(self.destination)
-            print('')
-
-        elif verbose: print('gage metadata {} is present\n'.format(self.NWIS))
 
     def extract_HUC8(self,
                      HUC8,
                      output,
                      gagefile = 'gagestations',
+                     srs_id = 1645423,
+                     stat_cd = 3,
                      verbose = True,
                      ):
         """
         Extracts the USGS gage stations for a watershed from the gage
         station shapefile into a shapefile for the 8-digit hydrologic unit
         code of interest.
+
+        srs_id 1645423 is the EPA ID for daily mean stream flow and
+        stat_cd 3 is the USGS code for mean values. This should filter
+        for unique sites with daily mean flow, but could be adjusted if
+        needed in special cases.
+        stat codes can be found here: https://help.waterdata.usgs.gov/stat_code
+        srs ID's can be looked up here:
+        https://ofmpub.epa.gov/sor_internet/registry/substreg/LandingPage.do
         """
-
-        # make sure the metadata exist locally
-
-        self.download_metadata()
 
         # make sure the output destination exists
 
         if not os.path.isdir(output): os.mkdir(output)
 
         sfile = '{}/{}'.format(output, gagefile)
-        if not os.path.isfile(sfile + '.shp'):
 
-            # copy the projection
+        # get a list of all the sites in the HUC
+        sites = nwis.what_sites(huc=HUC8,seriesCatalogOutput='true')
 
-            shutil.copy(self.NWIS + '.prj', sfile + '.prj')
+        # filter the list for sites with daily mean stream flow only
+        mask = (sites[0]['srs_id']==srs_id) & (sites[0]['stat_cd']==stat_cd)
+        sites = sites[0].loc[mask]
+        # just in case we also drop duplicates
+        sites.drop_duplicates(subset='site_no', keep='first', inplace=True)
+        sites.reset_index(inplace=True)
 
-            # read the file
+        # get the drainage area and state
+        siteids = sites['site_no'].to_list()
+        info = nwis.get_info(sites=siteids)
+        sites['drain_area_va'] = info[0]['drain_area_va']
+        sites['state_cd'] = info[0]['state_cd']
 
-            gagereader  = Reader(self.NWIS, shapeType = 1)
-            gagerecords = gagereader.records()
+        # get mean flow
+        stats = []
+        if len(sites) <= 10:
+            stats = nwis.get_stats(sites=siteids,statReportType='annual',statTypeCd='mean',parameterCd='00060')
+        else:
+            # if there are more than 10 sites we have to split up the queries
+            # first split the sites array
+            indices = []
+            for i in range(1,int(len(sites)/10)+1):
+                indices.append(i*10)
+            split = np.array_split(np.array(siteids),indices)
+            dfs = []
+            # download a dataframe for each chuck of sites
+            for query in split:
+                df = nwis.get_stats(sites=query.tolist(),statReportType='annual',statTypeCd='mean',parameterCd='00060')
+                dfs.append(df[0])
+            stats.append(pd.concat(dfs))
 
-            # pull out the HUC8 record to parse the dataset
+        for sid in siteids:
+            # get_stats gives us the annual mean for every year reported
+            # take the mean of the annual values to get the overall mean
+            mean = stats[0].loc[stats[0]['site_no']==sid,'mean_va'].mean()
+            sites.loc[sites['site_no']==sid,'mean_flow'] = mean
 
-            HUC8_index  = gagereader.fields.index(['HUC',  'C', 8, 0]) - 1
+        # 
+        # create a shapefile of the sites
+        w = Writer(sfile, shapeType = 1)
 
-            # iterate through the field and find gages in the watershed
+        # add the relevant fields
+        w.field('DAY1','N',19,0)
+        w.field('DAYN','N',19,0)
+        w.field('DA_SQ_MILE','N',19,2)
+        w.field('HUC','C',8,0)
+        w.field('STATE','C',2,0)
+        w.field('SITE_NO','C',15,0)
+        w.field('NWISWEB','C',75,0)
+        w.field('AVE','N',19,3)
+        w.field('STATION_NM','C',60,0)
 
-            its = HUC8, sfile
-            print('extracting gage stations in {} to {}\n'.format(*its))
+        # add a point shape and record for each of the sites
+        for sid in siteids:
+            # PyHSPF expects the dates to be integers in the format
+            # of YYYYMMDD so we do this little dance to convert it
+            day1 = sites.loc[sites['site_no']==sid,'begin_date'].item()
+            day1dt = datetime.datetime.strptime(day1,'%Y-%m-%d')
+            day1 = int(day1dt.strftime('%Y%m%d'))
+            dayn = sites.loc[sites['site_no']==sid,'end_date'].item()
+            dayndt = datetime.datetime.strptime(dayn,'%Y-%m-%d')
+            dayn = int(dayndt.strftime('%Y%m%d'))
+            # hack to deal with empty drainage area fields
+            da = None
+            try:
+                da = int(sites.loc[sites['site_no']==sid,'drain_area_va'].item())
+            except:
+                pass
+            huc = str(sites.loc[sites['site_no']==sid,'huc_cd'].item())
+            ave = sites.loc[sites['site_no']==sid,'mean_flow'].item()
+            name = sites.loc[sites['site_no']==sid,'station_nm'].item()
+            lat = sites.loc[sites['site_no']==sid,'dec_lat_va'].item()
+            lon = sites.loc[sites['site_no']==sid,'dec_long_va'].item()
+            # TODO: fix this
+            state = 'OK'
+            # this field is never actually used
+            web = ''
+            w.record(day1,dayn,da,huc,state,sid,web,ave,name)
+            w.point(lon,lat)
 
-            gage_indices = []
-
-            i = 0
-            for record in gagerecords:
-                if record[HUC8_index] == HUC8: gage_indices.append(i)
-                i+=1
-
-            # write the data from the HUC8 to a new shapefile
-
-            w = Writer(sfile, shapeType = 1)
-
-            for field in gagereader.fields:  w.field(*field)
-
-            for i in gage_indices:
-                point = gagereader.shape(i).points[0]
-                w.point(*point)
-                w.record(*gagerecords[i])
-
-            w.close()
-
-            if verbose:
-
-                print('successfully extracted NWIS gage stations\n')
-
-        elif verbose:
-
-            print('gage station file {} exists\n'.format(sfile))
-
+        w.close()
         self.set_metadata(sfile)
 
     def set_metadata(self,
@@ -192,7 +175,7 @@ class NWISExtractor:
         self.aves   = []
         self.names  = []
 
-        gagereader = Reader(gagefile, shapeType = 1)
+        gagereader = Reader(gagefile)
 
         # get the fields with pertinent info
 
@@ -236,26 +219,55 @@ class NWISExtractor:
                           end,
                           output = None,
                           plot = True,
+                          srs_id = 1645423,
+                          stat_cd = 3,
                           ):
         """
         Downloads the daily instantaneous flow and water quality data for the
         given period of time for a particular gage in the metadata.
         """
+        gage  = None
+        day1  = None
+        dayn  = None
+        drain = None
+        state = None
+        nwis  = ''
+        ave   = None
+        name  = None
+        # if the gage is not already in our metadata, the retrieve the
+        # required site info
+        if not gageid in self.gages:
+            site = nwis.what_sites(sites=gageid,seriesCatalogOutput='true')
+            # if the site doesn't exist, dataretrieval returns an empty dataframe
+            if site[0].empty:
+                print('error: could not find gageid\n')
+                raise ValueError
+                
+            # filter the list for sites with daily mean stream flow only
+            mask = (site[0]['srs_id']==srs_id) & (site[0]['stat_cd']==stat_cd)
+            site = site[0].loc[mask]
+            # just in case we also drop duplicates
+            site.drop_duplicates(subset='site_no', keep='first', inplace=True)
+            site.reset_index(inplace=True)
 
-        if self.gages is None:
+            day1 = sites.loc[0,'begin_date']
+            day1dt = datetime.datetime.strptime(day1,'%Y-%m-%d')
+            day1 = int(day1dt.strftime('%Y%m%d'))
+            dayn = sites.loc[0,'end_date']
+            dayndt = datetime.datetime.strptime(dayn,'%Y-%m-%d')
+            name = sites.loc[0,'station_nm']
+            # get the drainage area and state
+            info = nwis.get_info(sites=gageid)
+            drain = info[0].loc[0,'drain_area_va']
+            # TODO: fix
+            state = 'OK'
 
-            try:
+            # get mean flow
+            stats = nwis.get_stats(sites=gageid,statReportType='annual',statTypeCd='mean',parameterCd='00060')
+            ave = stats[0].loc[stats[0]['site_no']==gageid,'mean_va'].mean()
 
-                f = '{}/USGS_Streamgages-NHD_Locations'.format(self.destination)
-                self.set_metadata(f)
-
-            except:
-
-                print('error: please specify the path to the metadata')
-                raise
-
-        if gageid in self.gages:
-
+        else:
+            # if we already have the site info just pull it from our metadata
             i = self.gages.index(gageid)
 
             gage  = self.gages[i]
@@ -267,51 +279,47 @@ class NWISExtractor:
             ave   = self.aves[i]
             name  = self.names[i]
 
-            if not os.path.exists(output):
+        if not os.path.exists(output):
 
-                gagestation = GageStation(gage, name, state, day1, dayn,
-                                          drain, ave, nwis)
+            gagestation = GageStation(gage, name, state, day1, dayn,
+                                      drain, ave, nwis)
 
-                # download the daily discharge data if it exists
+            # download the daily discharge data if it exists
 
-                try:
+            try:
 
-                    gagestation.download_daily_discharge(start, end)
+                gagestation.download_daily_discharge(start, end)
 
-                    # download the stage-discharge measurements
+                # download the stage-discharge measurements
 
-                    gagestation.download_measurements()
+                gagestation.download_measurements()
 
-                    # make a plot of the data
+                # make a plot of the data
 
-                    if plot: gagestation.plot(output)
+                if plot: gagestation.plot(output)
 
-                    # download the water quality data if it exists
+                # download the water quality data if it exists
 
-                    try: gagestation.download_water_quality()
-                    except:
-                        print('warning, unable to download water quality ' +
-                              'data for {}\n'.format(gage))
-
-                    # download the instantaneous flow data if it exists
-
-                    gagestation.download_instant_flows(start, end)
-
-                    # save for later
-
-                    with open(output, 'wb') as f: pickle.dump(gagestation, f)
-
+                try: gagestation.download_water_quality()
                 except:
+                    print('warning, unable to download water quality ' +
+                          'data for {}\n'.format(gage))
 
-                    print('warning, unable to download daily flow data ' +
-                          'for {}\n'.format(gage))
+                # download the instantaneous flow data if it exists
 
-            else: print('gage data for {} exist\n'.format(gage))
+                gagestation.download_instant_flows(start, end)
 
-        else:
+                # save for later
 
-            print('error: gageid not in metadata\n')
-            raise
+                with open(output, 'wb') as f: pickle.dump(gagestation, f)
+
+            except:
+
+                print('warning, unable to download daily flow data ' +
+                      'for {}\n'.format(gage))
+
+        else: print('gage data for {} exist\n'.format(gage))
+
 
     def download_all(self,
                      start,

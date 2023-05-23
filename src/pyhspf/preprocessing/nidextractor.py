@@ -1,12 +1,12 @@
 # nidextractor.py
 #
 # David J. Lampert, PhD, PE
-# last uptdated: 10/07/2014
+# last uptdated: 04/03/2023
 # Purpose: Contains the NIDExtractor class to download data from the National
 # Inventory of Dams and then extract the dams for a given HUC8.
 
-import os, shutil, subprocess, tarfile
-
+import os, shutil, subprocess
+import pandas as pd
 from urllib    import request
 from shapefile import Reader, Writer
 
@@ -14,7 +14,8 @@ class NIDExtractor:
 
     def __init__(self, 
                  NID, 
-                 website = 'http://dds.cr.usgs.gov/pub/data/nationalatlas'):
+                 website = 'https://nid.usace.army.mil/api/nation/csv',
+                 ):
 
         self.NID     = NID
         self.website = website
@@ -47,44 +48,99 @@ class NIDExtractor:
 
         else: return False
 
-    def download_compressed(self, 
-                            webfile = 'dams00x020_nt00010.tar.gz',
-                            name    = 'dams00x020',
-                            verbose = True,
+    def generate_shape(self, 
+                            csv_name  = 'nation.csv',
+                            shapefile = 'dams00x020',
+                            height    = 50,      # ft
+                            storage   = 5000,    # acre-feet
+                            maxstore  = 25000,   # acre-feet,
+                            rebuild   = False,
+                            verbose   = True,
                             ):
-        """Private method to download a compressed file."""
+        """ This downloads the complete dam inventory and generates
+            a shapefile from it with the relevant fields. The old
+            shapefile that was used followed these rules:
+            -dams 50 feet or more in height
+            -or with a normal storage capacity of 5,000 acre-feet or more
+            -or with a maximum storage capacity of 25,000 acre-feet or more.
+            
+            By default this method uses those but they can be adjusted if
+            required.
+            
+            If the rebuild parameter is True, a new inventory will be
+            downloaded and the shapefile regenerated. Otherwise, if a
+            shapefile already exists then it will be used."""
 
-        # compressed file name on local machine
+        # source csv
 
-        compressed = '{}/{}'.format(self.NID, webfile)
+        csv = '{}/{}'.format(self.NID, csv_name)
 
-        # location of the file on the NHDPlus ftp server (the NHDPlus file
-        # structure is not consistent so this if statement is needed)
-
-        url = '{}/{}'.format(self.website, webfile)
-
-        if not os.path.isfile(compressed):
+        if not os.path.isfile(csv) or rebuild:
 
             if verbose: 
                 print('downloading NID source file {}\n'.format(url))
-                request.urlretrieve(url, compressed)
+                request.urlretrieve(website, csv)
 
-        elif verbose: print('NID source file {} exists\n'.format(compressed))
+        elif verbose: print('NID source file {} exists\n'.format(csv))
 
-        # decompress the file
+        # generate the source shapefile
 
-        self.source = '{}/{}'.format(self.NID, name)
+        self.source = '{}/{}'.format(self.NID, shapefile)
 
-        if not os.path.isfile(self.source + '.shp'):
+        if not os.path.isfile(self.source + '.shp') or rebuild:
 
-            with tarfile.open(compressed) as f: f.extractall(self.NID)
+            # read in the csv to a dataframe
+            dams = pd.read_csv(csv,header=1,low_memory=False)
+
+            # create a shapefile for the dams
+            w = Writer(self.source, shapeType = 1)
+
+            # add the relevant fields
+            w.field('DAM_NAME',   'C', 65,   0)
+            w.field('NIDID',      'C', 7,    0)
+            w.field('LONGITUDE',  'N', 19,  11)
+            w.field('LATITUDE',   'N', 19,  11)
+            w.field('RIVER',      'C', 65,   0)
+            w.field('OWN_NAME',   'C', 65,   0)
+            w.field('DAM_TYPE',   'C', 10,   0)
+            w.field('PURPOSES',   'C', 254,  0)
+            w.field('YR_COMPL',   'C', 10,   0)
+            w.field('NID_HEIGHT', 'N', 19,  11)
+            w.field('MAX_STOR',   'N', 19,  11)
+            w.field('NORMAL_STO', 'N', 19,  11)
+            w.field('SURF_AREA',  'N', 19,  11)
+
+            # iterate through the dataframe adding the shapes and records
+            for i in range(0,len(dams)):
+                dam_name = dams.loc[i,'Dam Name']
+                nidid = dams.loc[i,'NID ID']
+                lon = dams.loc[i,'Longitude']
+                lat = dams.loc[i,'Latitude']
+                river = dams.loc[i,'River or Stream Name']
+                own_name = dams.loc[i,'Owner Names']
+                dam_type = dams.loc[i,'Dam Types']
+                purposes = dams.loc[i,'Purposes']
+                yr_complete = dams.loc[i,'Year Completed']
+                nid_height = dams.loc[i,'NID Height (Ft)']
+                max_store = dams.loc[i,'Max Storage (Acre-Ft)']
+                norm_store = dams.loc[i,'Normal Storage (Acre-Ft)']
+                surface_area = dams.loc[i,'Surface Area (Acres)']
+
+                # check if the dam meets the specifications
+                if nid_height >= height or norm_store >= storage or max_store >= maxstore:
+                    w.point(lon,lat)
+                    w.record(dam_name,nidid,lon,lat,river,own_name,dam_type,purposes,
+                             yr_complete,nid_height,max_store,norm_store,surface_area)
+
+            # write to the file
+            w.close()
 
     def extract_bbox(self, bbox, output, verbose = True):
         """Extracts the NID dam locations for a watershed from the dam 
         shapefile and the 8-digit hydrologic unit code of interest. 
         """
 
-        self.download_compressed()
+        self.generate_shape()
 
         xmin, ymin, xmax, ymax = bbox
 
@@ -100,7 +156,7 @@ class NIDExtractor:
 
         if verbose: print('reading the dam file\n')
 
-        sf = Reader(self.source, shapeType = 1)
+        sf = Reader(self.source)
 
         # work around for issues with pyshp
 

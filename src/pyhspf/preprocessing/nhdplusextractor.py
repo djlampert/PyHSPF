@@ -2,7 +2,7 @@
 #
 # Mitchell Sawtelle (mitchell.sawtelle@okstate.edu)
 #
-# last updated: 06/25/2018
+# last updated: 03/28/2023
 #
 # contains the NHDPlus Extractor class, which can be used to retrieve source
 # data from the NHDPlus V2 dataset online, and then extract the data from
@@ -10,11 +10,10 @@
 
 
 import subprocess, time, os, numpy, struct, datetime, shutil
-from osgeo import gdal
-from osgeo import osr
+from osgeo import osr, gdal
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError, URLError
-from gdalconst import GA_ReadOnly
+from osgeo.gdalconst import GA_ReadOnly
 from matplotlib import pyplot, path, ticker
 from matplotlib import patches, colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -22,16 +21,16 @@ from .flowline import Flowline
 from .vectorutils import merge_shapes
 from shapefile import Reader, Writer
 import pickle
-import xml.etree.ElementTree as ET
+import socket
 
 
-class NHDPlusExtractor(object):
+class NHDPlusExtractor():
     """class which holds various methods to manipulate, gather, and unpack the NHDPlus Dataset
        updated email list
        destination argument of the init method denotes the working directory for all ndhplus work
      """
 
-    def __init__(self, destination):
+    def __init__(self, destination=None):
         '''
         init method for NHDPlusExtractor class
 
@@ -39,16 +38,19 @@ class NHDPlusExtractor(object):
             destination is the path to where the user would like the nhdplus data to be stored
             if no argument is given the location of this file is used
         '''
-        if destination is None: #if no destination given in init method set destination to current directory
-            self. destination = os.path.dirname(__file__)
-        if not os.path.isdir(destination): os.mkdir(destination)
-        #base_url to EPA's hosting of the NHDPlusV21 Dataset on amazon servers
-        self.base_url = 'https://s3.amazonaws.com/nhdplus/'
-        self.destination = destination #set destination
+        self.destination = destination
+        if self.destination is None: #if no destination given in init method set destination to current directory
+            self.destination = os.path.dirname(__file__)
+        else:
+            # make the directory if it doesn't exist
+            if not os.path.isdir(destination): os.mkdir(destination)
+            
+        #base_url to EPA's hosting of the NHDPlusV21 Dataset
+        self.base_url = 'https://edap-ow-data-commons.s3.amazonaws.com/NHDPlusV21/Data/NHDPlus'
         self.currentpath = os.path.dirname(__file__) #currentpath variable
         self.path_to_7zip = r'C:\Program Files\7-Zip\7z.exe' #path to 7zip will vary per User
 
-
+        socket.getaddrinfo('127.0.0.1', 8080)
         #names of the Drainage areas with respective abbreviations
         self.DD = {'AMERICAN SAMOA': 'PI',
               'ARK-RED-WHITE': 'MS',
@@ -253,64 +255,478 @@ class NHDPlusExtractor(object):
                       '22b': '22MP',
                       '22c': '22AS',
                     }
-        #files needed
-        self.files = ('NHDPlusCatchment',
-                      'NHDSnapshot',
-                      'NHDPlusAttributes',
-                      'EROMExtension',
-                      'NEDSnapshot',
-                      )
+        #names of the Raster files
+        self.RPU_Files = ['CatSeed', 'FdrFac', 'FdrNull', 'FilledAreas',
+                          'HydroDem', 'NEDSnapshot','Hydrodem','Catseed']
 
+
+        #some of the files on the website do not follow the nomenclature this dictionary makes up for human errors
+        self.problematic_rpu_files = {'Catseed':['Catseed','CatSeed'],
+                                      'CatSeed':['Catseed','CatSeed'],
+                                      'HydroDem':['HydroDem','Hydrodem'],
+                                      'Hydrodem':['HydroDem','Hydrodem']}
+
+        #names of the Vector files
+        self.VPU_Files = ['EROMExtension', 'NHDPlusAttributes', 'NHDPlusBurnComponents',
+                          'NHDPlusCatchment', 'NHDSnapshot','VPUAttributeExtension',
+                          'VogelExtension', 'WBDSnapshot', 'NHDSnapshotFGDB',]
+        #some vpu regions dont follow the standard url for the other regions this list notes those
+        self.problematic_vpu_list = ['03N', '03S', '03W','05', '06', '07', '08',
+                                '10U', '14', '15', '10L', '11','22AS', '22GU', '22MP']
+        self.link_file = os.path.join(self.destination,'link.txt') #path to link file
+        self.known_exceptions = {(self.base_url+'CO/NHDPlus15/NHDPlusV21_CO_15_VogelExtension'):(self.base_url+'CO/NHDPlus15/NHDPlusV21_CO_15_VogelEXtension')}
 
         #headers to use when pinging the amazon servers
         self.headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.81 Safari/537.36'}
-        self.vpu_links = {'01': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusNE/',
-                          '02': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusMA/',
-                          '03N': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusSA/NHDPlus03N/',
-                          '03S': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusSA/NHDPlus03S/',
-                          '03W': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusSA/NHDPlus03W/',
-                          '04': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusGL/',
-                          '05': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusMS/NHDPlus05/',
-                          '06': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusMS/NHDPlus06/',
-                          '07': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusMS/NHDPlus07/',
-                          '08': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusMS/NHDPlus08/',
-                          '09': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusSR/',
-                          '10U':'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusMS/NHDPlus10U/',
-                          '10L':'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusMS/NHDPlus10L/',
-                          '11': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusMS/NHDPlus11/',
-                          '12': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusTX/',
-                          '13': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusRG/',
-                          '14': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusCO/NHDPlus14/',
-                          '15': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusCO/NHDPlus15/',
-                          '16': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusGB/',
-                          '17': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusPN/',
-                          '18': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusCA/',
-                          '20': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusHI/',
-                          '21': 'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusCI/',
-                          '22AS':'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusPI/NHDPlus22AS/',
-                          '22GU':'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusPI/NHDPlus22GU/',
-                          '22MP':'https://s3.amazonaws.com/nhdplus?delimiter=/&prefix=NHDPlusV21/Data/NHDPlusPI/NHDPlus22MP/'
-                         }
 
-    def get_links(self,vpu):
+        #list of encodings to try when reading shapefiles
+        #utf-8 by default but some use latin-1
+        self.encodings = ['utf8','latin1']
+
+    def gather_rpu_links(self,max_version=25, rpu_input=None, filename_input=None):
         '''
-        grab the download links for self.files from the amazon xml pages
+        A function to gather the working rpu links for the metadata text file
+
+        max_version takes the highest know version of the files in the NHDPLUS Dataset
+
+        the two optional arguments facilitate getting one link in the case that the metadata file is not up to date
+        rpu_input takes a specific rpu region to gather one link
+        filename_input takes a specific rpu filename to gather one link
+
         '''
-        xml = self.vpu_links[vpu]
-        req = Request(xml, data = None, headers = self.headers)
-        response = urlopen(req).read().decode('ascii')
-        tree = ET.ElementTree(ET.fromstring(response))
-        root = tree.getroot()
-        links = []
-        for i,child in enumerate(root.iter(r'{http://s3.amazonaws.com/doc/2006-03-01/}Contents')):
-            if i == 0 or i ==1:
-                continue
-            link = child.find(r'{http://s3.amazonaws.com/doc/2006-03-01/}Key').text
-            for files in self.files:
-                if files.lower() in link.lower():
-                    dwn_link = self.base_url + link
-                    links.append(dwn_link)
-        return links
+
+        working_urls = []
+
+
+        if rpu_input is None and filename_input is None: #if no arguments given loop over all rpus
+            for rpu in sorted(self.RPU_to_VPU.keys()): #iterate over rpus in order
+
+                vpu = self.RPU_to_VPU[rpu] #set variable
+                DA = self.VPU_to_DA[vpu] #set variable
+
+                for filename in self.RPU_Files: #iterate over different rpu filetypes
+
+                    if vpu in self.problematic_vpu_list: #catch exceptions
+                        url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu, filename)
+
+                        i = 1
+                        while i < max_version+1: #find current version of NHDPlus
+
+                            final_url = '{}_{:02d}.7z'.format(url,i) #final url
+
+                            try:
+                                time.sleep(0.3) #delay
+                                req = Request(final_url, data=None,headers=self.headers)
+                                response = urlopen(req)
+                                working_urls.append(final_url)
+                                print('FOUND ' + final_url)
+                                break
+                            except HTTPError or URLError:
+                                pass
+                            i += 1
+
+                    else:
+                        url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu, filename)
+
+                        i = 1
+
+                        while i < max_version+1:
+
+                            final_url = '{}_{:02d}.7z'.format(url, i)
+
+
+                            try:
+                                time.sleep(0.3)
+                                req = Request(final_url, data=None,headers=self.headers)
+                                response = urlopen(req)
+                                working_urls.append(final_url)
+                                print('FOUND '+ final_url)
+                                break
+                            except HTTPError or URLError:
+                                pass
+                            i+= 1
+
+                    if i > max_version:
+                        print('no link found for ', final_url)
+                        pass
+
+            return working_urls
+
+        else:
+
+            assert rpu_input in self.RPU_to_VPU.keys(), 'RPU must be one of the following ' + str(sorted(self.RPU_to_VPU.keys()))
+
+            assert filename_input in self.RPU_Files, 'filename must be one of the following ' + str(sorted(self.RPU_Files))
+
+            vpu = self.RPU_to_VPU[rpu_input]
+            DA = self.VPU_to_DA[vpu]
+
+            if vpu in problematic_vpu_list:
+                url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu_input, filename_input)
+
+                i = 1
+                while i < max_version+1:
+
+                    final_url = '{}_{:02d}.7z'.format(url,i)
+
+                    try:
+                        time.sleep(0.3)
+                        req = Request(final_url, data=None,headers=self.headers)
+                        response = urlopen(req)
+                        working_link = final_url
+                        print('FOUND ' + final_url)
+                        break
+                    except HTTPError or URLError:
+                            pass
+                    i += 1
+
+            else:
+
+                url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu_input, filename_input)
+
+                i = 1
+
+                while i < max_version+1:
+
+                    final_url = '{}_{:02d}.7z'.format(url, i)
+
+
+                    try:
+                        time.sleep(0.3)
+                        req = Request(final_url, data=None,headers=self.headers)
+                        response = urlopen(req)
+                        working_link = final_url
+                        print('FOUND '+ final_url)
+                        break
+                    except HTTPError or URLError:
+                        pass
+                    i+= 1
+
+            if i > max_version:
+                print('no link found for ', final_url)
+                pass
+
+            return working_link
+
+    def gather_vpu_links(self,max_version=25, vpu_input=None, filename_input=None):
+        '''
+        A function to gather the working vpu links for the metadata text file
+        max_version takes the highest known version of the files in the NHDPLUS Dataset
+        the two optional arguments facilitate getting one link in the case that the metadata file is not up to date
+        vpu_input takes a specific vpu region to gather one link
+        filename_input takes a specific vpu filename to gather one link
+        '''
+        working_urls = []
+
+        if vpu_input is None and filename_input is None:
+
+            for vpu in sorted(self.VPU_to_DA.keys()):
+
+                DA = self.VPU_to_DA[vpu]
+
+                for filename in self.VPU_Files:
+
+                    if vpu in self.problematic_vpu_list:
+
+                        url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}'.format(self.base_url,DA,vpu,filename)
+                        if url in self.known_exceptions.keys():
+                            url = self.known_exceptions[url]
+
+                        i = 1
+                        while i < max_version+1:
+
+                            final_url = '{}_{:02d}.7z'.format(url,i)
+
+                            try:
+                                time.sleep(0.3)
+                                req = Request(final_url, data=None,headers=self.headers)
+                                response = urlopen(req)
+                                working_urls.append(final_url)
+                                print('FOUND '+ final_url)
+                                break
+                            except HTTPError or URLError:
+                                pass
+                            i += 1
+
+
+                    else:
+
+                        url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}'.format(self.base_url,DA,vpu,filename)
+                        if url in self.known_exceptions.keys():
+                            url = self.known_exceptions[url]
+                        i = 1
+                        while i < max_version+1:
+                            final_url = '{}_{:02d}.7z'.format(url,i)
+
+                            try:
+                                time.sleep(0.3)
+                                req = Request(final_url, data=None,headers=self.headers)
+                                response = urlopen(req)
+                                working_urls.append(final_url)
+                                print('FOUND '+ final_url)
+                                break
+                            except HTTPError or URLError:
+                                pass
+                            i += 1
+
+                    if i > max_version:
+                        print('no link found for ', final_url)
+                        pass
+
+            return working_urls
+
+        else:
+
+            assert vpu_input in self.VPU_to_RPU.keys(), 'VPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
+
+            assert filename_input in self.VPU_Files, 'filename must be one of ' + str(self.VPU_Files)
+
+            DA = self.VPU_to_DA[vpu_input]
+
+            if vpu_input in self.problematic_vpu_list:
+
+                url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}'.format(self.base_url,DA,vpu_input,filename_input)
+                if url in self.known_exceptions.keys():
+                    url = self.known_exceptions[url]
+
+                i = 1
+                while i < max_version+1:
+
+                    final_url = '{}_{:02d}.7z'.format(url,i)
+
+                    try:
+                        time.sleep(0.3)
+                        req = Request(final_url, data=None,headers=self.headers)
+                        response = urlopen(req)
+                        working_link = final_url
+                        print('FOUND '+ final_url)
+                        break
+                    except HTTPError or URLError:
+                        pass
+                    i += 1
+
+
+            else:
+
+                url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}'.format(self.base_url,DA,vpu_input,filename_input)
+                if url in self.known_exceptions.keys():
+                    url = self.known_exceptions[url]
+                i = 1
+                while i < max_version+1:
+                    final_url = '{}_{:02d}.7z'.format(url,i)
+
+                    try:
+                        time.sleep(0.3)
+                        req = Request(final_url, data=None,headers=self.headers)
+                        response = urlopen(req)
+                        working_link = final_url
+                        print('FOUND '+ final_url)
+                        break
+                    except HTTPError or URLError:
+                        pass
+                    i += 1
+
+            if i > max_version:
+                print('no link found for ', final_url)
+                pass
+
+            return working_link
+
+    def getvpufile(self, vpu, filename):
+
+        '''
+        A function to return the desired VPU File
+
+        Arguments:
+            vpu takes any of the keys in the VPU_to_RPU dictionary as strings
+            filename takes any of the values in the VPU_Files list as strings
+
+        '''
+
+
+        assert vpu in self.VPU_to_RPU.keys(), 'VPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
+
+        assert filename in self.VPU_Files, 'filename must be one of ' + str(self.VPU_Files)
+
+        DA = self.VPU_to_DA[vpu]
+
+        with open(self.link_file) as f:
+
+            verified_links = f.read().splitlines()
+
+        if vpu in self.problematic_vpu_list:
+
+            url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}'.format(self.base_url, DA, vpu, filename)
+            if url in self.known_exceptions.keys():
+                url = self.known_exceptions[url]
+
+        else:
+
+            url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}'.format(self.base_url,DA,vpu,filename)
+            if url in self.known_exceptions.keys():
+                url = self.known_exceptions[url]
+
+        for link in verified_links:
+
+            if url in link:
+                working_link = link
+                print('the link to your selected vpu and filename is ' + working_link)
+                return working_link
+            else:
+                pass
+
+        try:
+            working_link
+        except NameError:
+            working_link = None
+            print('no link found for {} {}'.format(vpu, filename))
+            return working_link
+
+    def getrpufile(self, rpu, filename):
+        '''
+        A function to return the desired RPU file
+
+        Arguments:
+            rpu takes any of the keys in the the RPU_to_VPU dictionary
+            filename takes any of the value in the RPU_Files list
+        '''
+
+        rpu = rpu.lower()
+
+        assert rpu in self.RPU_to_VPU.keys(), 'RPU must be one of the following ' + str(sorted(self.RPU_to_VPU.keys()))
+
+        assert filename in self.RPU_Files, 'filename must be one of the following ' + str(sorted(self.RPU_Files))
+
+        with open(self.link_file) as f:
+
+            verified_links = f.read().splitlines()
+
+        vpu = self.RPU_to_VPU[rpu]
+        DA = self.VPU_to_DA[vpu]
+        possible_urls = []
+
+        if filename in self.problematic_rpu_files.keys():
+            possible_filenames = self.problematic_rpu_files[filename]
+
+            if vpu in self.problematic_vpu_list:
+
+                for items in possible_filenames:
+                    url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu, items)
+                    possible_urls.append(url)
+
+
+            else:
+                for items in possible_filenames:
+                    url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu, items)
+                    possible_urls.append(url)
+
+
+            for link in verified_links:
+
+                for item in possible_urls:
+
+                    if item in link:
+                        working_link = link
+                        print('the link to your selected rpu and filename is ' + working_link)
+                        return working_link
+
+                    else:
+                        pass
+
+            try:
+                working_link
+            except NameError:
+                working_link = None
+                print('no link found for {} {}'.format(rpu, filename))
+                return working_link
+
+        else:
+
+            if vpu in self.problematic_vpu_list:
+                url = '{0}{1}/NHDPlus{2}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu, filename)
+            else:
+                url = '{0}{1}/NHDPlusV21_{1}_{2}_{3}_{4}'.format(self.base_url, DA, vpu, rpu, filename)
+
+            for link in verified_links:
+
+                if url in link:
+                    working_link = link
+                    print('the link to your selected rpu and filename is ' + working_link)
+                    return working_link
+
+                else:
+                    pass
+
+            try:
+                working_link
+            except NameError:
+                working_link = None
+                print('no link found for {} {}'.format(vpu, filename))
+                return working_link
+
+    def downloadrpufile(self, rpu, filename):
+        '''
+        function to download rpu files
+        arguments:
+            rpu: raster processing unit
+            filename: possible raster files listed in self.RPU_Files
+        '''
+
+        assert rpu in self.RPU_to_VPU.keys(), 'RPU must be one of the following ' + str(sorted(self.RPU_to_VPU.keys()))
+        assert os.path.isfile(self.link_file), 'no link file run verify_links function'
+        assert filename in self.RPU_Files, 'filename must be one of the following ' + str(sorted(self.RPU_Files))
+        link = self.getrpufile(rpu, filename)
+        filename = link.split('/')[-1]
+        filepath = os.path.join(self.destination, filename)
+
+        if not os.path.isfile(filepath):
+            req = Request(link, data = None, headers = self.headers)
+            response = urlopen(req)
+            CHUNK = 1024 * 1024
+            with open(filepath, 'wb') as f:
+                while True:
+                    chunk = response.read(CHUNK)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+            print('finished downloading file for rpu:{}, filename:{}'.format(rpu,filename))
+
+        else:
+            print('{} already exists, moving on'.format(filepath))
+        # return the filename so that the download_decompress method knows what to decompress
+        return filename
+
+    def downloadvpufile(self, vpu, filename):
+        '''
+        function to download vpu files
+        arguments:
+            vpu: vector processing unit
+            filename: possible vector files listed in self.VPU_Files
+        '''
+
+        assert vpu in self.VPU_to_RPU.keys(), 'VPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
+        assert os.path.isfile(self.link_file), 'no link_file run verify_links function'
+        assert filename in self.VPU_Files, 'filename must be one of ' + str(self.VPU_Files)
+
+        link = self.getvpufile(vpu, filename)
+        filename = link.split('/')[-1]
+        filepath = os.path.join(self.destination, filename)
+
+        if not os.path.isfile(filepath):
+            req = Request(link, data = None, headers = self.headers)
+            response = urlopen(req)
+            CHUNK = 1024 * 1024
+            with open(filepath, 'wb') as f:
+                while True:
+                    chunk = response.read(CHUNK)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+            print('finished downloading file for vpu:{}, filename:{}'.format(vpu,filename))
+        else:
+            print('{} already exists, moving on'.format(filepath))
+        # return the filename so the download_decompress method knows what to decompress
+        return filename
 
     def decompress(self,filename):
 
@@ -354,6 +770,7 @@ class NHDPlusExtractor(object):
 
             print('error: unable to decompress files')
             print('is 7zip installed?')
+        print('{} decompressed'.format(filename))
 
     def decompress_linux(self, filename):
         """
@@ -372,45 +789,147 @@ class NHDPlusExtractor(object):
             print('error: unable to decompress files')
             print('is 7zip installed?')
 
-    def download_decompress(self,vpu,decompress=True):
-        '''
-        function to download and decompress the data from the NHDPlus DataSet
-        this function will download all of the raster and vector data for a specified Drainage area
-        **kwargs
-        vpu: string, the VPU corresponding to the Drainage Area ID to be downloaded ie DA = 'MA' vpu = '02'
-        decomrpess: if True decompress files with 7zip
-        '''
-        assert vpu in self.VPU_to_RPU.keys(), 'VPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
-        links = self.get_links(vpu)
-        local_files = [f for f in os.listdir(self.destination)]
-        for f in self.files:
-            dwn_link = None
-            if any([f in localfile for localfile in local_files]):
-                print(f,'for vpu:',vpu,'exists')
-            else:
-                print(f,'for vpu:',vpu,'does not exist starting download')
-                for link in links:
-                    if f.lower() in link.lower():
-                        dwn_link = link
-            if dwn_link is not None:
-                filename = os.path.basename(dwn_link)
-                req = Request(dwn_link, data = None, headers = self.headers)
-                response = urlopen(req)
-                CHUNK = 1024 * 1024
-                with open(os.path.join(self.destination, filename), 'wb') as f:
-                    while True:
-                        chunk = response.read(CHUNK)
-                        if not chunk:
-                            break
-                        f.write(chunk)
-                print(filename,'for vpu:',vpu,'downloaded')
-            del(dwn_link)
+        print('{} decompressed'.format(filename))
 
-        if decompress == True:
-            local_files = [os.path.join(self.destination,f) for f in os.listdir(self.destination) if f.endswith('.7z')]
-            print(local_files)
-            for file in local_files:
-                self.decompress(file)
+    def verify_links(self):
+
+        '''
+        function to verify all the links in the metadata file are up to date
+        '''
+        print('verifying links')
+        working_links = []
+
+        if os.path.isfile(self.link_file):
+
+            source = open(self.link_file)
+            links = source.read().splitlines()
+            print(str(self.link_file) + ' has been read')
+            source.close()
+
+            for link in links:
+
+                try:
+                        time.sleep(0.3)
+                        print('trying ' + link)
+                        req = Request(link, data=None, headers=self.headers)
+                        working_links.append(link)
+                        print('success')
+
+                except HTTPError or URLError:
+                    print('the following link was broken ' + link)
+                    a = link.split('/')[-1]
+                    b = a.split('_')
+
+                    if len(b) == 5:
+                        working_links.append(str(self.gather_vpu_links(vpu_input=b[2], filename_input=b[3])))
+
+                    else:
+                        working_links.append(str(self.gather_rpu_links(rpu_input=b[3], filename_input=b[4])))
+
+                with open(self.link_file,'w') as corrected:
+
+                    for items in working_links:
+
+                        corrected.write('%s\n' %items)
+
+        else:
+            print('no file: {} creating new instance this will take awhile'.format(self.link_file) )
+
+            vpu_links = self.gather_vpu_links()
+            rpu_links = self.gather_rpu_links()
+
+            with open(self.link_file,'w') as destination:
+
+                for items in vpu_links:
+                    destination.write('%s\n' % items)
+
+                for items in rpu_links:
+                    destination.write('%s\n' % items)
+
+    def download_decompress(self,vpu=None,rpu=None,filename=None,decompress=True):
+        '''
+        function to download all the data for the NHDPlus DataSet
+        **kwargs
+        vpu vector processing unit desired, inputted as string
+        rpu raster processing unit desired, inputted as string
+        filename filename corresponding to rpu or vpu
+        decompress if True decompress files with 7zip
+
+        kwarg combinations and function behavior
+        None : All files in the NHDPlus dataset will be downloaded
+        vpu only : downloads all vpu files for specified vpu
+        rpu only : downloads all rpu files for specified rpu
+        vpu + filename : download specified file
+        rpu + filename : downloda specified file
+        vpu + filename + decompress: download specified file and decompress
+        rpu + filename + decompress: download specified file and decompress
+        decompress only : decompresses all '.7z' files in self.destination
+
+        '''
+        # list of files that will need to be decompressed
+        filenames = []
+        if not os.path.isfile(self.link_file):
+            print('the file {} was not found, running verify_links()'.format(self.link_file))
+            self.verify_links()
+
+        if vpu is not None and filename is not None:
+            assert vpu in self.VPU_to_RPU.keys(), 'VPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
+            assert filename in self.VPU_Files, 'filename must be one of ' + str(self.VPU_Files)
+            assert rpu is None, 'kwargs rpu and vpu can not be called at the same time, if you wish to download the entire NHDPlus DataSet do not specify either'
+            dl_file = self.downloadvpufile(vpu,filename)
+            filenames.append(dl_file)
+
+        elif rpu is not None and filename is not None:
+            assert rpu in self.RPU_to_VPU.keys(), 'RPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
+            assert filename in self.RPU_Files, 'filename must be one of ' + str(self.VPU_Files)
+            assert vpu is None, 'kwargs rpu and vpu can not be called at the same time if you wish to download the entire NHDPlus DataSet do not specify either'
+            dl_file = self.downloadrpufile(rpu,filename)
+            filenames.append(dl_file)
+
+        elif vpu is not None and rpu is None and filename is None:
+            assert vpu in self.VPU_to_RPU.keys(), 'VPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
+            for files in self.VPU_Files:
+                dl_file = self.downloadvpufile(vpu,files)
+                filenames.append(dl_file)
+
+        elif rpu is not None and vpu is None and filename is None:
+            assert rpu in self.RPU_to_VPU.keys(), 'RPU must be in ' + str(sorted(self.VPU_to_RPU.keys()))
+            for files in self.VPU_Files:
+                dl_file = self.downloadrpufile(rpu,files)
+                filenames.append(dl_file)
+
+        elif rpu is None and vpu is None and filename is None:
+            for vpus in sorted(self.VPU_to_RPU.keys()):
+                for files in self.VPU_Files:
+                    dl_file = self.downloadvpufile(vpu,files)
+                    filenames.append(dl_file)
+
+            for rpu in sorted(self.RPU_to_VPU.keys()):
+
+                for files in self.RPU_Files:
+                    dl_file = self.downloadrpufile(rpu, files)
+                    filenames.append(dl_file)
+
+        else:
+            print('the acceptable kwarg combinations are vpu and filename, rpu and filename, vpu only, rpu only, or no kwargs')
+            raise
+
+        if decompress is True:
+
+            # if the filenames list is empty then only the decompress argument was true
+            # in that case decompress all files in the destination directory
+            if not filenames:
+                lst_files = os.listdir(self.destination)
+                for lst_name in lst_files:
+                    if lst_name.lower().endswith('.7z') and os.isfile(lst_name):
+                        self.decompress(os.path.join(self.destination, lst_name))
+            # in the case that the filenames list is not empty we only want to
+            # decompress the files we just downloaded
+            else:
+                print('Extracting files in {}'.format(self.destination))
+                for lst_name in filenames:
+                    print('Extracting {}'.format(lst_name))
+                    self.decompress(os.path.join(self.destination, lst_name))
 
     def get_degree_transform(self, dataset):
         """
@@ -660,7 +1179,7 @@ class NHDPlusExtractor(object):
         function to read database files, .dbf,
         arguments:
             source: dbf file to be read
-            comids: comids of flowlines to  from source
+            comids: comids of flowlines to extract from source
         kwargs:
             attributes: attributes of flowline to be extracted from source if None
                         all attributes are returned
@@ -671,7 +1190,29 @@ class NHDPlusExtractor(object):
         temp = {} #dictionary mapping values to fields example temp['COMID'] = [7621376,24557283]
         index=[] #index of the requested attributes in the dbf
         mydbf = open(source,'rb')#open dbf file
-        sf = Reader(dbf=mydbf)#use PyShp to read dbf
+
+        # occasionally shapefile records are not encoded in utf-8 so we initialize the variables
+        # then attempt to read the shapefile in a try block in order to catch codec errors
+        sf = None
+        sfrecords = None
+        for encoding in self.encodings:
+            try:
+            # attempt to read the shapefile using the given encoding
+                sf = Reader(dbf=mydbf,encoding = encoding)#use PyShp to read dbf
+                sfrecords = sf.records()
+                if verbose:
+                    print('Successfully read {} with {} encoding.'.format(source,encoding))
+                break
+            except UnicodeDecodeError:
+            # could not read the records using the given encoding so we log and move to the next one
+                if verbose:
+                    print('Failed to read {} with {} encoding.'.format(source,encoding))
+        # if sfrecords is still none that means we were unable to read with any of the encodings
+        if sfrecords is None:
+            print('ERROR: Unable to read {} with any of the specified encodings. Try appending'
+                  ' additional options to the NHDPlusExtractor object\'s encoding property.'.format(source))
+            return None
+
         fields = sf.fields[1:]#list of the fields from the dbf excluding the DeletionFlag
         fields = [item[0].upper() for item in fields]#capitalize the names of the fields and remove the other qualitites of the fields
 
@@ -692,7 +1233,7 @@ class NHDPlusExtractor(object):
         if verbose is True:
             print('iterating over records finding matching comids from list given')
         #iterate over records finding matching comids
-        for pos,rec in enumerate(sf.records()):
+        for pos,rec in enumerate(sfrecords):
 
             if rec[comid_index[0]] in comids:
                 for indice in index:
@@ -711,15 +1252,32 @@ class NHDPlusExtractor(object):
 
         return temp
 
-
-    def get_comids(self, flowlinefile):
+    def get_comids(self, flowlinefile, verbose = True):
         """
         Finds the comids from the flowline file.
         """
 
-        # open the file
-
-        shapefile = Reader(flowlinefile)
+        # occasionally shapefile records are not encoded in utf-8 so we initialize the variables
+        # then attempt to read the shapefile in a try block in order to catch codec errors
+        shapefile = None
+        sfrecords = None
+        for encoding in self.encodings:
+            try:
+            # attempt to read the shapefile using the given encoding
+                shapefile = Reader(flowlinefile,encoding = encoding)
+                sfrecords = shapefile.records()
+                if verbose:
+                    print('Successfully read {} with {} encoding.'.format(flowlinefile,encoding))
+                break
+            except UnicodeDecodeError:
+            # could not read the records using the given encoding so we log and move to the next one
+                if verbose:
+                    print('Failed to read {} with {} encoding.'.format(flowlinefile,encoding))
+        # if sfrecords is still none that means we were unable to read with any of the encodings
+        if sfrecords is None:
+            print('ERROR: Unable to read {} with any of the specified encodings. Try appending'
+                  ' additional options to the NHDPlusExtractor object\'s encoding property.'.format(flowlinefile))
+            return None
 
         # find the index of the comids
         try:
@@ -729,7 +1287,7 @@ class NHDPlusExtractor(object):
 
         # make a list of the comids
 
-        comids = [r[comid_index] for r in shapefile.records()]
+        comids = [r[comid_index] for r in sfrecords]
 
         return comids
 
@@ -748,13 +1306,33 @@ class NHDPlusExtractor(object):
 
         if verbose: print('reading the flowline file\n')
 
-        shapefile = Reader(source, shapeType = 3)
-        records   = shapefile.records()
+        # occasionally shapefile records are not encoded in utf-8 so we initialize the variables
+        # then attempt to read the shapefile in a try block in order to catch codec errors
+        shapefile = None
+        records = None
+        for encoding in self.encodings:
+            try:
+            # attempt to read the shapefile using the given encoding
+                shapefile = Reader(source,encoding = encoding)
+                records = shapefile.records()
+                if verbose:
+                    print('Successfully read {} with {} encoding.'.format(source,encoding))
+                break
+            except UnicodeDecodeError:
+            # could not read the records using the given encoding so we log and move to the next one
+                if verbose:
+                    print('Failed to read {} with {} encoding.'.format(source,encoding))
+        # if records is still none that means we were unable to read with any of the encodings
+        if records is None:
+            print('ERROR: Unable to read {} with any of the specified encodings. Try appending'
+                  ' additional options to the NHDPlusExtractor object\'s encoding property.'.format(source))
+            return None
 
         # figure out which field codes are the Reach code and comid
 
         fields = shapefile.fields[1:]
         fields = [item[0].upper() for item in fields]
+
 
         for pos, j in enumerate(fields):
             if j == 'REACHCODE':
@@ -769,23 +1347,24 @@ class NHDPlusExtractor(object):
 
         i = 0
         for record in records:
-            if record[reach_index][:8] == HUC8: indices.append(i)
+            huc8record = int(record[reach_index][:8])
+            if huc8record == int(HUC8):
+                indices.append(i)
             i+=1
-
         if len(indices) == 0:
             if verbose: print('error: query returned no values')
             raise
 
         # write the data from the HUC8 to a new shapefile
 
-        w = Writer(destination, shapeType = 3)
+        w = Writer(destination, shapeType = shapefile.shapeType)
 
         for field in shapefile.fields:  w.field(*field)
 
         for i in indices:
             shape = shapefile.shape(i)
-            w.poly(shapeType = 3, parts = [shape.points])
 
+            w.shape(shape)
             record = records[i]
 
             #little work around for blank GNIS_ID and GNIS_NAME values
@@ -794,7 +1373,6 @@ class NHDPlusExtractor(object):
                 record[3] = record[3].decode('cp1252')
             if isinstance(record[4], bytes):
                 record[4] = record[4].decode('cp1252')
-
             w.record(*record)
 
         w.close()
@@ -822,10 +1400,30 @@ class NHDPlusExtractor(object):
 
         if verbose: print('reading the catchment shapefile\n')
 
-        shapefile = Reader(source)
+        # occasionally shapefile records are not encoded in utf-8 so we initialize the variables
+        # then attempt to read the shapefile in a try block in order to catch codec errors
+        shapefile = None
+        records = None
+        for encoding in self.encodings:
+            try:
+            # attempt to read the shapefile using the given encoding
+                shapefile = Reader(source,encoding = encoding)
+                records = shapefile.records()
+                if verbose:
+                    print('Successfully read {} with {} encoding.'.format(source,encoding))
+                break
+            except UnicodeDecodeError:
+            # could not read the records using the given encoding so we log and move to the next one
+                if verbose:
+                    print('Failed to read {} with {} encoding.'.format(source,encoding))
+        # if records is still none that means we were unable to read with any of the encodings
+        if records is None:
+            print('ERROR: Unable to read {} with any of the specified encodings. Try appending'
+                  ' additional options to the NHDPlusExtractor object\'s encoding property.'.format(source))
+            return None
 
         # get the index of the feature id, which links to the flowline comid
-        print(shapefile.fields)
+
         featureid_index = shapefile.fields.index(['FEATUREID', 'N', 9, 0]) - 1
 
         # go through the comids from the flowlines and add the corresponding
@@ -833,7 +1431,6 @@ class NHDPlusExtractor(object):
 
         if verbose: print('searching the catchments in the watershed\n')
 
-        records = shapefile.records()
         indices = []
 
         i = 0
@@ -849,16 +1446,17 @@ class NHDPlusExtractor(object):
 
         if verbose: print('writing the new catchment shapefile\n')
 
-        w = Writer(destination)
+        w = Writer(destination,shapeType = shapefile.shapeType)
 
         for field in shapefile.fields:  w.field(*field)
 
         for i in indices:
             shape = shapefile.shape(i)
-            w.poly(shapeType = 5, parts = [shape.points])
+            w.shape(shape)
             w.record(*records[i])
 
         w.close()
+
 
     def combine_NED(self, nedfiles, VPU):
         '''
@@ -896,7 +1494,6 @@ class NHDPlusExtractor(object):
         newfile = None #save changes to file
         os.remove(inmosaic) #delete vrt
         combinednedfile = newfile = '{}/{}'.format(nedfilepath, outmosaic)
-
 
     def get_pixel(self, x, x0, width):
         """returns the pixel number for a coordinate value."""
@@ -980,9 +1577,13 @@ class NHDPlusExtractor(object):
         # get a driver and make the new file
 
         driver = gdal.GetDriverByName('GTiff')
-
+        # check if we need to use 32bit ints or if we can get away with 16
+        if numpy.amax(values) >  65535:
+            gdal_type = gdal.GDT_UInt32
+        else:
+            gdal_type = gdal.GDT_UInt16
         dest = driver.Create(destination, len(values[0]), len(values), 1,
-                             gdal.GDT_UInt16)
+                             gdal_type)
 
         dest.SetProjection(source.GetProjection())
         dest.SetMetadata(source.GetMetadata())
@@ -1021,6 +1622,13 @@ class NHDPlusExtractor(object):
         #getting proper files for vpu and huc8 selected
         start = time.time()
         DA = self.VPU_to_DA[VPU]
+        
+        # download the required files
+        self.download_decompress(vpu = VPU)
+        # also need the NEDSnapshot files for each rpu
+        RPUs = self.VPU_to_RPU[VPU]
+        for RPU in RPUs:
+            self.download_decompress(rpu = RPU, filename = 'NEDSnapshot')
 
         destination = '{}/NHDPlus{}'.format(self.destination, DA)
         NHDPlus = '{}/NHDPlus{}'.format(destination, VPU)
@@ -1044,7 +1652,7 @@ class NHDPlusExtractor(object):
 
         # NED rasters -- there is more than one per VPU
         nedfiles = ['{}/NEDSnapshot/Ned{}/elev_cm'.format(NHDPlus,RPU)
-                         for RPU in self.VPU_to_RPU[VPU]]
+                         for RPU in RPUs]
 
         newnedfile = '{}/NEDSnapshot/Combined_NED/mosaic_{}.tif'.format(NHDPlus,DA)
         if not os.path.isfile(newnedfile):
@@ -1091,6 +1699,9 @@ class NHDPlusExtractor(object):
             comids = self.get_comids(ffile)
 
         # read hydrologic sequence and drainage attributes from the database
+
+
+
             if verbose:
                 print('reading flowline value added attributes for ' + '{}\n'.format(HUC8))
 
@@ -1101,8 +1712,10 @@ class NHDPlusExtractor(object):
                                       attributes = flowattributes,
                                       comids = comids,
                                       verbose = vverbose)
+                # read the slope data from the database
 
-            # read the slope data from the database
+
+
             if verbose:
                 print('reading slope and elevation attributes for ' +
                           '{}\n'.format(HUC8))
@@ -1114,6 +1727,9 @@ class NHDPlusExtractor(object):
                                        verbose = vverbose)
 
             # get the flow and velocity data
+            for key, values in slopevalues.items():
+                for i in range(len(values)):
+                    print(values[i],type(values[i]))
             eromattributes = [['COMID', 'N', 9, 0],  ['Q0001E', 'N', 15, 3], ['V0001E', 'N', 14, 5], ['SMGAGEID', 'C', 16, 0]]
 
             if verbose: print('reading EROM model attributes for ' +
@@ -1127,8 +1743,7 @@ class NHDPlusExtractor(object):
             # and make a dictionary linking the comids to hydroseqs
 
             flowlines = {}
-
-            if verbose: print('making flowline dictionary')
+            print('making flowline dictionary')
 
             for flowlineVAAs in zip(*(flowvalues[a[0]] for a in flowattributes)):
                 flowlines[flowlineVAAs[1]] = Flowline(*flowlineVAAs)
@@ -1170,8 +1785,9 @@ class NHDPlusExtractor(object):
 
         end = time.time()
         t = end - start
-
+        print('stop')
         if verbose:
+
             print('successfully queried NHDPlus data for {} '.format(HUC8) +
                   'in {:.1f} seconds\n'.format(t))
 
@@ -1192,12 +1808,11 @@ class NHDPlusExtractor(object):
             bfile    = '{}/{}'.format(output, boundaryfile)
             VAAfile  = '{}/{}'.format(output, VAAfile)
             elevfile = '{}/{}'.format(output, elevfile)
-            plotfiledestination = '{}/{}'.format(output, plotfile)
 
-            if not os.path.isfile(plotfiledestination + '.png'):
+            if not os.path.isfile(plotfile + '.png'):
 
                 self.plot_HUC8(flowfile, cfile, bfile, VAAfile, elevfile,
-                               output = plotfiledestination)
+                               output = plotfile)
 
     def get_distance(self, p1, p2):
         """Approximates the distance in kilometers between two points on the
@@ -1356,7 +1971,7 @@ class NHDPlusExtractor(object):
 
         # open up and show the boundary
 
-        b = Reader(bfile, shapeType = 5)
+        b = Reader(bfile)
 
         boundary = b.shape(0)
         points = numpy.array(boundary.points)
@@ -1364,9 +1979,10 @@ class NHDPlusExtractor(object):
 
         # open up and show the catchments
 
-        c = Reader(cfile, shapeType = 5)
-
-        extent = self.get_boundaries(c.shapes(), space = 0.02)
+        c = Reader(cfile)
+        cshapes = c.shapes()
+        
+        extent = self.get_boundaries(cshapes, space = 0.02)
 
         xmin, ymin, xmax, ymax = extent
 
@@ -1380,9 +1996,8 @@ class NHDPlusExtractor(object):
 
         # make patches of the catchment area
 
-        for i in range(len(c.records())):
-            catchment = c.shape(i)
-            points = numpy.array(catchment.points)
+        for shape in cshapes:
+            points = numpy.array(shape.points)
             subplot.add_patch(self.make_patch(points, facecolor, width = 0.1))
 
         # get the flowline attributes, make an "updown" dictionary to follow
@@ -1401,10 +2016,30 @@ class NHDPlusExtractor(object):
 
         # open up and show the flowfiles
 
-        f = Reader(flowfile, shapeType = 3)
+        # occasionally shapefile records are not encoded in utf-8 so we initialize the variables
+        # then attempt to read the shapefile in a try block in order to catch codec errors
+        f = None
+        frecords = None
+        for encoding in self.encodings:
+            try:
+            # attempt to read the shapefile using the given encoding
+                f = Reader(flowfile,encoding = encoding)
+                frecords = f.records()
+                if verbose:
+                    print('Successfully read {} with {} encoding.'.format(flowfile,encoding))
+                break
+            except UnicodeDecodeError:
+            # could not read the records using the given encoding so we log and move to the next one
+                if verbose:
+                    print('Failed to read {} with {} encoding.'.format(flowfile,encoding))
+        # if frecords is still none that means we were unable to read with any of the encodings
+        if frecords is None:
+            print('ERROR: Unable to read {} with any of the specified encodings. Try appending'
+                  ' additional options to the NHDPlusExtractor object\'s encoding property.'.format(flowfile))
+            return None
         comid_index = f.fields.index(['COMID', 'N',  9, 0]) - 1
 
-        all_comids = [r[comid_index] for r in f.records()]
+        all_comids = [r[comid_index] for r in frecords]
 
         # get the flows and velocities from the dictionary
 

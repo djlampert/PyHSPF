@@ -5,11 +5,13 @@
 # Purpose: This file contains many functions to extract data for postprocessing
 # from an HSPF simulation.
 #
-# Last updated: 06/30/2016
+# Last updated: 2/16/2023
 
 import os, pickle, numpy, datetime, calendar, csv
 
 from scipy import stats
+
+from dateutil.relativedelta import relativedelta
 
 from .wdmutil import WDMUtil
 
@@ -72,6 +74,15 @@ class Postprocessor:
 
         self.wdm_parms = None
         self.total_error = None
+
+    def get_tstep(self):
+        """Checks the timestep of the HSPFModel and returns it as a string."""
+        if self.hspfmodel.tstep == 1440:
+            return 'daily'
+        elif self.hspfmodel.tstep == 60:
+            return 'hourly'
+        else:
+            return self.hspfmodel.tstep
 
     def is_number(self, s):
         """Tests if a string is a number."""
@@ -155,9 +166,42 @@ class Postprocessor:
                              for n in self.dsns]
 
         self.wdm_parms = wdm
+    
+    def get_max(self, oflows):
+        return max(list(filter(lambda x: numpy.isnan(x) == False, oflows)))
+    
+    def get_sum(self, oflows):
+        return sum(list(x for x in oflows if numpy.isnan(x) == False))
 
-    def aggregate_hourly_daily(self, hourly):
+    def aggregate_minutes_hourly(self, minutes):
+        """
+        aggregates a time series of minutes intervals into an hourly one.
+        for use with hspf series as it takes the timestep from self.hspfmodel
+        """
+        step = self.get_tstep()
+        # no need to aggregate
+        if step == 'daily' or step == 'hourly':
+            return minutes
+        hourly = []
+        interval = int(60/step)
+        for i in range(0, len(minutes) - interval+1, interval):
+            hourly.append(sum(minutes[i:i+interval]))
+        return hourly
+
+    def aggregate_hourly_daily(self, hourly, series_tstep=None):
         """Aggregates an hourly timeseries to a daily one."""
+        # if the original timeseries has a weird timestep we aggregate
+        # to daily based on that
+        if series_tstep:
+            daily = []
+            interval = int(1440/series_tstep)
+            for i in range(0, len(hourly) - interval+1, interval):
+                daily.append(sum(hourly[i:i+interval]))
+            return daily
+
+        # if the model timestep is already daily them just return the series
+        if self.get_tstep() == 'daily':
+            return hourly
 
         if len(hourly) < 24:
             print('warning: insufficiently short time series')
@@ -166,7 +210,6 @@ class Postprocessor:
         daily = []
         for i in range(0, len(hourly) - 23, 24):
             daily.append(sum(hourly[i:i+24]))
-
         return daily
 
     def aggregate_daily_monthly(self, dates, daily, option = 'total'):
@@ -238,9 +281,18 @@ class Postprocessor:
         elif tstep == 'hourly':
             n = round((end - start).total_seconds() / 3600)
             delt = datetime.timedelta(hours = 1)
-        else: 
-            print('Warning: unknown time step specified for timeseries')
-            return None
+        elif tstep == 'monthly':
+            delt = relativedelta(months=+1)
+            cur = start
+            ret = []
+            while cur <= end:
+                ret.append(cur)
+                cur = cur + delt
+            return ret
+        else:
+            # we probably got an time step in minutes
+            n = round((end - start).total_seconds() / (60*tstep))
+            delt = datetime.timedelta(minutes=int(tstep))
 
         return [start + delt * i for i in range(n)]
 
@@ -254,7 +306,7 @@ class Postprocessor:
 
         for comid in comids:
 
-            areas.append(sum([o.area 
+            areas.append(self.get_sum([o.area 
                               for o in operations if o.subbasin == comid]))
 
         return areas
@@ -410,6 +462,8 @@ class Postprocessor:
                 prec_dsn = self.dsns[self.idconss.index('PREC')]
                 prec = self.wdm.get_data(self.wdminfile, prec_dsn,
                                          start = start, end = end)
+                prec_ids = list(self.hspfmodel.watershed_timeseries['precipitation'].keys())
+                prec_tstep = self.hspfmodel.precipitations[prec_ids[0]][1]
 
             elif 'precipitation' in self.hspfmodel.subbasin_timeseries:
 
@@ -424,16 +478,31 @@ class Postprocessor:
                                              start = start, end = end)
                            for comid in comids]
 
-                prec = sum([p*a for p, a in zip(precips, areas)]) / sum(areas) 
-
+                prec = sum([p*a for p, a in zip(precips, areas)]) / sum(areas)
+                prec_ids = list(self.hspfmodel.subbasin_timeseries['precipitation'].keys())
+                prec_tstep = self.hspfmodel.precipitations[prec_ids[0]][1]
+        # if the hspfmodel timestep is in minutes we want to change it to hourly
+        if isinstance(tstep,int): tstep = 'hourly'
+        # if the precipitation timeseries uses a different timestep than hourly
+        # or daily we need to tell the aggregate method about it
+        if (prec_tstep == 60 or prec_tstep == 1440):
+            # if it is hourly/daily we need to send the method None
+            prec_tstep = None
         if tstep == 'hourly':
             times = self.get_timeseries(tstep = tstep, dates = dates)
+            # if the rain series tstep is < 60 minutes need to aggregate
+            if prec_tstep:
+                hourly = []
+                interval = int(60/prec_tstep)
+                for i in range(0, len(prec) - interval+1, interval):
+                    hourly.append(sum(prec[i:i+interval]))
+                prec = numpy.array(hourly)
         if tstep == 'daily':
             times = self.get_timeseries(tstep = tstep, dates = dates)
-            prec = [p for p in self.aggregate_hourly_daily(prec)]
+            prec = numpy.array([p for p in self.aggregate_hourly_daily(prec,series_tstep = prec_tstep)])
         elif tstep == 'monthly':
             times = self.get_timeseries(tstep = 'daily', dates = dates)
-            prec = [p for p in self.aggregate_hourly_daily(prec)]
+            prec = [p for p in self.aggregate_hourly_daily(prec,series_tstep = prec_tstep)]
             times, prec = self.aggregate_daily_monthly(times, prec)
         elif tstep != 'hourly':
             print('Warning: unknown time step size specified')
@@ -444,9 +513,9 @@ class Postprocessor:
     def get_total_precipitation(self, comid, upcomids = [], variable = 'supply',
                                 dates = None):
         """Returns the total precipitation volume for the comids."""
-
+        tstep = self.get_tstep()
         times, prec = self.get_precipitation(comid, upcomids = upcomids, 
-                                             tstep = 'hourly', 
+                                             tstep = tstep, 
                                              variable = variable, dates = dates)
         comids = self.get_upstream_comids(comid, upcomids = upcomids)
         area   = sum(self.get_subbasin_areas(comids))
@@ -746,8 +815,8 @@ class Postprocessor:
     def get_total_flow(self, comid, dates = None):
         """Returns the total flow volume from reach for the subbasin with the
         given comid."""
-
-        ts, vols = self.get_reach_timeseries('ROVOL', comid, tstep = 'hourly',
+        tstep = self.get_tstep()
+        ts, vols = self.get_reach_timeseries('ROVOL', comid, tstep = tstep,
                                              dates = dates)
 
         return vols.sum()
@@ -769,9 +838,9 @@ class Postprocessor:
         else:             start, end = dates
 
         # get a timeseries for the dates and the outflow volumes
-
+        tstep = self.get_tstep()
         times, vols = self.get_reach_timeseries('ROVOL', comid,
-                                                tstep = 'hourly', dates = dates)
+                                                tstep = tstep, dates = dates)
 
         seasonal = [(t, v) for t, v in zip(times, vols) 
                     if self.within_season(t, start, end, season)]
@@ -787,13 +856,12 @@ class Postprocessor:
 
     def get_sim_flow(self, comid, dates = None, tstep = 'daily'):
         """Returns a timeseries of flows (m3/s) at the comid."""
-
         times, vols = self.get_reach_timeseries('ROVOL', comid, 
-                                                tstep = 'hourly', dates = dates)
+                                                tstep = tstep, dates = dates)
 
         if   self.hspfmodel.units == 'Metric':  conv = 10**6
         elif self.hspfmodel.units == 'English': conv = 43560
-
+        vols = self.aggregate_minutes_hourly(vols)
         if tstep == 'hourly':
 
             times = self.get_timeseries(tstep = tstep, dates = dates)
@@ -1141,7 +1209,7 @@ class Postprocessor:
         areas = self.get_subbasin_areas(comids)
 
         suro = sum([s * a for s, a in zip(suros, areas)]) / sum(areas)
-
+        suro = self.aggregate_minutes_hourly(suro)
         if tstep == 'hourly': 
             times  = self.get_timeseries(tstep = 'hourly', dates = dates)
         if tstep == 'daily':
@@ -1170,7 +1238,7 @@ class Postprocessor:
         areas = self.get_subbasin_areas(comids)
 
         ifwo = sum([i * a for i, a in zip(ifwos, areas)]) / sum(areas)
-
+        ifwo = self.aggregate_minutes_hourly(ifwo)
         if tstep == 'hourly': 
             times  = self.get_timeseries(tstep = 'hourly', dates = dates)
         if tstep == 'daily':
@@ -1199,7 +1267,7 @@ class Postprocessor:
         areas = self.get_subbasin_areas(comids)
 
         agwo = sum([f * a for f, a in zip(agwos, areas)]) / sum(areas)
-
+        agwo = self.aggregate_minutes_hourly(agwo)
         if tstep == 'hourly': 
             times  = self.get_timeseries(tstep = 'hourly', dates = dates)
         if tstep == 'daily':
@@ -1270,21 +1338,21 @@ class Postprocessor:
 
     def get_total_sediment_in(self, comid, dates = None):
         """Returns the total mass of sediment into the reach."""
-
-        ts, ised = self.get_reach_timeseries('ISED', comid, tstep = 'hourly')
+        tstep = self.get_tstep()
+        ts, ised = self.get_reach_timeseries('ISED', comid, tstep = tstep)
         return ised[1].sum()
 
     def get_total_sediment_out(self, comid, dates = None):
         """Returns the total mass of sediment out of the reach."""
-
-        ts, rosed = self.get_reach_timeseries('ROSED', comid, tstep = 'hourly')
+        tstep = self.get_tstep()
+        ts, rosed = self.get_reach_timeseries('ROSED', comid, tstep = tstep)
         return rosed[1].sum()
 
     def get_sediment_loading(self, comid, tstep = 'daily', dates = None):
         """Returns the time series of sediment loading."""
-
+        tstep = self.get_tstep()
         times, rosed = self.get_reach_timeseries('ROSED', comid, 
-                                                 tstep = 'hourly', 
+                                                 tstep = tstep, 
                                                  dates = dates)
 
         if tstep == 'hourly':
@@ -1480,7 +1548,7 @@ class Postprocessor:
         if   self.hspfmodel.units == 'Metric':  conv = 10**6
         elif self.hspfmodel.units == 'English': conv = 43560
 
-        return (sum(flows) * 86400 / conv)
+        return (self.get_sum(flows) * 86400 / conv)
 
     def get_obs_recession(self, comid, dates = None):
         """Returns a timeseries of the daily recession rates for the comid
@@ -1491,8 +1559,11 @@ class Postprocessor:
         ts, flows = self.get_obs_flow(dates, verbose = True)
 
         # compute the recession rates and throw out if the flow increased
-
-        observed_rates = [f1 / f2 for f1, f2 in zip(flows[1:], flows[:-1])]
+        observed_rates = []
+        for f1, f2 in zip(flows[1:], flows[:-1]):
+            if not f2 == 0:
+                observed_rates.append(f1/f2)
+        #observed_rates = [f1 / f2 for f1, f2 in zip(flows[1:], flows[:-1])]
         observed_rates.insert(0, 1)
 
         return ts, observed_rates
@@ -1507,34 +1578,41 @@ class Postprocessor:
                                                  dates = dates)
         otimes, oflows = self.get_obs_flow(tstep = 'daily', dates = dates)
 
+        slope, intercept, daily_r, p, std_err = stats.linregress(oflows, sflows)
+
+        # daily log r2
+        # remove 0's for the logs
+        sflows_l = [sflows[stimes.index(t)] 
+                  for t, f in zip(otimes, oflows) 
+                  if t in stimes and not numpy.isnan(f) and not f == 0]
+        oflows_l = [oflows[otimes.index(t)] 
+                  for t, f in zip(otimes, oflows) 
+                  if not numpy.isnan(f) and not f == 0]
+
         # deal with missing data
 
         sflows = [sflows[stimes.index(t)] 
                   for t, f in zip(otimes, oflows) 
-                  if t in stimes and f is not None]
+                  if t in stimes and not numpy.isnan(f)]
         oflows = [oflows[otimes.index(t)] 
                   for t, f in zip(otimes, oflows) 
-                  if f is not None]
+                  if not numpy.isnan(f)]
 
-        slope, intercept, daily_r, p, std_err = stats.linregress(oflows, sflows)
-
-        # daily log r2
-
-        log_o = [numpy.log(f) for f in oflows]
-        log_s = [numpy.log(f) for f in sflows]
+        log_o = [numpy.log(f) for f in oflows_l]
+        log_s = [numpy.log(f) for f in sflows_l]
 
         slope, intercept, daily_logr, p, std_err = stats.linregress(log_o, 
                                                                     log_s)
 
         # Daily Nash Sutcliffe Efficiency
 
-        dailyNS = (1 - sum((numpy.array(sflows) - numpy.array(oflows))**2) /
-                   sum((numpy.array(oflows) - numpy.mean(oflows))**2))
+        dailyNS = (1 - self.get_sum((numpy.array(sflows) - numpy.array(oflows))**2) /
+                   self.get_sum((numpy.array(oflows) - numpy.mean(oflows))**2))
 
         # Daily log Nash Sutcliffe Efficiency
 
-        daily_logNS = (1 - sum((numpy.array(log_s) - numpy.array(log_o))**2) /
-                       sum((numpy.array(log_o) - numpy.mean(log_o))**2))
+        daily_logNS = (1 - self.get_sum((numpy.array(log_s) - numpy.array(log_o))**2) /
+                       self.get_sum((numpy.array(log_o) - numpy.mean(log_o))**2))
 
         # monthly r2
 
@@ -1547,8 +1625,8 @@ class Postprocessor:
         # deal with missing data
 
         sflows = [sflows[stimes.index(t)] for t, f in zip(otimes, oflows) 
-                  if t in stimes and f is not None]
-        oflows = [f for t, f in zip(otimes, oflows) if f is not None]
+                  if t in stimes and not numpy.isnan(f)]
+        oflows = [f for t, f in zip(otimes, oflows) if not numpy.isnan(f)]
 
         slope, intercept, monthly_r, p, std_err = stats.linregress(oflows, 
                                                                    sflows)
@@ -1563,13 +1641,13 @@ class Postprocessor:
 
         # Monthly Nash Sutcliffe Efficiency
 
-        monthlyNS = (1 - sum((numpy.array(sflows) - numpy.array(oflows))**2) /
-               sum((numpy.array(oflows) - numpy.mean(oflows))**2))
+        monthlyNS = (1 - self.get_sum((numpy.array(sflows) - numpy.array(oflows))**2) /
+               self.get_sum((numpy.array(oflows) - numpy.mean(oflows))**2))
 
         # Monthly log Nash Sutcliffe Efficiency
 
-        monthly_logNS = (1 - sum((numpy.array(log_s) - numpy.array(log_o))**2) /
-               sum((numpy.array(log_o) - numpy.mean(log_o))**2))
+        monthly_logNS = (1 - self.get_sum((numpy.array(log_s) - numpy.array(log_o))**2) /
+               self.get_sum((numpy.array(log_o) - numpy.mean(log_o))**2))
 
         return (daily_r**2, daily_logr**2, dailyNS, daily_logNS,
                 monthly_r**2, monthly_logr**2, monthlyNS, monthly_logNS)
@@ -1587,7 +1665,7 @@ class Postprocessor:
                                                                 verbose = True))
                           if self.within_season(t, start, end, season)]
 
-        return (sum(obs_flows) * 86400 / conv)
+        return (self.get_sum(obs_flows) * 86400 / conv)
 
     def get_volume(self, comids, states):
         """Returns the total volume in the list of subbasins given the state
@@ -1758,19 +1836,19 @@ class Postprocessor:
         simulated = self.get_recession_rates(comid, dates = dates,
                                              season = season)
 
-        return sum(observed) / len(observed), sum(simulated) / len(simulated)
+        return self.get_sum(observed) / len(observed), sum(simulated) / len(simulated)
 
     def mean_flow(self, comid, low_percent, high_percent, dates = None):
         """Returns the mean daily flows across a given percentile."""
 
         # get the flows
-
+        if dates is None: start, end = self.start, self.end
+        else:             start, end = dates
+        
         oflows, sflows = self.get_flow_percents(comid, low_percent, 
                                                 high_percent, dates = dates)
 
-        # get the mean
-
-        obs_mean  = sum(oflows) / len(oflows)        
+        obs_mean  = self.get_sum(oflows) / len(oflows)        
         sim_mean = sum(sflows) / len(sflows)
 
         return obs_mean, sim_mean
@@ -1781,14 +1859,15 @@ class Postprocessor:
         ts, flows = self.get_obs_flow(dates, verbose = True)
 
         # compute the cutoffs
+        filter_flows = list(filter(lambda x: numpy.isnan(x) == False, flows))
 
-        low  = stats.scoreatpercentile(flows, low_percent)
-        high = stats.scoreatpercentile(flows, high_percent)
+        low  = stats.scoreatpercentile(filter_flows, low_percent)
+        high = stats.scoreatpercentile(filter_flows, high_percent)
 
         # find the flows in the cutoff range
 
         obs_flows = [f for f in flows if low < f and f < high]
-
+        
         # get the simulated data
 
         ts, flows = self.get_sim_flow(comid, tstep = 'daily', dates = dates)
@@ -1825,7 +1904,8 @@ class Postprocessor:
 
         if   tstep == 'daily':   factor = 86400 / conv
         elif tstep == 'hourly':  factor = 3600 / conv
-        else: 
+        else:
+            print(tstep)
             print('Warning: unknown timestep specified for runoff flows')
             return
 
@@ -1939,10 +2019,8 @@ class Postprocessor:
         elif season == 'other':  months = [1, 2, 3, 4, 5, 9, 10, 11, 12]
 
         fs = [f for t, f in zip(times, flows) if t.month in months]
-
         if len(fs) == 0: return None
-
-        max_flow = max(fs)
+        max_flow = self.get_max(fs)
         max_date = times[flows.index(max_flow)]
 
         # convert to the flow to a daily drainage depth (mm or in)
@@ -2049,7 +2127,6 @@ class Postprocessor:
 
                     storms.append(self.get_stormflows(storm_dates, tstep, 
                                                       comid))
-
         return storms
 
     def get_stormflows(self, storm_dates, tstep, comid):
@@ -2059,33 +2136,33 @@ class Postprocessor:
         # get the observed flows for the storm dates
 
         obs = self.get_obs_flow(dates = storm_dates, tstep = tstep)
-        
+
         # get the time series for the storm period
 
-        storm_times = self.get_timeseries(dates = storm_dates, tstep = 'hourly')
+        storm_times = self.get_timeseries(dates = storm_dates, tstep = tstep)
 
         # get the precipitation time series
 
-        prec = self.get_precipitation(comid,  tstep = 'hourly', 
+        prec = self.get_precipitation(comid,  tstep = tstep, 
                                       dates = storm_dates)[1]
 
         # get the simulated flows
 
-        flows = self.get_sim_flow(comid, tstep = 'hourly', 
+        flows = self.get_sim_flow(comid, tstep = tstep, 
                                         dates = storm_dates)[1]
 
         # get the inflow (if exists)
 
         if len(self.hspfmodel.inlets) > 0:
 
-            times, inflow = self.get_inflow(tstep = 'hourly', 
+            times, inflow = self.get_inflow(tstep = tstep, 
                                             dates = storm_dates)
         else: inflow = None
 
         # get the runoff components (if available)
 
         if 'runoff' in self.hspfmodel.targets:
-            times, r, i, b = self.get_runoff_depths(comid, tstep = 'hourly',
+            times, r, i, b = self.get_runoff_depths(comid, tstep = tstep,
                                                     dates = storm_dates)
         else: r, i, b = ([0 for t in storm_times] for i in range(3))
 
@@ -2109,11 +2186,11 @@ class Postprocessor:
 
             flows = [f / area * 3600 / conv  for f in s]
             obs   = [f / area * self.gagestep * 60 / conv for f in o[1]]
-
+            
             # add to the total
 
             simulated += sum(flows)
-            observed  += sum(obs)
+            observed  += self.get_sum(obs)
 
         return observed, simulated
 
@@ -2130,13 +2207,13 @@ class Postprocessor:
 
             oflows = storm[7][1]
 
-            if self.gagestep == 1440: opeak = max(oflows)
+            if self.gagestep == 1440: opeak = self.get_max(oflows)
             elif self.gagestep == 60: 
-                opeak = max([f / 24 for f in 
+                opeak = self.get_max([f / 24 for f in 
                              self.aggregate_hourly_daily(oflows)])
             obs_peaks.append(opeak)
 
-        observed  = sum(obs_peaks) / len(obs_peaks)
+        observed  = self.get_sum(obs_peaks) / len(obs_peaks)
         simulated = sum(sim_peaks) / len(sim_peaks)
 
         return observed, simulated
@@ -2268,7 +2345,7 @@ class Postprocessor:
         self.regression = self.get_regression(comid, dates = dates)
 
         # get the storm events
-
+        
         if summer_storms is None:
             summer_storms = self.get_storms(comid, dates = dates, 
                                             season = 'summer')
@@ -3161,10 +3238,10 @@ class Postprocessor:
 
         d_sflow = [d_sflow[stimes.index(t)] 
                    for t, f in zip(otimes, d_oflow) 
-                   if t in stimes and f is not None]
+                   if t in stimes and not numpy.isnan(f)]
         d_oflow = [d_oflow[otimes.index(t)] 
                    for t, f in zip(otimes, d_oflow) 
-                   if f is not None]
+                   if not numpy.isnan(f)]
 
         # monthly
 
@@ -3176,8 +3253,8 @@ class Postprocessor:
         # deal with missing data
 
         m_sflow = [m_sflow[stimes.index(t)] for t, f in zip(otimes, m_oflow) 
-                   if t in stimes and f is not None]
-        m_oflow = [f for t, f in zip(otimes, m_oflow) if f is not None]
+                   if t in stimes and not numpy.isnan(f)]
+        m_oflow = [f for t, f in zip(otimes, m_oflow) if not numpy.isnan(f)]
 
         plot_calibration(self.hspfmodel.description, d_sflow, d_oflow, 
                          m_sflow, m_oflow, output = output, show = show)
