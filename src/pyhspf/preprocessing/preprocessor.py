@@ -629,7 +629,7 @@ class Preprocessor:
 
         for r in reader.records():
 
-            comid = '{}'.format(r[comid_index])
+            comid = '{}'.format(int(r[comid_index]))
 
             if isinstance(r[nwis_index], bytes): gageid = None
             else: gageid = r[nwis_index]
@@ -669,7 +669,7 @@ class Preprocessor:
 
         # create an instance of the NHDPlusExtractor for the VPU
 
-        nhdplusextractor = NHDPlusExtractor(VPU, self.NHDPlus)
+        nhdplusextractor = NHDPlusExtractor(self.NHDPlus)
 
         # file name for the output plot file
 
@@ -680,7 +680,7 @@ class Preprocessor:
 
         # extract NHDPlus data from the VPU for the HUC8 to the output directory
 
-        nhdplusextractor.extract_HUC8(self.HUC8, self.hydrography, 
+        nhdplusextractor.extract_HUC8(VPU, self.HUC8, self.hydrography, 
                                       plotfile = plotfile)
 
         # create an instance of the NWISExtractor to extract flow and water 
@@ -876,10 +876,10 @@ class Preprocessor:
                                                       output = results, 
                                                       datatype = 'results')
 
-                except:
-
+                except Exception as error:
                     print('warning: unable to calculate land use for year ' +
-                          '{}; check data availability'.format(year))
+                          '{} due to the follow error:'.format(year))
+                    print(error)
 
     def build_watershed(self, 
                         regression = True,
@@ -934,12 +934,12 @@ class Preprocessor:
 
         # make dictionaries of subbasins with dams and gages
 
-        nids = {'{}'.format(r[comid_index]):r[nid_index] for r in records 
-                if isinstance(r[nid_index], str)}
+        nids = {'{}'.format(int(r[comid_index])):r[nid_index] for r in records 
+                if (isinstance(r[nid_index], str) and not r[nid_index]=='')}
 
-        nwiss = {'{}'.format(r[comid_index]):r[nwis_index] 
+        nwiss = {'{}'.format(int(r[comid_index])):r[nwis_index] 
                  for r in records 
-                 if not isinstance(r[nwis_index], bytes)}
+                 if (not isinstance(r[nwis_index], bytes) and r[nwis_index])}
 
         # make a default gage with the largest flow to use for FTABLE generation
 
@@ -963,7 +963,7 @@ class Preprocessor:
 
         for record in sf.records():
 
-            comid     = '{}'.format(record[comid_index])
+            comid     = '{}'.format(int(record[comid_index]))
             length    = record[len_index]
             slope     = record[slope_index]
             tot_area  = record[area_index]
@@ -982,7 +982,7 @@ class Preprocessor:
             
         # create a dictionary to connect the comids to hydroseqs
 
-        hydroseqs = {'{}'.format(flowlines[f].comid): 
+        hydroseqs = {'{}'.format(int(flowlines[f].comid)): 
                      flowlines[f].hydroseq for f in flowlines}
 
         # create a dictionary linking upstream and downstream reach comids
@@ -991,7 +991,7 @@ class Preprocessor:
         for c in hydroseqs:
             f = flowlines[hydroseqs[c]].down
             if f in flowlines:
-                connections[c] = '{}'.format(flowlines[f].comid)
+                connections[c] = '{}'.format(int(flowlines[f].comid))
 
         # read in the stream reach data to an instance of the Subbasin class
 
@@ -1012,10 +1012,10 @@ class Preprocessor:
 
         for record in sf.records():
 
-            outcomid   = '{}'.format(record[outcomid_index])
+            outcomid   = '{}'.format(int(record[outcomid_index]))
             gnis       = record[gnis_index]
             reach      = record[reach_index]
-            incomid    = '{}'.format(record[incomid_index])
+            incomid    = '{}'.format(int(record[incomid_index]))
             maxelev    = record[maxelev_index] / 100
             minelev    = record[minelev_index] / 100
             slopelen   = record[slopelen_index]
@@ -1024,6 +1024,10 @@ class Preprocessor:
             outflow    = record[outflow_index]
             velocity   = record[velocity_index]
             traveltime = record[traveltime_index]
+
+            # correct error codes for velocity
+            if velocity < 0:
+                velocity = 0.1
 
             # work around for empty GNIS stream names
 
@@ -1236,7 +1240,7 @@ class Preprocessor:
             inlet = hydroseqs[inlets[comid]]
 
             if flowlines[inlet].up in flowlines:
-                i = '{}'.format(flowlines[flowlines[inlet].up].comid)
+                i = '{}'.format(int(flowlines[flowlines[inlet].up].comid))
                 subbasin.add_inlet(i)
             elif flowlines[inlet].up != 0:
                 watershed.add_inlet(comid)
@@ -1248,12 +1252,12 @@ class Preprocessor:
 
             if flowline.down in flowlines:
                 flowline = flowlines[flowline.down]
-                while '{}'.format(flowline.comid) not in subbasins:
+                while '{}'.format(int(flowline.comid)) not in subbasins:
                     flowline = flowlines[flowline.down]
-                updown[comid] = '{}'.format(flowline.comid)
+                updown[comid] = '{}'.format(int(flowline.comid))
             else: 
                 updown[comid] = 0
-                watershed.add_outlet('{}'.format(comid))
+                watershed.add_outlet('{}'.format(int(comid)))
 
         # add the updown dictionary to show mass linkage in the reaches
 
