@@ -343,7 +343,7 @@ class NWISExtractor:
         for gage, day1, dayn, drain, state, nwis, ave, name in iters:
 
             s = float('{}'.format(dayn)[:4])
-            print('start {} s {}'.format(start.year,s))
+
             if start.year <= s:
 
                 # filename to use for data

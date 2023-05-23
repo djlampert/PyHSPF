@@ -1457,6 +1457,7 @@ class NHDPlusExtractor():
 
         w.close()
 
+
     def combine_NED(self, nedfiles, VPU):
         '''
         combines all NED files in the RPU regions for specified VPU into one big file for simplicity
@@ -1576,9 +1577,13 @@ class NHDPlusExtractor():
         # get a driver and make the new file
 
         driver = gdal.GetDriverByName('GTiff')
-
+        # check if we need to use 32bit ints or if we can get away with 16
+        if numpy.amax(values) >  65535:
+            gdal_type = gdal.GDT_UInt32
+        else:
+            gdal_type = gdal.GDT_UInt16
         dest = driver.Create(destination, len(values[0]), len(values), 1,
-                             gdal.GDT_UInt16)
+                             gdal_type)
 
         dest.SetProjection(source.GetProjection())
         dest.SetMetadata(source.GetMetadata())
